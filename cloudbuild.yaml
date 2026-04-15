@@ -1,0 +1,96 @@
+steps:
+  # ── BACKEND ──────────────────────────────────────────────────────────────────
+
+  - id: build-backend
+    name: 'gcr.io/cloud-builders/docker'
+    args:
+      - build
+      - -t
+      - asia-south1-docker.pkg.dev/divine-position-290710/morph-mumbai/backend
+      - ./backend
+
+  - id: push-backend
+    name: 'gcr.io/cloud-builders/docker'
+    args:
+      - push
+      - asia-south1-docker.pkg.dev/divine-position-290710/morph-mumbai/backend
+    waitFor: [build-backend]
+
+  - id: deploy-backend
+    name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - morph-backend
+      - --image=asia-south1-docker.pkg.dev/divine-position-290710/morph-mumbai/backend
+      - --region=asia-south1
+      - --platform=managed
+      - --allow-unauthenticated
+      - --port=8080
+      - --memory=1Gi
+      - >-
+        --set-env-vars=GEMINI_API_KEY=$$GEMINI_API_KEY,DATABASE_URL=$$DATABASE_URL,YOUTUBE_API_KEY=$$YOUTUBE_API_KEY,ALLOWED_ORIGINS=https://morph-frontend-37603380386.asia-south1.run.app
+    secretEnv:
+      - GEMINI_API_KEY
+      - DATABASE_URL
+      - YOUTUBE_API_KEY
+    waitFor: [push-backend]
+
+  # ── FRONTEND ─────────────────────────────────────────────────────────────────
+
+  - id: build-frontend
+    name: 'gcr.io/cloud-builders/docker'
+    args:
+      - build
+      - --build-arg
+      - NEXT_PUBLIC_API_URL=https://morph-backend-37603380386.asia-south1.run.app
+      - -t
+      - asia-south1-docker.pkg.dev/divine-position-290710/morph-mumbai/frontend
+      - ./frontend
+
+  - id: push-frontend
+    name: 'gcr.io/cloud-builders/docker'
+    args:
+      - push
+      - asia-south1-docker.pkg.dev/divine-position-290710/morph-mumbai/frontend
+    waitFor: [build-frontend]
+
+  - id: deploy-frontend
+    name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - morph-frontend
+      - --image=asia-south1-docker.pkg.dev/divine-position-290710/morph-mumbai/frontend
+      - --region=asia-south1
+      - --platform=managed
+      - --allow-unauthenticated
+      - --port=3000
+      - --memory=1Gi
+      - >-
+        --set-env-vars=NEXTAUTH_URL=https://morph-frontend-37603380386.asia-south1.run.app,NODE_ENV=production,NEXTAUTH_SECRET=$$NEXTAUTH_SECRET,GOOGLE_CLIENT_ID=$$GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET=$$GOOGLE_CLIENT_SECRET
+    secretEnv:
+      - NEXTAUTH_SECRET
+      - GOOGLE_CLIENT_ID
+      - GOOGLE_CLIENT_SECRET
+    waitFor: [push-frontend]
+
+availableSecrets:
+  secretManager:
+    - versionName: projects/divine-position-290710/secrets/GEMINI_API_KEY/versions/latest
+      env: GEMINI_API_KEY
+    - versionName: projects/divine-position-290710/secrets/DATABASE_URL/versions/latest
+      env: DATABASE_URL
+    - versionName: projects/divine-position-290710/secrets/YOUTUBE_API_KEY/versions/latest
+      env: YOUTUBE_API_KEY
+    - versionName: projects/divine-position-290710/secrets/NEXTAUTH_SECRET/versions/latest
+      env: NEXTAUTH_SECRET
+    - versionName: projects/divine-position-290710/secrets/GOOGLE_CLIENT_ID/versions/latest
+      env: GOOGLE_CLIENT_ID
+    - versionName: projects/divine-position-290710/secrets/GOOGLE_CLIENT_SECRET/versions/latest
+      env: GOOGLE_CLIENT_SECRET
+
+options:
+  logging: CLOUD_LOGGING_ONLY

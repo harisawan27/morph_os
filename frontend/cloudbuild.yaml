@@ -1,0 +1,15 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '--build-arg'
+      - 'NEXT_PUBLIC_API_URL=${_API_URL}'
+      - '-t'
+      - '${_IMAGE}'
+      - '.'
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', '${_IMAGE}']
+
+substitutions:
+  _API_URL: 'http://localhost:8000'
+  _IMAGE: 'us-central1-docker.pkg.dev/morph-os-app/morph/frontend'
