@@ -1,17 +1,23 @@
 import os
 import json
+import uuid
+import asyncio
+import logging
 import httpx
 from fastapi import FastAPI, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from typing import Optional, Any
 
-from database import get_db, init_db
+from database import get_db, init_db, SessionLocal
 from models import Artifact
-from llm_pipeline import generate_artifact_pipeline, embed_text
+from llm_pipeline import brain_plan_ui, execute_plan, embed_text
 from auth import get_current_user, get_optional_user
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Morph OS Backend")
 
@@ -66,91 +72,112 @@ class GenerateRequest(BaseModel):
     user_context: Optional[dict] = None       # name, role, about, location, tone
     current_artifact: Optional[str] = None    # current rendered code for edit mode
 
-class GenerateResponse(BaseModel):
-    id: str
-    prompt: str
-    reply: str
-    code: Optional[str] = None
-    cached: bool
-    saved: bool = False  # True only when artifact was persisted to DB for this user
+def _sse(event: dict) -> str:
+    return f"data: {json.dumps(event)}\n\n"
 
-@app.post("/api/generate", response_model=GenerateResponse)
-def generate_artifact(
+
+@app.post("/api/generate")
+async def generate_artifact(
     request: GenerateRequest,
-    db: Session = Depends(get_db),
     user: dict | None = Depends(get_optional_user),
 ):
-    # Guest users get full generation but nothing is persisted
     user_id = (user.get("email") or user.get("sub")) if user else None
 
-    # 1. Embed the prompt
-    try:
-        query_embedding = embed_text(request.prompt)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Embedding failed: {e}")
+    async def stream():
+        # ── 1. Embed (in thread — blocking network call) ────────────────────
+        try:
+            embedding = await asyncio.to_thread(embed_text, request.prompt)
+        except Exception as e:
+            yield _sse({"type": "error", "text": f"Embedding failed: {e}"})
+            return
 
-    # 2. Semantic cache — only for authenticated users (guests have no history)
-    if user_id:
-        similarity_threshold = 0.1
-        distance_col = Artifact.embedding.cosine_distance(query_embedding).label("distance")
-        closest = (
-            db.query(Artifact, distance_col)
-            .filter(Artifact.user_id == user_id)
-            .order_by(distance_col)
-            .first()
-        )
-        if closest:
-            cached_artifact, distance = closest
-            if distance is not None and distance < similarity_threshold:
-                return GenerateResponse(
-                    id=cached_artifact.id,
-                    prompt=cached_artifact.prompt,
-                    reply=cached_artifact.reply or "Found in memory.",
-                    code=cached_artifact.code,
-                    cached=True,
-                    saved=True,
+        # ── 2. Semantic cache (DB — sync, stays in main thread) ─────────────
+        if user_id:
+            db = SessionLocal()
+            try:
+                distance_col = Artifact.embedding.cosine_distance(embedding).label("distance")
+                closest = (
+                    db.query(Artifact, distance_col)
+                    .filter(Artifact.user_id == user_id)
+                    .order_by(distance_col)
+                    .first()
                 )
+                if closest:
+                    hit, distance = closest
+                    if distance is not None and distance < 0.1:
+                        yield _sse({"type": "reply", "text": hit.reply or "Found in memory.", "id": hit.id})
+                        if hit.code:
+                            yield _sse({"type": "artifact", "code": hit.code, "id": hit.id})
+                        yield _sse({"type": "done"})
+                        return
+            finally:
+                db.close()
 
-    # 3. Brain + Builder pipeline
-    try:
-        reply, ui_spec, generated_code, embedding = generate_artifact_pipeline(
-            request.prompt, request.history, request.user_context, request.current_artifact
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"LLM Pipeline failed: {e}")
+        # ── 3. Brain classifies + plans (in thread) ──────────────────────────
+        try:
+            brain_json = await asyncio.to_thread(
+                brain_plan_ui,
+                request.prompt,
+                request.history,
+                request.user_context,
+                bool(request.current_artifact),
+            )
+            planned = json.loads(brain_json)
+        except Exception as e:
+            logger.error(f"Brain failed: {e}")
+            planned = {"type": "chat", "reply": "Something went wrong on my end. Try again?"}
 
-    # 4. Persist only for authenticated users
-    if user_id:
-        artifact = Artifact(
-            user_id=user_id,
-            session_id=request.session_id,
-            prompt=request.prompt,
-            reply=reply,
-            ui_spec=ui_spec,
-            code=generated_code,
-            embedding=embedding,
-        )
-        db.add(artifact)
-        db.commit()
-        db.refresh(artifact)
-        return GenerateResponse(
-            id=artifact.id,
-            prompt=artifact.prompt,
-            reply=artifact.reply,
-            code=artifact.code,
-            cached=False,
-            saved=True,
-        )
+        reply       = planned.get("reply", "On it...")
+        artifact_id = str(uuid.uuid4())
 
-    # Guest: return ephemeral response with a temp ID
-    import uuid
-    return GenerateResponse(
-        id=str(uuid.uuid4()),
-        prompt=request.prompt,
-        reply=reply,
-        code=generated_code,
-        cached=False,
-        saved=False,
+        # ── 4. Yield reply immediately — user sees this right away ───────────
+        needs_artifact = planned.get("type") in ("template", "build", "edit") or planned.get("requires_ui")
+        yield _sse({"type": "reply", "text": reply, "id": artifact_id, "pending": bool(needs_artifact)})
+
+        # ── 5. Execute plan if artifact needed (in thread — slow for builds) ─
+        code     = None
+        ui_spec  = None
+        if needs_artifact:
+            try:
+                code, ui_spec = await asyncio.to_thread(
+                    execute_plan, planned, request.current_artifact
+                )
+            except Exception as e:
+                logger.error(f"Plan execution failed: {e}")
+
+        # ── 6. Yield artifact ────────────────────────────────────────────────
+        if code:
+            yield _sse({"type": "artifact", "code": code, "id": artifact_id})
+
+        # ── 7. Persist to DB (sync, in main thread) ──────────────────────────
+        if user_id:
+            db = SessionLocal()
+            try:
+                artifact = Artifact(
+                    id=artifact_id,
+                    user_id=user_id,
+                    session_id=request.session_id,
+                    prompt=request.prompt,
+                    reply=reply,
+                    ui_spec=ui_spec,
+                    code=code,
+                    embedding=embedding,
+                )
+                db.add(artifact)
+                db.commit()
+                logger.info(f"Persisted artifact {artifact_id}")
+            except Exception as e:
+                logger.error(f"Persist failed: {e}")
+                db.rollback()
+            finally:
+                db.close()
+
+        yield _sse({"type": "done"})
+
+    return StreamingResponse(
+        stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
 
 
@@ -160,7 +187,7 @@ def generate_artifact(
 def get_artifacts(
     db: Session = Depends(get_db),
     user: dict | None = Depends(get_optional_user),
-    limit: int = Query(50, le=100),
+    limit: int = Query(100, le=200),
     offset: int = Query(0, ge=0),
 ):
     """Returns all artifacts (with generated code) for the current user."""
@@ -187,12 +214,31 @@ def get_artifacts(
                 "prompt":     a.prompt,
                 "reply":      a.reply,
                 "session_id": a.session_id,
+                "ui_spec":    a.ui_spec,
                 "created_at": a.created_at.isoformat() if a.created_at else None,
             }
             for a in items
         ],
         "total": total,
     }
+
+
+@app.delete("/api/artifacts/{artifact_id}")
+def delete_artifact(
+    artifact_id: str,
+    db: Session = Depends(get_db),
+    user: dict | None = Depends(get_optional_user),
+):
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    user_id = user.get("email") or user.get("sub")
+    deleted = (
+        db.query(Artifact)
+        .filter(Artifact.id == artifact_id, Artifact.user_id == user_id)
+        .delete()
+    )
+    db.commit()
+    return {"deleted": deleted}
 
 
 # ─── Sessions ────────────────────────────────────────────────────────────────
@@ -208,6 +254,7 @@ def get_sessions(
     query = text("""
         SELECT session_id,
                MAX(created_at) as last_activity,
+               MAX(session_title) as custom_title,
                (ARRAY_AGG(prompt ORDER BY created_at ASC))[1] as title
         FROM artifacts
         WHERE session_id IS NOT NULL AND user_id = :uid
@@ -216,7 +263,7 @@ def get_sessions(
         LIMIT 30
     """)
     rows = db.execute(query, {"uid": user_id}).fetchall()
-    return [{"id": r[0], "title": r[2]} for r in rows]
+    return [{"id": r[0], "title": r[2] or r[3]} for r in rows]
 
 
 @app.delete("/api/sessions/{session_id}")
@@ -235,6 +282,27 @@ def delete_session(
     )
     db.commit()
     return {"deleted": deleted}
+
+
+class RenameSessionRequest(BaseModel):
+    title: str
+
+@app.patch("/api/sessions/{session_id}")
+def rename_session(
+    session_id: str,
+    request: RenameSessionRequest,
+    db: Session = Depends(get_db),
+    user: dict | None = Depends(get_optional_user),
+):
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    user_id = user.get("email") or user.get("sub")
+    db.execute(
+        text("UPDATE artifacts SET session_title = :title WHERE session_id = :sid AND user_id = :uid"),
+        {"title": request.title, "sid": session_id, "uid": user_id},
+    )
+    db.commit()
+    return {"ok": True}
 
 
 @app.get("/api/sessions/{session_id}")
