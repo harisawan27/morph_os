@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7c3aed"/>
+      <stop offset="100%" stop-color="#2563eb"/>
+    </linearGradient>
+    <linearGradient id="letter" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#e0e7ff" stop-opacity="0.85"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Full bleed background (maskable — safe zone is center 80%) -->
+  <rect width="512" height="512" fill="#050505"/>
+
+  <!-- Subtle gradient fill -->
+  <rect width="512" height="512" fill="url(#bg)" opacity="0.08"/>
+
+  <!-- M letterform — kept well within safe zone -->
+  <text
+    x="256" y="310"
+    font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif"
+    font-size="196"
+    font-weight="200"
+    text-anchor="middle"
+    fill="url(#letter)"
+    letter-spacing="-8"
+  >M</text>
+
+  <text
+    x="256" y="358"
+    font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif"
+    font-size="28"
+    font-weight="300"
+    text-anchor="middle"
+    fill="#ffffff"
+    opacity="0.28"
+    letter-spacing="6"
+  >OS</text>
+</svg>

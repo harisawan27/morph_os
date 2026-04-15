@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+google-genai
+sqlalchemy
+psycopg2-binary
+pgvector
+pydantic
+pydantic-settings
+python-dotenv
+greenlet
+tenacity
+python-jose[cryptography]
+httpx
