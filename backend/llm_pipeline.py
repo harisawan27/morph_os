@@ -5,20 +5,16 @@ from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_excep
 from google import genai
 from google.genai import types, errors
 
-# Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Model Configuration
-PRIMARY_MODEL = 'gemini-2.5-flash'
-FALLBACK_MODEL = 'gemini-2.0-flash' # Fallback when 2.5-flash is overloaded
+PRIMARY_MODEL  = 'gemini-2.5-flash'
+FALLBACK_MODEL = 'gemini-2.0-flash'
 
-# Initialize client. Assumes GEMINI_API_KEY is in environment.
 client = genai.Client()
 
+
 def embed_text(text: str) -> list[float]:
-    """Vectorizes the input prompt using Google's embedding model."""
-    # Standard embedding model
     response = client.models.embed_content(
         model='gemini-embedding-001',
         contents=text,
@@ -26,219 +22,269 @@ def embed_text(text: str) -> list[float]:
     )
     return response.embeddings[0].values
 
-def brain_plan_ui(prompt: str, history: list[dict] = [], user_context: dict = None, has_active_artifact: bool = False) -> str:
+
+def brain_plan_ui(
+    prompt: str,
+    history: list[dict] = [],
+    user_context: dict = None,
+    has_active_artifact: bool = False,
+) -> str:
     """
-    The Brain: Acts as the high-reasoning Planner.
-    Accepts optional user_context dict for personalization.
+    The Brain: classifies the request and plans the response.
+    Always returns valid JSON.
     """
 
-    # Build user context block if provided
+    # Build user context block
     user_ctx_block = ""
     if user_context:
         parts = []
         if user_context.get("name"):     parts.append(f"Name: {user_context['name']}")
         if user_context.get("role"):     parts.append(f"Occupation: {user_context['role']}")
-        if user_context.get("about"):    parts.append(f"About them: {user_context['about']}")
+        if user_context.get("about"):    parts.append(f"About: {user_context['about']}")
         if user_context.get("location"): parts.append(f"Location: {user_context['location']}")
-        if user_context.get("tone"):     parts.append(f"Preferred tone: {user_context['tone']}")
+        if user_context.get("tone"):     parts.append(f"Tone: {user_context['tone']}")
         if parts:
-            user_ctx_block = "USER PROFILE — use this to personalize every response:\n" + "\n".join(parts) + "\n\n"
+            user_ctx_block = "USER PROFILE:\n" + "\n".join(parts) + "\n\n"
 
-    system_instruction = f"""
-    {user_ctx_block}You are THE BRAIN of Morph OS — an intelligent assistant that can both CONVERSE naturally and GENERATE interactive UI artifacts.
+    system_instruction = f"""{user_ctx_block}You are Morph OS — a smart AI assistant that can both CONVERSE naturally and generate interactive UI artifacts (apps, tools, games).
 
-    ════════════════════════════════════════════════════════
-    STEP 1 — DECIDE: Is this a CHAT request or an ARTIFACT request?
-    ════════════════════════════════════════════════════════
+You must return ONE of four JSON types. Choose based on what the user actually needs.
 
-    USE "chat" (no UI) for:
-    • Conversation, greetings, questions about yourself or the world
-    • Creative writing: poems, stories, essays, lyrics, jokes, scripts
-    • Explanations, definitions, summaries, opinions, advice
-    • Simple calculations or facts ("what's 15% of 200?", "who is Einstein?")
-    • Follow-up questions or clarifications in a conversation
-    • Anything where a written reply is the natural response
+════════════════════════════════════════
+TYPE DECISION RULES
+════════════════════════════════════════
 
-    USE "template" for:
-    • Explicit requests to open/launch/create a tool, app, game, or widget
-    • Keywords that clearly match a vault template below
+"chat" — Use this by default. A written reply is the answer.
+  • Greetings, small talk, questions about yourself
+  • Factual questions: history, science, people, definitions
+  • Math / calculations — just answer the number, don't open a calculator
+  • Unit / currency conversions — just answer, don't open a converter
+  • Coding help, debugging, explaining code — reply with text/code blocks
+  • Creative writing: poems, stories, essays, jokes, lyrics
+  • Advice, opinions, summaries, recommendations
+  • Capability questions: "what can you do?", "do you have games?" — list your abilities
+  • Follow-up questions and conversation
 
-    USE "build" ONLY for:
-    • Requests for a truly custom interactive app that no template covers
-    • NEVER use build for something a chat reply handles perfectly
+"template" — Use ONLY when user explicitly wants to OPEN or USE a specific built-in tool/game.
+  Clear signals: "open X", "launch X", "I want to play X", "show me a X tool", "give me a X"
+  NEVER use template just because a keyword appears — intent must be clear.
 
-    USE "edit" ONLY when an ACTIVE ARTIFACT is visible AND the user wants to modify it:
-    • Signals: "make it", "add X to it", "change the", "update it", "remove", "fix the", "can you also"
-    • Pronouns referring to existing UI: "it", "this", "the app", "the widget"
-    • Style changes: "dark mode", "make it red", "bigger font"
-    • Feature additions to existing UI: "add a delete button", "add a search bar"
-    {{ "type": "edit", "edit_instruction": "Precise description of what to change", "reply": "Short acknowledgment" }}
+"build" — Use ONLY for a truly custom interactive app with specific requirements not covered by any template.
+  Clear signals: "build me a...", "create a custom...", "make an app that..."
 
-    GOLDEN RULE: When in doubt — CHAT. A great written reply beats a mismatched artifact every time.
+"edit" — Use ONLY when an active artifact is on screen AND user wants to modify it.
+  Signals: "make it...", "add X to it", "change the color", "update it", "fix the..."
+  Pronouns referring to the current UI: "it", "this", "the app", "the widget"
 
-    ════════════════════════════════════════════════════════
-    STEP 2 — IF ARTIFACT: Choose from the Vault first
-    ════════════════════════════════════════════════════════
+GOLDEN RULE: If a sentence can answer it — use "chat". Never spawn a UI where words will do.
 
-    ZERO-DATA TEMPLATES (data: {{}}):
-    - "todo"       : Task list, checklist, to-do, grocery list.
-    - "snake"      : Snake game, arcade game, retro game.
-    - "calculator" : Calculator, math tool, arithmetic UI.
-    - "timer"      : Timer, stopwatch, countdown.
-    - "clock"      : Clock, world clock, timezone display.
-    - "color"      : Color palette, color picker, hex colors.
-    - "habit"      : Habit tracker, daily habits, streak tracker.
-    - "budget"     : Budget tracker, expense tracker, finance tracker.
-    - "kanban"     : Kanban board, task board, trello-like.
-    - "password"   : Password generator, secure password.
-    - "qrcode"     : QR code generator, QR maker.
-    - "draw"       : Drawing canvas, paint, sketch, whiteboard.
-    - "converter"  : Unit converter, length/weight/temperature/speed.
-    - "memory"     : Memory card game, matching pairs, flip cards.
-    - "tictactoe"  : Tic tac toe, noughts and crosses, XO game.
-    - "typing"     : Typing speed test, WPM test, typing practice.
-    - "calendar"   : Calendar, monthly planner, event tracker.
-    - "billsplit"  : Bill splitter, split dinner, expense split, tip calculator.
-    - "pomodoro"   : Pomodoro timer with task list, focus sessions, work/break cycles.
-    - "gradient"   : Gradient generator, CSS gradient, color gradient maker.
-    - "pixel"      : Pixel art editor, pixel drawing, 8-bit art.
-    - "matrix"     : Matrix rain, digital rain, matrix screensaver.
-    - "magicball"  : Magic 8 ball, fortune teller, yes/no oracle.
+════════════════════════════════════════
+FEW-SHOT EXAMPLES (calibrate your judgment here)
+════════════════════════════════════════
 
-    PARAMETRIC TEMPLATES (provide rich data):
-    - "youtube"    : Play a song, video, or music.
-       DATA: {{ "title": "best YouTube search query — artist + song name" }}
-       NOTE: NEVER provide videoId. No placeholders.
-    - "weather"    : Weather forecast for a city.
-       DATA: {{ "city": "city name, e.g. 'Mumbai' or 'New York'" }}
-    - "notes"      : Notes, notepad, text editor, journal.
-       DATA: {{ "title": "note title (can be empty string)" }}
-    - "flashcard"  : Flashcards, study cards, memorization.
-       DATA: {{ "topic": "string", "cards": [{{"front": "question", "back": "answer"}}, ...8-12 cards] }}
-    - "quiz"       : Quiz, trivia, test, multiple choice.
-       DATA: {{ "topic": "string", "questions": [{{"question":"...","options":["A","B","C","D"],"correct":0}}, ...5-10] }}
-    - "chart"      : Chart, graph, data visualization.
-       DATA: {{ "type": "bar|line|pie", "title": "string", "labels": [...], "values": [...], "color": "blue|purple|green|orange|pink" }}
-    - "spinwheel"  : Spin the wheel, random picker, decision wheel, what to eat.
-       DATA: {{ "options": ["option1", "option2", ...up to 12] }} — generate contextual options if user has a topic, else omit for defaults.
+"hi" → chat: "Hey! What can I make for you today?"
+"how are you?" → chat: "I'm running smooth! What do you want to build or talk about?"
+"do you have games?" → chat: "Yes! I have Snake, Memory card game, Tic-Tac-Toe, and Magic 8-Ball. Just say which one you'd like to play!"
+"what can you make?" → chat: list all categories with examples
+"what's 20% of 350?" → chat: "That's 70."
+"convert 5 miles to km" → chat: "5 miles = 8.05 km."
+"who is Alan Turing?" → chat: [factual answer]
+"what time is it in Tokyo?" → chat: [answer with timezone info — do NOT open the clock widget]
+"explain how async/await works" → chat: [explanation with code examples]
+"write me a poem about the ocean" → chat: [write the poem]
+"what's the weather like?" → chat: "I can show you a live weather widget! Which city?"
+"I forgot my password" → chat: [help them recover it — do NOT open password generator]
+"note that I'll be late" → chat: "Got it, noted!" — do NOT open notes app
+"I was drawing yesterday" → chat: [respond conversationally — do NOT open drawing canvas]
+"can you calculate compound interest?" → chat: [explain or calculate — do NOT open calculator]
+"how do I convert Celsius to Fahrenheit?" → chat: "The formula is (C × 9/5) + 32." — do NOT open converter
+"open snake" → template: snake
+"I want to play snake" → template: snake
+"launch the calculator" → template: calculator
+"show me a budget tracker" → template: budget
+"give me a todo list" → template: todo
+"make me a pomodoro timer" → template: pomodoro
+"open the drawing canvas" → template: draw
+"weather in Tokyo" → template: weather, data: {{"city": "Tokyo"}}
+"play me some lofi music" → template: youtube, data: {{"title": "lofi hip hop chill beats"}}
+"make flashcards for photosynthesis" → template: flashcard, data: {{"topic": "Photosynthesis", "cards": [...]}}
+"build a habit tracker for my gym routine" → template: habit (closest match, use template not build)
+"build me a custom CRM dashboard with lead scoring" → build [genuinely custom]
+"make it dark mode" [active artifact] → edit
+"add a reset button to it" [active artifact] → edit
 
-    DATA RULE: For parametric templates, generate rich realistic data. No placeholders, no dummy values.
+════════════════════════════════════════
+TEMPLATE CATALOG
+════════════════════════════════════════
 
-    ════════════════════════════════════════════════════════
-    OUTPUT — always return valid JSON, one of these four:
-    ════════════════════════════════════════════════════════
+ZERO-DATA (data: {{}}):
+todo, snake, calculator, timer, clock, color, habit, budget, kanban,
+password, qrcode, draw, converter, memory, tictactoe, typing,
+calendar, billsplit, gradient, pixel, matrix, magicball
 
-    {{ "type": "chat", "requires_ui": false, "reply": "Your full conversational response here" }}
+PARAMETRIC (provide rich data, no placeholders):
+- youtube:    {{ "title": "best YouTube search query" }}
+- weather:    {{ "city": "city name" }}
+- notes:      {{ "title": "note title or empty string" }}
+- flashcard:  {{ "topic": "string", "cards": [{{"front": "Q", "back": "A"}}, ...8-12 cards] }}
+- quiz:       {{ "topic": "string", "questions": [{{"question":"...","options":["A","B","C","D"],"correct":0}}, ...5-10] }}
+- chart:      {{ "type": "bar|line|pie", "title": "string", "labels": [...], "values": [...], "color": "blue|purple|green|orange|pink" }}
+- spinwheel:  {{ "options": ["option1", "option2", ...up to 12] }}
 
-    {{ "type": "template", "template_id": "<id>", "data": {{ ... }}, "reply": "Short acknowledgment" }}
+════════════════════════════════════════
+OUTPUT FORMAT — always valid JSON, one of:
+════════════════════════════════════════
 
-    {{ "type": "build", "requires_ui": true, "ui_spec": {{ "goal": "...", "features": [...], "style": "dark glassmorphism" }}, "reply": "Short text" }}
+{{ "type": "chat", "reply": "Your full conversational response" }}
 
-    {{ "type": "edit", "edit_instruction": "Precise description of what to change in the existing component", "reply": "Short acknowledgment" }}
-    """
+{{ "type": "template", "template_id": "<id>", "data": {{ ... }}, "reply": "Short friendly acknowledgment" }}
 
-    # Build context
+{{ "type": "build", "ui_spec": {{ "goal": "...", "features": [...], "style": "dark glassmorphism" }}, "reply": "Short text" }}
+
+{{ "type": "edit", "edit_instruction": "Precise description of what to change", "reply": "Short acknowledgment" }}
+"""
+
     history_context = ""
     if history:
-        history_context = "### CONVERSATION HISTORY ###\n" + "\n".join([f"{msg['role'].capitalize()}: {msg['text']}" for msg in history]) + "\n\n"
+        history_context = "CONVERSATION HISTORY:\n" + "\n".join(
+            [f"{m['role'].capitalize()}: {m['text']}" for m in history[-12:]]
+        ) + "\n\n"
 
     artifact_context = ""
     if has_active_artifact:
-        artifact_context = "### ACTIVE ARTIFACT ###\nThere is currently a live interactive artifact rendered in the user's canvas. If the user's message seems to refer to it (using 'it', 'this', 'the app', etc.) or asks to modify/improve/fix it, use type 'edit'.\n\n"
+        artifact_context = "ACTIVE ARTIFACT: There is a live interactive artifact on the user's canvas right now. If the user refers to it with 'it', 'this', 'the app', or asks to change/fix/update it — use type 'edit'.\n\n"
 
-    full_prompt = history_context + artifact_context + f"### USER MESSAGE ###\n{prompt}"
-    
+    full_prompt = history_context + artifact_context + f"USER: {prompt}"
+
     @retry(
         retry=retry_if_exception_type(errors.ServerError),
         stop=stop_after_attempt(2),
-        wait=wait_exponential(multiplier=1, min=1, max=4)
+        wait=wait_exponential(multiplier=1, min=1, max=4),
     )
-    def _generate_with_fallback(model_name):
-        logger.info(f"Generating brain plan with {model_name}...")
+    def _call(model_name):
+        logger.info(f"Brain thinking with {model_name}...")
         return client.models.generate_content(
             model=model_name,
             contents=full_prompt,
             config=types.GenerateContentConfig(
                 system_instruction=system_instruction,
                 temperature=0.2,
-                response_mime_type="application/json"
-            )
+                response_mime_type="application/json",
+            ),
         )
 
     try:
-        response = _generate_with_fallback(PRIMARY_MODEL)
+        response = _call(PRIMARY_MODEL)
     except Exception as e:
-        logger.warning(f"Primary model failed (busy), falling back: {e}")
-        response = _generate_with_fallback(FALLBACK_MODEL)
-        
+        logger.warning(f"Primary brain failed, falling back: {e}")
+        response = _call(FALLBACK_MODEL)
+
     return response.text
 
+
+def execute_plan(
+    planned: dict,
+    current_artifact: str | None = None,
+) -> tuple[str | None, str | None]:
+    """
+    Executes a brain plan and returns (code, ui_spec_json).
+    Runs entirely outside the async loop — safe to call via asyncio.to_thread.
+    """
+    from vault_manager import get_hydrated_template
+
+    plan_type = planned.get("type")
+
+    # ── Edit existing artifact ───────────────────────────────────────────────
+    if plan_type == "edit" and current_artifact:
+        instruction = planned.get("edit_instruction", "")
+        logger.info(f"EDIT MODE: {instruction[:80]}...")
+        try:
+            code = builder_edit_react(current_artifact, instruction)
+            return code, None
+        except Exception as e:
+            logger.error(f"Edit failed: {e} — falling back to fresh build")
+            plan_type = "build"
+            planned.setdefault("ui_spec", {"goal": instruction, "features": [], "style": "dark glassmorphism"})
+
+    # ── Vault template ───────────────────────────────────────────────────────
+    if plan_type == "template":
+        template_id = planned.get("template_id")
+        data = planned.get("data", {})
+        logger.info(f"VAULT: hydrating {template_id}...")
+        try:
+            code = get_hydrated_template(template_id, data)
+            return code, json.dumps(planned)
+        except Exception as e:
+            logger.error(f"Vault hydration failed: {e} — falling back to builder")
+            plan_type = "build"
+            planned.setdefault("ui_spec", {"goal": f"Create a {template_id} app", "features": [], "style": "dark glassmorphism"})
+
+    # ── Custom build ─────────────────────────────────────────────────────────
+    if plan_type == "build" or planned.get("requires_ui"):
+        ui_spec = planned.get("ui_spec")
+        if ui_spec:
+            logger.info(f"BUILDER: generating React component...")
+            code = builder_generate_react(json.dumps(ui_spec))
+            return code, json.dumps(ui_spec)
+
+    # ── Chat / no artifact ───────────────────────────────────────────────────
+    return None, None
+
+
 def builder_generate_react(ui_spec: str) -> str:
-    """
-    The Builder: Consumes the JSON Spec to generate high-fidelity React code.
-    Includes fallback resilience for high-demand spikes.
-    """
-    system_instruction = """
-    You are a Full-Stack Creative Engineer (THE BUILDER).
-    Generate a SINGLE, standalone React Component (default export) using Tailwind CSS.
+    """Generates a standalone React component from a UI spec."""
+    system_instruction = """You are a Full-Stack Creative Engineer (THE BUILDER).
+Generate a SINGLE, standalone React Component (default export) using Tailwind CSS.
 
-    MEDIA INSTRUCTION: If building a YouTube or Music player:
-    - Always use the YouTube Embed iframe: `https://www.youtube.com/embed/[ID]`.
-    - If the ID is not explicitly provided in the spec, use a search-based placeholder or a generic YouTube player UI.
-    - Style it with premium Glassmorphism, blurred overlays, and Lucide-React icons.
+MEDIA INSTRUCTION: If building a YouTube or Music player:
+- Always use the YouTube Embed iframe: `https://www.youtube.com/embed/[ID]`.
+- Style it with premium Glassmorphism, blurred overlays, and Lucide-React icons.
 
-    DO NOT wrap in markdown code blocks. Just the raw JS/TS code.
-    Include all necessary React imports.
-    """
-    
+DO NOT wrap in markdown code blocks. Just the raw JS/TS code.
+Include all necessary React imports."""
+
     @retry(
         retry=retry_if_exception_type(errors.ServerError),
         stop=stop_after_attempt(2),
-        wait=wait_exponential(multiplier=1, min=1, max=4)
+        wait=wait_exponential(multiplier=1, min=1, max=4),
     )
-    def _build_with_fallback(model_name):
-        logger.info(f"Generating React code with {model_name}...")
+    def _build(model_name):
+        logger.info(f"Builder generating with {model_name}...")
         return client.models.generate_content(
             model=model_name,
-            contents=f"Here is the UI Spec:\n{ui_spec}",
+            contents=f"UI Spec:\n{ui_spec}",
             config=types.GenerateContentConfig(
                 system_instruction=system_instruction,
-                temperature=0.4
-            )
+                temperature=0.4,
+            ),
         )
 
     try:
-        response = _build_with_fallback(PRIMARY_MODEL)
+        response = _build(PRIMARY_MODEL)
     except Exception as e:
         logger.warning(f"Primary builder failed, falling back: {e}")
-        response = _build_with_fallback(FALLBACK_MODEL)
-    
+        response = _build(FALLBACK_MODEL)
+
     code = response.text.strip()
     if code.startswith("```") and code.endswith("```"):
-        # Strip markdown syntax if it accidentally includes it
-        lines = code.split("\\n")
-        code = "\\n".join(lines[1:-1])
-        
+        lines = code.split("\n")
+        code = "\n".join(lines[1:-1])
     return code
 
+
 def builder_edit_react(current_code: str, instruction: str) -> str:
-    """
-    The Builder in EDIT mode: Takes existing React component + edit instruction,
-    returns a modified version of the component.
-    """
-    system_instruction = """
-    You are a Full-Stack Creative Engineer (THE BUILDER) in EDIT MODE.
-    You will receive an existing React component and an edit instruction.
+    """Modifies an existing React component based on an edit instruction."""
+    system_instruction = """You are a Full-Stack Creative Engineer (THE BUILDER) in EDIT MODE.
+You will receive an existing React component and an edit instruction.
 
-    YOUR TASK:
-    - Modify the existing component exactly as instructed.
-    - Preserve all existing functionality, state, style, and structure that is NOT mentioned in the instruction.
-    - Keep the same dark glassmorphism / Tailwind CSS aesthetic.
-    - Return the COMPLETE modified component (not a diff, not partial code).
+YOUR TASK:
+- Modify the existing component exactly as instructed.
+- Preserve all existing functionality, state, style, and structure not mentioned in the instruction.
+- Keep the same dark glassmorphism / Tailwind CSS aesthetic.
+- Return the COMPLETE modified component (not a diff, not partial code).
 
-    DO NOT wrap in markdown code blocks. Just the raw JS/TS code.
-    Include all necessary React imports.
-    """
+DO NOT wrap in markdown code blocks. Just the raw JS/TS code.
+Include all necessary React imports."""
 
     edit_prompt = f"""EXISTING COMPONENT:
 {current_code}
@@ -251,220 +297,27 @@ Return the complete modified component."""
     @retry(
         retry=retry_if_exception_type(errors.ServerError),
         stop=stop_after_attempt(2),
-        wait=wait_exponential(multiplier=1, min=1, max=4)
+        wait=wait_exponential(multiplier=1, min=1, max=4),
     )
-    def _edit_with_fallback(model_name):
-        logger.info(f"Editing React component with {model_name}...")
+    def _edit(model_name):
+        logger.info(f"Editor running with {model_name}...")
         return client.models.generate_content(
             model=model_name,
             contents=edit_prompt,
             config=types.GenerateContentConfig(
                 system_instruction=system_instruction,
-                temperature=0.3
-            )
+                temperature=0.3,
+            ),
         )
 
     try:
-        response = _edit_with_fallback(PRIMARY_MODEL)
+        response = _edit(PRIMARY_MODEL)
     except Exception as e:
-        logger.warning(f"Primary edit failed, falling back: {e}")
-        response = _edit_with_fallback(FALLBACK_MODEL)
+        logger.warning(f"Primary editor failed, falling back: {e}")
+        response = _edit(FALLBACK_MODEL)
 
     code = response.text.strip()
     if code.startswith("```") and code.endswith("```"):
         lines = code.split("\n")
         code = "\n".join(lines[1:-1])
-
     return code
-
-
-def local_intent_router(prompt: str):
-    """
-    Zero-Token Routing: Checks for common commands via keyword/regex matching.
-    Returns (template_id, data, reply) if matched, else None.
-    Weather intentionally excluded — needs the Brain to extract the city name from the prompt.
-    """
-    import re
-    p = prompt.lower().strip()
-
-    # Snake / Arcade
-    if any(x in p for x in ["snake", "play snake", "arcade", "play game", "retro game"]):
-        return "snake", {}, "Initializing the Arcade Engine..."
-
-    # Memory game
-    if any(x in p for x in ["memory game", "memory card", "matching game", "flip card", "card matching"]):
-        return "memory", {}, "Shuffling the cards..."
-
-    # Tic Tac Toe
-    if any(x in p for x in ["tic tac toe", "tictactoe", "tic-tac-toe", "noughts and crosses", "xo game", "play xo"]):
-        return "tictactoe", {}, "Setting up the board..."
-
-    # Typing speed test
-    if any(x in p for x in ["typing test", "typing speed", "wpm test", "type speed", "typeracer", "words per minute"]):
-        return "typing", {}, "Loading the typing test..."
-
-    # Calculator
-    if any(x in p for x in ["calculator", "calc", "calculate", "math tool", "arithmetic"]):
-        return "calculator", {}, "Spinning up the Morph Calculator..."
-
-    # Pomodoro (specific — must come before generic timer)
-    if any(x in p for x in ["pomodoro", "pomodoro timer", "focus session", "25 minute", "work break"]):
-        return "pomodoro", {}, "Starting your focus session..."
-
-    # Timer / Stopwatch
-    if any(x in p for x in ["timer", "stopwatch", "countdown", "focus timer"]):
-        return "timer", {}, "Mounting the Morph Timer..."
-
-    # Clock
-    if re.search(r"\b(?:clock|world clock|timezone|what time|current time)\b", p):
-        return "clock", {}, "Rendering the Morph Clock..."
-
-    # Notes / Notepad
-    if any(x in p for x in ["note", "notepad", "notes app", "text editor", "write note", "rich text", "journal"]):
-        title_match = re.search(r"(?:note|notepad)\s+(?:for|about|titled?|called)?\s*(.*)", p)
-        title = title_match.group(1).strip().title() if title_match and title_match.group(1).strip() else ""
-        return "notes", {"title": title}, f"Opening Morph Notes{f' — {title}' if title else ''}..."
-
-    # Color palette
-    if any(x in p for x in ["color", "colour", "palette", "hex", "color picker", "colour palette"]):
-        return "color", {}, "Launching the Color Forge..."
-
-    # ToDo / Tasks
-    if any(x in p for x in ["todo", "to-do", "to do", "task list", "tasks", "checklist", "ledger"]):
-        return "todo", {}, "Mounting The Ledger..."
-
-    # Habit tracker
-    if any(x in p for x in ["habit", "habit tracker", "daily habit", "routine tracker", "streak"]):
-        return "habit", {}, "Opening Habit Tracker..."
-
-    # Budget / Finance
-    if any(x in p for x in ["budget", "expense", "expenses", "income", "finance tracker", "spending", "money tracker", "budget tracker"]):
-        return "budget", {}, "Opening Budget Tracker..."
-
-    # Kanban board
-    if any(x in p for x in ["kanban", "kanban board", "task board", "project board", "sprint board", "trello"]):
-        return "kanban", {}, "Opening Kanban Board..."
-
-    # Password generator
-    if any(x in p for x in ["password", "password generator", "generate password", "random password", "strong password"]):
-        return "password", {}, "Generating secure passwords..."
-
-    # QR code
-    if any(x in p for x in ["qr code", "qrcode", "qr generator", "generate qr", "make qr"]):
-        return "qrcode", {}, "Opening QR Generator..."
-
-    # Drawing canvas
-    if any(x in p for x in ["draw", "drawing", "paint", "sketch", "whiteboard", "doodle", "canvas"]):
-        return "draw", {}, "Opening Drawing Canvas..."
-
-    # Unit converter
-    if any(x in p for x in ["convert", "converter", "unit convert", "unit converter", "length convert", "weight convert", "temperature convert", "mph to", "km to", "kg to", "celsius to", "fahrenheit"]):
-        return "converter", {}, "Opening Unit Converter..."
-
-    # Calendar
-    if any(x in p for x in ["calendar", "monthly calendar", "monthly planner", "event calendar", "my calendar"]):
-        return "calendar", {}, "Opening Morph Calendar..."
-
-    # Bill splitter
-    if any(x in p for x in ["bill split", "split bill", "split dinner", "split the bill", "expense split", "split cost", "tip calculator", "split check"]):
-        return "billsplit", {}, "Opening Bill Splitter..."
-
-    # Gradient generator
-    if any(x in p for x in ["gradient", "css gradient", "gradient generator", "color gradient", "gradient maker"]):
-        return "gradient", {}, "Opening Gradient Generator..."
-
-    # Pixel art
-    if any(x in p for x in ["pixel art", "pixel editor", "pixel draw", "8-bit art", "pixelart"]):
-        return "pixel", {}, "Opening Pixel Art Editor..."
-
-    # Matrix rain
-    if any(x in p for x in ["matrix rain", "digital rain", "matrix screen", "matrix effect", "falling code", "matrix screensaver"]):
-        return "matrix", {}, "Initializing the Matrix..."
-
-    # Spin the wheel
-    if any(x in p for x in ["spin the wheel", "spin wheel", "wheel spinner", "random picker", "decision wheel", "spinning wheel"]):
-        return "spinwheel", {}, "Spinning up the wheel..."
-
-    # Magic 8 ball
-    if any(x in p for x in ["magic 8 ball", "magic ball", "8 ball", "magic 8ball", "fortune teller", "oracle"]):
-        return "magicball", {}, "Summoning the oracle..."
-
-    return None
-
-def generate_artifact_pipeline(
-    prompt: str,
-    history: list[dict] = [],
-    user_context: dict = None,
-    current_artifact: str | None = None,
-) -> tuple[str, str | None, str | None, list[float]]:
-    """
-    Runs the full Brain -> (Vault | Builder | Editor) pipeline.
-    Returns (reply, ui_spec, code, embedding)
-    """
-    from vault_manager import get_hydrated_template
-
-    embedding = embed_text(prompt)
-
-    # 0. Zero-Token Local Routing (FASTEST) — skip if editing existing artifact
-    if not current_artifact:
-        local_match = local_intent_router(prompt)
-        if local_match:
-            template_id, data, reply = local_match
-            logger.info(f"LOCAL ROUTE MATCH: {template_id}")
-            try:
-                code = get_hydrated_template(template_id, data)
-                planned = {"type": "template", "template_id": template_id, "data": data, "reply": reply}
-                return reply, json.dumps(planned), code, embedding
-            except Exception as e:
-                logger.warning(f"Local hydration failed: {e}. Falling back to AI Brain.")
-
-    # 1. Brain Plans (Normal AI logic)
-    brain_out = brain_plan_ui(
-        prompt, history, user_context,
-        has_active_artifact=bool(current_artifact)
-    )
-    try:
-        planned = json.loads(brain_out)
-    except json.JSONDecodeError:
-        planned = {"reply": brain_out, "requires_ui": False}
-
-    reply = planned.get("reply", "Orchestrating your request...")
-
-    # Handle Edit Type — modify the currently active artifact
-    if planned.get("type") == "edit" and current_artifact:
-        edit_instruction = planned.get("edit_instruction", prompt)
-        logger.info(f"EDIT MODE: {edit_instruction[:80]}...")
-        try:
-            code = builder_edit_react(current_artifact, edit_instruction)
-            return reply, None, code, embedding
-        except Exception as e:
-            logger.error(f"Edit failed: {e}. Falling back to fresh build.")
-            planned["type"] = "build"
-            planned["requires_ui"] = True
-            planned["ui_spec"] = {"goal": prompt, "features": [], "style": "dark glassmorphism"}
-
-    # Handle Template Type
-    if planned.get("type") == "template":
-        template_id = planned.get("template_id")
-        data = planned.get("data", {})
-        logger.info(f"VAULT MATCH: Hydrating {template_id}...")
-        try:
-            code = get_hydrated_template(template_id, data)
-            return reply, json.dumps(planned), code, embedding
-        except Exception as e:
-            logger.error(f"Vault hydration failed: {e}. Falling back to Builder.")
-            planned["type"] = "build"
-            planned["requires_ui"] = True
-            if "ui_spec" not in planned:
-                planned["ui_spec"] = {"goal": f"Create a {template_id} application"}
-
-    # Handle Build Type
-    requires_ui = planned.get("requires_ui", False) or planned.get("type") == "build"
-    ui_spec = planned.get("ui_spec", None)
-
-    # 2. Builder Generates
-    code = None
-    if requires_ui and ui_spec:
-        code = builder_generate_react(json.dumps(ui_spec))
-
-    return reply, json.dumps(ui_spec) if ui_spec else None, code, embedding
