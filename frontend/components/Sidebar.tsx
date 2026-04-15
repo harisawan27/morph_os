@@ -156,7 +156,7 @@ export default function Sidebar() {
               exit={{ opacity: 0 }}
               className="flex items-center gap-2.5 overflow-hidden"
             >
-              <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-purple-600/30 to-blue-600/30 border border-white/10 flex items-center justify-center shrink-0">
+              <div className="w-7 h-7 rounded-xl bg-linear-to-br from-purple-600/30 to-blue-600/30 border border-white/10 flex items-center justify-center shrink-0">
                 <Ghost size={14} className="text-white/60" />
               </div>
               <div className="leading-none">

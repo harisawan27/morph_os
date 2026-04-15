@@ -230,11 +230,11 @@ export default function ChatCanvas({
           {/* Logo */}
           <div className="flex flex-col items-center gap-4 select-none">
             <div className="relative">
-              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-purple-600/20 to-blue-600/20 flex items-center justify-center"
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-linear-to-br from-purple-600/20 to-blue-600/20 flex items-center justify-center"
                 style={{ border: "1px solid var(--border)" }}>
                 <Ghost size={26} className="text-purple-400/60" />
               </div>
-              <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-purple-600/10 to-blue-600/10 blur-xl -z-10 scale-150" />
+              <div className="absolute inset-0 rounded-2xl bg-linear-to-br from-purple-600/10 to-blue-600/10 blur-xl -z-10 scale-150" />
             </div>
             <div className="text-center">
               <h1 className="text-xl sm:text-2xl font-light tracking-tight" style={{ color: "var(--t1)" }}>Morph OS</h1>
@@ -477,7 +477,7 @@ function MessageRow({
               className="max-w-[82%] sm:max-w-[75%] px-4 py-2.5 rounded-2xl rounded-tr-sm text-sm leading-relaxed"
               style={{ background: "var(--msg-bg)", border: "1px solid var(--msg-border)", color: "var(--t1)" }}
             >
-              <p className="whitespace-pre-wrap break-words">{m.text}</p>
+              <p className="whitespace-pre-wrap wrap-break-word">{m.text}</p>
             </div>
             {/* action bar — always visible */}
             <div className="flex items-center gap-0.5 pr-1">
@@ -510,13 +510,13 @@ function MessageRow({
 
   return (
     <div className="flex items-start gap-3 py-1">
-      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-600/50 to-blue-600/50 shrink-0 mt-0.5 flex items-center justify-center"
+      <div className="w-7 h-7 rounded-full bg-linear-to-br from-purple-600/50 to-blue-600/50 shrink-0 mt-0.5 flex items-center justify-center"
         style={{ border: "1px solid var(--border)" }}>
         <Ghost size={12} className="text-purple-300/70" />
       </div>
       <div className="flex-1 min-w-0">
         <p
-          className="text-sm leading-relaxed whitespace-pre-wrap break-words"
+          className="text-sm leading-relaxed whitespace-pre-wrap wrap-break-word"
           style={{ color: isError ? "#f87171" : "var(--t2)" }}
         >
           {m.text}
@@ -532,7 +532,7 @@ function MessageRow({
               color: "rgba(192,132,252,0.5)",
             }}
           >
-            <span className="flex gap-[3px] items-center">
+            <span className="flex gap-0.75 items-center">
               {[0,1,2].map(i => (
                 <span key={i} className="w-1 h-1 rounded-full animate-bounce"
                   style={{ background: "rgba(192,132,252,0.5)", animationDelay: `${i * 0.12}s` }} />
@@ -577,7 +577,7 @@ function MessageRow({
 function TypingIndicator() {
   return (
     <div className="flex items-start gap-3 pt-1">
-      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-600/40 to-blue-600/40 shrink-0 mt-0.5 flex items-center justify-center"
+      <div className="w-7 h-7 rounded-full bg-linear-to-br from-purple-600/40 to-blue-600/40 shrink-0 mt-0.5 flex items-center justify-center"
         style={{ border: "1px solid var(--border)" }}>
         <Ghost size={12} className="text-purple-300/50" />
       </div>
