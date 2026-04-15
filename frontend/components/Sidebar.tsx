@@ -6,7 +6,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession, signIn } from "next-auth/react";
 import {
-  Ghost, Plus, Settings, Menu, X, Trash2, User, LogIn, Vault,
+  Ghost, Plus, Settings, Menu, X, Trash2, User, LogIn, Vault, Pencil, Library,
 } from "lucide-react";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "";
@@ -18,8 +18,11 @@ export default function Sidebar() {
   const router      = useRouter();
   const [expanded,   setExpanded]   = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [sessions,   setSessions]   = useState<ChatSession[]>([]);
-  const [deleting,   setDeleting]   = useState<string | null>(null);
+  const [sessions,       setSessions]       = useState<ChatSession[]>([]);
+  const [deleting,       setDeleting]       = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [renamingId,     setRenamingId]     = useState<string | null>(null);
+  const [renameVal,      setRenameVal]      = useState("");
 
   const isOpen = expanded || mobileOpen;
   const { data: session } = useSession();
@@ -39,9 +42,30 @@ export default function Sidebar() {
 
   useEffect(() => { setMobileOpen(false); }, [pathname]);
 
-  const handleDelete = async (e: React.MouseEvent, id: string) => {
+  const startRename = (e: React.MouseEvent, s: ChatSession) => {
     e.preventDefault();
     e.stopPropagation();
+    setRenamingId(s.id);
+    setRenameVal(s.title);
+  };
+
+  const handleRename = async (id: string) => {
+    const trimmed = renameVal.trim();
+    setRenamingId(null);
+    if (!trimmed) return;
+    setSessions(prev => prev.map(s => s.id === id ? { ...s, title: trimmed } : s));
+    try {
+      await fetch(`${API}/api/sessions/${id}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: trimmed }),
+      });
+    } catch {}
+  };
+
+  const handleDelete = async (id: string) => {
+    setConfirmDeleteId(null);
     setDeleting(id);
     try {
       await fetch(`${API}/api/sessions/${id}`, { method: "DELETE", credentials: "include" });
@@ -153,6 +177,11 @@ export default function Sidebar() {
           {navItem("/artifacts", <Vault size={17} />, "The Vault")}
         </div>
 
+        {/* My Library */}
+        <div className="px-2 mb-1 shrink-0">
+          {navItem("/library", <Library size={17} />, "My Library")}
+        </div>
+
         {/* Divider + recent label */}
         {isOpen && sessions.length > 0 && (
           <div className="px-4 mb-1 shrink-0">
@@ -165,10 +194,68 @@ export default function Sidebar() {
           <div className="flex-1 overflow-y-auto overflow-x-hidden px-2 space-y-0.5 morph-scrollbar">
             {sessions.map(s => {
               const isActive = s.id === activeSessionId;
+              const isRenaming = renamingId === s.id;
+
+              if (isRenaming) {
+                return (
+                  <div
+                    key={s.id}
+                    className="flex items-center rounded-xl px-3 py-2"
+                    style={{ background: "var(--bg-active)" }}
+                  >
+                    <input
+                      autoFocus
+                      value={renameVal}
+                      onChange={e => setRenameVal(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === "Enter") handleRename(s.id);
+                        if (e.key === "Escape") setRenamingId(null);
+                      }}
+                      onBlur={() => handleRename(s.id)}
+                      className="flex-1 min-w-0 text-xs font-light bg-transparent outline-none"
+                      style={{ color: "var(--t1)" }}
+                    />
+                  </div>
+                );
+              }
+
+              if (confirmDeleteId === s.id) {
+                return (
+                  <div
+                    key={s.id}
+                    className="rounded-xl px-3 py-2.5 space-y-2"
+                    style={{ background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.18)" }}
+                  >
+                    <p className="text-[11px] font-medium" style={{ color: "var(--t2)" }}>Delete this chat?</p>
+                    <p className="text-[10px] leading-relaxed truncate" style={{ color: "var(--t4)" }}>
+                      {s.title.length > 32 ? s.title.slice(0, 32) + "…" : s.title}
+                    </p>
+                    <div className="flex gap-1.5">
+                      <button
+                        onClick={() => setConfirmDeleteId(null)}
+                        className="flex-1 py-1 text-[11px] rounded-lg transition-all"
+                        style={{ background: "var(--bg-card)", color: "var(--t3)", border: "1px solid var(--border)" }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => handleDelete(s.id)}
+                        className="flex-1 py-1 text-[11px] rounded-lg transition-all font-medium"
+                        style={{ background: "rgba(239,68,68,0.15)", color: "#f87171", border: "1px solid rgba(239,68,68,0.25)" }}
+                      >
+                        {deleting === s.id
+                          ? <span className="w-2.5 h-2.5 rounded-full border border-red-400/30 border-t-red-400 animate-spin block mx-auto" />
+                          : "Delete"}
+                      </button>
+                    </div>
+                  </div>
+                );
+              }
+
               return (
                 <Link key={s.id} href={`/session/${s.id}`}>
                   <div
-                    className="group relative flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all cursor-pointer"
+                    className="relative flex items-center gap-2 rounded-xl px-3 py-2.5 transition-all cursor-pointer"
                     style={{
                       background: isActive ? "var(--bg-active)" : "transparent",
                       color: isActive ? "var(--t1)" : "var(--t3)",
@@ -176,18 +263,29 @@ export default function Sidebar() {
                     onMouseEnter={e => { if (!isActive) { (e.currentTarget as HTMLElement).style.background = "var(--bg-hover)"; (e.currentTarget as HTMLElement).style.color = "var(--t1)"; } }}
                     onMouseLeave={e => { if (!isActive) { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--t3)"; } }}
                   >
-                    <span className="text-xs font-light truncate flex-1 min-w-0 pr-5">
-                      {s.title.length > 28 ? s.title.slice(0, 28) + "…" : s.title}
+                    <span className="text-xs font-light truncate flex-1 min-w-0">
+                      {s.title.length > 22 ? s.title.slice(0, 22) + "…" : s.title}
                     </span>
-                    <button
-                      onClick={e => handleDelete(e, s.id)}
-                      className="absolute right-2 opacity-0 group-hover:opacity-100 p-1 rounded-lg hover:bg-red-500/15 hover:text-red-400 transition-all"
-                      style={{ color: "var(--t4)" }}
-                    >
-                      {deleting === s.id
-                        ? <span className="w-2.5 h-2.5 rounded-full border border-red-400/30 border-t-red-400 animate-spin block" />
-                        : <Trash2 size={11} />}
-                    </button>
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      <button
+                        onClick={e => startRename(e, s)}
+                        className="p-1 rounded-lg transition-all"
+                        style={{ color: "var(--t5)" }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-hover)"; (e.currentTarget as HTMLElement).style.color = "var(--t2)"; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--t5)"; }}
+                      >
+                        <Pencil size={11} />
+                      </button>
+                      <button
+                        onClick={e => { e.preventDefault(); e.stopPropagation(); setConfirmDeleteId(s.id); }}
+                        className="p-1 rounded-lg transition-all"
+                        style={{ color: "var(--t5)" }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(239,68,68,0.1)"; (e.currentTarget as HTMLElement).style.color = "#f87171"; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--t5)"; }}
+                      >
+                        <Trash2 size={11} />
+                      </button>
+                    </div>
                   </div>
                 </Link>
               );
