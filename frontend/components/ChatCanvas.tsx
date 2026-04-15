@@ -5,7 +5,7 @@ import { Panel, Group, Separator } from "react-resizable-panels";
 import { AnimatePresence, motion } from "framer-motion";
 import OmniBar from "./OmniBar";
 import ArtifactRenderer from "./ArtifactRenderer";
-import { Ghost, Layers, ChevronRight, Sparkles, X } from "lucide-react";
+import { Ghost, Layers, ChevronRight, Sparkles, X, Copy, Check, Pencil, CornerDownLeft } from "lucide-react";
 import Link from "next/link";
 
 type Message = {
@@ -13,6 +13,7 @@ type Message = {
   role: "user" | "assistant";
   text: string;
   code?: string | null;
+  pending?: boolean; // true while artifact is still streaming in
 };
 type ActiveArtifact = { code: string; id: string } | null;
 
@@ -106,7 +107,7 @@ export default function ChatCanvas({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Core generate ───────────────────────────────────────────────────────
+  // ── Core generate (streaming SSE) ───────────────────────────────────────
   const handleGenerate = useCallback(async (prompt: string) => {
     const userMsg: Message = { id: Date.now().toString(), role: "user", text: prompt };
     setMessages(prev => [...prev, userMsg]);
@@ -117,6 +118,8 @@ export default function ChatCanvas({
       const raw = localStorage.getItem("morph_user_context");
       if (raw) user_context = JSON.parse(raw);
     } catch {}
+
+    let botMsgId: string | null = null;
 
     try {
       const res = await fetch(`${API}/api/generate`, {
@@ -132,31 +135,83 @@ export default function ChatCanvas({
         }),
       });
 
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.detail || `Error ${res.status}`);
-      }
+      if (!res.ok || !res.body) throw new Error(`Error ${res.status}`);
 
-      const data = await res.json();
-      const botMsg: Message = {
-        id: data.id || Date.now().toString(),
-        role: "assistant",
-        text: data.reply || "Done.",
-        code: data.code ?? null,
-      };
-      setMessages(prev => [...prev, botMsg]);
-      if (data.code) setActiveArtifact({ code: data.code, id: data.id });
-      window.dispatchEvent(new CustomEvent("morph:session-update"));
+      const reader  = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer    = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split("\n\n");
+        buffer = parts.pop() ?? "";
+
+        for (const part of parts) {
+          if (!part.startsWith("data: ")) continue;
+          let event: Record<string, unknown>;
+          try { event = JSON.parse(part.slice(6).trim()); } catch { continue; }
+
+          if (event.type === "reply") {
+            // Phase 1 — reply text arrives: hide typing indicator, show message
+            botMsgId = event.id as string;
+            setIsGenerating(false);
+            setMessages(prev => [...prev, {
+              id:      event.id as string,
+              role:    "assistant",
+              text:    event.text as string,
+              code:    null,
+              pending: !!(event.pending),
+            }]);
+          }
+
+          if (event.type === "artifact" && botMsgId) {
+            // Phase 2 — artifact arrives: attach to existing message, open canvas
+            const code = event.code as string;
+            const id   = event.id as string;
+            setMessages(prev => prev.map(m =>
+              m.id === id ? { ...m, code, pending: false } : m
+            ));
+            setActiveArtifact({ code, id });
+            if (isMobile) setMobileView("artifact");
+            window.dispatchEvent(new CustomEvent("morph:session-update"));
+          }
+
+          if (event.type === "done") {
+            if (botMsgId) {
+              setMessages(prev => prev.map(m =>
+                m.id === botMsgId ? { ...m, pending: false } : m
+              ));
+            }
+            window.dispatchEvent(new CustomEvent("morph:session-update"));
+          }
+
+          if (event.type === "error") throw new Error(event.text as string);
+        }
+      }
     } catch (e) {
       setMessages(prev => [...prev, {
-        id: Date.now().toString(),
+        id:   Date.now().toString(),
         role: "assistant",
         text: `Signal lost — ${e instanceof Error ? e.message : "Unknown error"}`,
       }]);
     } finally {
       setIsGenerating(false);
+      if (botMsgId) {
+        setMessages(prev => prev.map(m =>
+          m.id === botMsgId ? { ...m, pending: false } : m
+        ));
+      }
     }
-  }, [messages, sessionId, activeArtifact]);
+  }, [messages, sessionId, activeArtifact, isMobile]);
+
+  const handleResubmit = useCallback((index: number, newText: string) => {
+    setMessages(prev => prev.slice(0, index));
+    handleGenerate(newText);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [handleGenerate]);
 
   const isEmpty = messages.length === 0 && !isLoadingHistory && !isGenerating;
 
@@ -226,6 +281,7 @@ export default function ChatCanvas({
                   <MessageRow
                     key={m.id}
                     message={m}
+                    messageIndex={i}
                     isLast={i === messages.length - 1}
                     isMobile={isMobile}
                     onShowArtifact={() => {
@@ -234,6 +290,7 @@ export default function ChatCanvas({
                         if (isMobile) setMobileView("artifact");
                       }
                     }}
+                    onResubmit={handleResubmit}
                   />
                 ))
               )}
@@ -345,27 +402,108 @@ const HINTS = [
 // ─── Message row ──────────────────────────────────────────────────────────────
 function MessageRow({
   message: m,
+  messageIndex,
   isLast,
   isMobile,
   onShowArtifact,
+  onResubmit,
 }: {
   message: Message;
+  messageIndex: number;
   isLast: boolean;
   isMobile: boolean;
   onShowArtifact: () => void;
+  onResubmit: (index: number, text: string) => void;
 }) {
   const isUser  = m.role === "user";
   const isError = m.text.startsWith("Signal lost");
 
+  const [copied,   setCopied]   = useState(false);
+  const [editing,  setEditing]  = useState(false);
+  const [editText, setEditText] = useState(m.text);
+
+  const copy = (text: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    });
+  };
+
+  const submitEdit = () => {
+    const trimmed = editText.trim();
+    setEditing(false);
+    if (trimmed && trimmed !== m.text) onResubmit(messageIndex, trimmed);
+    else setEditText(m.text);
+  };
+
   if (isUser) {
     return (
-      <div className="flex justify-end py-1">
-        <div
-          className="max-w-[82%] sm:max-w-[75%] px-4 py-2.5 rounded-2xl rounded-tr-sm text-sm leading-relaxed"
-          style={{ background: "var(--msg-bg)", border: "1px solid var(--msg-border)", color: "var(--t1)" }}
-        >
-          <p className="whitespace-pre-wrap break-words">{m.text}</p>
-        </div>
+      <div className="flex flex-col items-end py-1 gap-1">
+        {editing ? (
+          <div className="max-w-[82%] sm:max-w-[75%] w-full">
+            <textarea
+              autoFocus
+              value={editText}
+              onChange={e => setEditText(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submitEdit(); }
+                if (e.key === "Escape") { setEditing(false); setEditText(m.text); }
+              }}
+              rows={Math.max(2, editText.split("\n").length)}
+              className="w-full text-sm leading-relaxed px-4 py-2.5 rounded-2xl rounded-tr-sm resize-none outline-none"
+              style={{ background: "var(--msg-bg)", border: "1px solid var(--border-md)", color: "var(--t1)" }}
+            />
+            <div className="flex justify-end gap-1.5 mt-1.5">
+              <button
+                onClick={() => { setEditing(false); setEditText(m.text); }}
+                className="px-2.5 py-1 text-[11px] rounded-lg transition-all"
+                style={{ color: "var(--t4)", background: "var(--bg-card)" }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitEdit}
+                className="px-2.5 py-1 text-[11px] rounded-lg flex items-center gap-1 transition-all"
+                style={{ color: "var(--t1)", background: "rgba(147,51,234,0.15)", border: "1px solid rgba(147,51,234,0.25)" }}
+              >
+                <CornerDownLeft size={10} />
+                Send
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div
+              className="max-w-[82%] sm:max-w-[75%] px-4 py-2.5 rounded-2xl rounded-tr-sm text-sm leading-relaxed"
+              style={{ background: "var(--msg-bg)", border: "1px solid var(--msg-border)", color: "var(--t1)" }}
+            >
+              <p className="whitespace-pre-wrap break-words">{m.text}</p>
+            </div>
+            {/* action bar — always visible */}
+            <div className="flex items-center gap-0.5 pr-1">
+              <button
+                onClick={() => { setEditing(true); setEditText(m.text); }}
+                className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] transition-all"
+                style={{ color: "var(--t4)" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-hover)"; (e.currentTarget as HTMLElement).style.color = "var(--t2)"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--t4)"; }}
+              >
+                <Pencil size={10} />
+                <span>Edit</span>
+              </button>
+              <button
+                onClick={() => copy(m.text)}
+                className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] transition-all"
+                style={{ color: "var(--t4)" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-hover)"; (e.currentTarget as HTMLElement).style.color = "var(--t2)"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--t4)"; }}
+              >
+                {copied ? <Check size={10} /> : <Copy size={10} />}
+                <span>{copied ? "Copied" : "Copy"}</span>
+              </button>
+            </div>
+          </>
+        )}
       </div>
     );
   }
@@ -384,7 +522,25 @@ function MessageRow({
           {m.text}
         </p>
 
-        {m.code && (
+        {m.pending && !m.code ? (
+          /* Artifact still generating — show pulsing placeholder */
+          <div
+            className="mt-2.5 flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px]"
+            style={{
+              background: "rgba(147,51,234,0.05)",
+              border: "1px solid rgba(147,51,234,0.12)",
+              color: "rgba(192,132,252,0.5)",
+            }}
+          >
+            <span className="flex gap-[3px] items-center">
+              {[0,1,2].map(i => (
+                <span key={i} className="w-1 h-1 rounded-full animate-bounce"
+                  style={{ background: "rgba(192,132,252,0.5)", animationDelay: `${i * 0.12}s` }} />
+              ))}
+            </span>
+            <span>Building canvas…</span>
+          </div>
+        ) : m.code ? (
           <button
             onClick={onShowArtifact}
             className="mt-2.5 flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-medium transition-all active:scale-[0.97]"
@@ -399,6 +555,17 @@ function MessageRow({
             <Layers size={11} />
             <span>Open in Canvas</span>
             <ChevronRight size={10} className="ml-0.5 opacity-50" />
+          </button>
+        ) : !isError && (
+          <button
+            onClick={() => copy(m.text)}
+            className="mt-1.5 flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] transition-all"
+            style={{ color: "var(--t4)" }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-hover)"; (e.currentTarget as HTMLElement).style.color = "var(--t2)"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--t4)"; }}
+          >
+            {copied ? <Check size={10} /> : <Copy size={10} />}
+            <span>{copied ? "Copied!" : "Copy"}</span>
           </button>
         )}
       </div>
