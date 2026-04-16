@@ -18,15 +18,16 @@ const nextConfig: NextConfig = {
   async rewrites() {
     const backendUrl = process.env.BACKEND_URL;
     if (!backendUrl) return [];
+    // Explicit routes only — /api/auth/** is intentionally absent so
+    // NextAuth's route handler handles signin/callback/error undisturbed.
     return [
-      {
-        // Proxy /api/* to the backend.
-        // Next.js rewrites run AFTER filesystem routes, so /api/auth/**
-        // is already handled by the NextAuth route handler and never
-        // reaches this rewrite.
-        source: "/api/:path*",
-        destination: `${backendUrl}/api/:path*`,
-      },
+      { source: "/api/generate",           destination: `${backendUrl}/api/generate` },
+      { source: "/api/generate-with-file", destination: `${backendUrl}/api/generate-with-file` },
+      { source: "/api/sessions",           destination: `${backendUrl}/api/sessions` },
+      { source: "/api/sessions/:path*",    destination: `${backendUrl}/api/sessions/:path*` },
+      { source: "/api/artifacts",          destination: `${backendUrl}/api/artifacts` },
+      { source: "/api/artifacts/:path*",   destination: `${backendUrl}/api/artifacts/:path*` },
+      { source: "/api/youtube/:path*",     destination: `${backendUrl}/api/youtube/:path*` },
     ];
   },
 };

@@ -22,8 +22,8 @@ export default function OmniBar({ onGenerate, onStop, isLoading, autoFocus }: Om
   const resize = useCallback(() => {
     const el = textareaRef.current;
     if (!el) return;
-    el.style.height = "0px";                                   // collapse first so scrollHeight shrinks too
-    el.style.height = Math.min(el.scrollHeight, 200) + "px";  // expand to content, cap at 200px
+    el.style.height = "auto";                                  // let browser compute natural height
+    el.style.height = Math.min(el.scrollHeight, 200) + "px";  // lock it in, cap at 200px
   }, []);
 
   useEffect(() => { resize(); }, [prompt, resize]);
@@ -54,7 +54,6 @@ export default function OmniBar({ onGenerate, onStop, isLoading, autoFocus }: Om
     onGenerate(val || "Analyze this file", file);
     setPrompt("");
     clearFile();
-    if (textareaRef.current) textareaRef.current.style.height = "auto";
   }, [prompt, file, isLoading, onGenerate, clearFile]);
 
   const onKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -108,11 +107,12 @@ export default function OmniBar({ onGenerate, onStop, isLoading, autoFocus }: Om
 
       {/* Bar */}
       <div
-        className="rounded-2xl transition-all duration-150"
+        className="rounded-2xl"
         style={{
           background: "var(--bg-input)",
           border: `1px solid ${borderColor}`,
           boxShadow: focused ? "0 0 0 3px rgba(139,92,246,0.08)" : "none",
+          transition: "border-color 150ms, box-shadow 150ms",
         }}
         onFocusCapture={() => setFocused(true)}
         onBlurCapture={() => setFocused(false)}

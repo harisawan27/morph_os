@@ -26,6 +26,7 @@ export const authOptions: NextAuthOptions = {
     maxAge: MAX_AGE,
 
     encode: async ({ secret, token }) => {
+      if (!token) return "";
       const key = new TextEncoder().encode(secret as string);
       return new jose.SignJWT(token as jose.JWTPayload)
         .setProtectedHeader({ alg: "HS256" })
@@ -36,9 +37,15 @@ export const authOptions: NextAuthOptions = {
 
     decode: async ({ secret, token }) => {
       if (!token) return null;
-      const key = new TextEncoder().encode(secret as string);
-      const { payload } = await jose.jwtVerify(token, key, { algorithms: ["HS256"] });
-      return payload as ReturnType<typeof jose.decodeJwt>;
+      try {
+        const key = new TextEncoder().encode(secret as string);
+        const { payload } = await jose.jwtVerify(token, key, { algorithms: ["HS256"] });
+        return payload as ReturnType<typeof jose.decodeJwt>;
+      } catch {
+        // Token invalid or signed with a different secret — treat as unauthenticated
+        // instead of throwing, which would redirect to /api/auth/error
+        return null;
+      }
     },
   },
 
@@ -60,6 +67,7 @@ export const authOptions: NextAuthOptions = {
 
   pages: {
     signIn: "/login",
+    error:  "/login",
   },
 };
 
