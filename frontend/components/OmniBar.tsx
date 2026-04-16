@@ -16,14 +16,14 @@ export default function OmniBar({ onGenerate, onStop, isLoading, autoFocus }: Om
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [focused,    setFocused]    = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const textareaRef  = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const resize = useCallback(() => {
     const el = textareaRef.current;
     if (!el) return;
     el.style.height = "auto";
-    el.style.height = Math.min(el.scrollHeight, 180) + "px";
+    el.style.height = Math.min(el.scrollHeight, 200) + "px";
   }, []);
 
   useEffect(() => { resize(); }, [prompt, resize]);
@@ -72,13 +72,21 @@ export default function OmniBar({ onGenerate, onStop, isLoading, autoFocus }: Om
     if (f) handleFile(f);
   };
 
-  const borderColor = isDragging || focused ? "var(--border-hi)" : "var(--border)";
+  const borderColor = isDragging
+    ? "var(--border-hi)"
+    : focused
+    ? "var(--border-md)"
+    : "var(--border)";
 
   return (
     <form onSubmit={e => { e.preventDefault(); submit(); }} className="w-full max-w-2xl mx-auto">
       <div
         className="rounded-2xl transition-all duration-150"
-        style={{ background: "var(--bg-input)", border: `1px solid ${borderColor}` }}
+        style={{
+          background: "var(--bg-input)",
+          border: `1px solid ${borderColor}`,
+          boxShadow: focused ? "0 0 0 3px rgba(139,92,246,0.08)" : "none",
+        }}
         onFocusCapture={() => setFocused(true)}
         onBlurCapture={() => setFocused(false)}
         onDragOver={onDragOver}
@@ -87,20 +95,20 @@ export default function OmniBar({ onGenerate, onStop, isLoading, autoFocus }: Om
       >
         {/* File preview chip */}
         {file && (
-          <div className="px-3 pt-2.5 pb-0">
+          <div className="px-4 pt-3 pb-0">
             <div
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px]"
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-[12px]"
               style={{ background: "rgba(147,51,234,0.08)", border: "1px solid rgba(147,51,234,0.15)" }}
             >
               {previewUrl
-                ? <img src={previewUrl} alt="" className="w-5 h-5 rounded object-cover shrink-0" />
-                : <FileText size={11} style={{ color: "rgba(192,132,252,0.7)" }} className="shrink-0" />}
-              <span className="truncate" style={{ color: "var(--t3)", maxWidth: "180px" }}>{file.name}</span>
+                ? <img src={previewUrl} alt="" className="w-6 h-6 rounded-lg object-cover shrink-0" />
+                : <FileText size={13} style={{ color: "rgba(192,132,252,0.7)" }} className="shrink-0" />}
+              <span className="truncate" style={{ color: "var(--t2)", maxWidth: "200px" }}>{file.name}</span>
               <button
                 type="button"
                 onClick={clearFile}
-                className="shrink-0 ml-0.5 transition-colors"
-                style={{ color: "var(--t4)" }}
+                className="shrink-0 w-4 h-4 rounded-full flex items-center justify-center transition-colors"
+                style={{ background: "rgba(255,255,255,0.06)", color: "var(--t4)" }}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "var(--t2)"; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--t4)"; }}
               >
@@ -110,22 +118,8 @@ export default function OmniBar({ onGenerate, onStop, isLoading, autoFocus }: Om
           </div>
         )}
 
-        {/* Input row */}
-        <div className="flex items-end gap-2 px-3 py-3">
-          {/* Paperclip */}
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isLoading}
-            className="shrink-0 mb-0.5 w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-150 disabled:opacity-30"
-            style={{ color: "var(--t4)" }}
-            title="Attach file (image, PDF, text)"
-            onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = "var(--bg-hover)"; el.style.color = "var(--t2)"; }}
-            onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = "transparent"; el.style.color = "var(--t4)"; }}
-          >
-            <Paperclip size={15} />
-          </button>
-
+        {/* Textarea — full width, no side buttons */}
+        <div className="px-4 pt-3.5 pb-1">
           <textarea
             ref={textareaRef}
             rows={1}
@@ -134,30 +128,54 @@ export default function OmniBar({ onGenerate, onStop, isLoading, autoFocus }: Om
             onKeyDown={onKey}
             disabled={isLoading}
             placeholder={file ? "Ask about this file…" : "Ask anything, build a tool, or open an app…"}
-            className="flex-1 bg-transparent text-[15px] leading-relaxed resize-none outline-none disabled:opacity-40 min-h-6"
-            style={{ color: "var(--t1)", caretColor: "var(--t1)", maxHeight: "180px" }}
+            className="w-full bg-transparent text-[15px] leading-relaxed resize-none outline-none disabled:opacity-40"
+            style={{
+              color: "var(--t1)",
+              caretColor: "var(--t1)",
+              minHeight: "28px",
+              maxHeight: "200px",
+            }}
           />
+        </div>
 
+        {/* Bottom row: attachment (left) + send/stop (right) */}
+        <div className="flex items-center justify-between px-3 pb-3 pt-1">
+          {/* Paperclip */}
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isLoading}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[12px] transition-all duration-150 disabled:opacity-30"
+            style={{ color: "var(--t4)", background: "transparent" }}
+            title="Attach file (image, PDF, text)"
+            onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = "var(--bg-hover)"; el.style.color = "var(--t2)"; }}
+            onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = "transparent"; el.style.color = "var(--t4)"; }}
+          >
+            <Paperclip size={15} />
+            {file && <span className="text-[11px]" style={{ color: "rgba(192,132,252,0.7)" }}>1 file</span>}
+          </button>
+
+          {/* Stop / Send */}
           {isLoading ? (
             <button
               type="button"
               onClick={onStop}
-              className="shrink-0 mb-0.5 w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-150 active:scale-90"
+              className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-150 active:scale-90"
               style={{ background: "var(--t1)", color: "var(--bg-page)" }}
               title="Stop generating"
             >
-              <Square size={11} fill="currentColor" strokeWidth={0} />
+              <Square size={12} fill="currentColor" strokeWidth={0} />
             </button>
           ) : (
             <button
               type="submit"
               disabled={!canSubmit}
-              className="shrink-0 mb-0.5 w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-150 active:scale-90"
+              className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-150 active:scale-90"
               style={canSubmit
                 ? { background: "var(--t1)", color: "var(--bg-page)" }
                 : { background: "var(--bg-card)", color: "var(--t5)", cursor: "default" }}
             >
-              <ArrowUp size={14} strokeWidth={2.5} />
+              <ArrowUp size={15} strokeWidth={2.5} />
             </button>
           )}
         </div>
@@ -173,9 +191,9 @@ export default function OmniBar({ onGenerate, onStop, isLoading, autoFocus }: Om
 
       <style>{`textarea::placeholder { color: var(--placeholder); }`}</style>
 
-      <p className="hidden sm:block text-center text-[10px] tracking-wide mt-1.5 select-none transition-all duration-200" style={{ color: "var(--t5)" }}>
+      <p className="hidden sm:block text-center text-[10px] tracking-wide mt-2 select-none" style={{ color: "var(--t5)" }}>
         {isLoading
-          ? "Click ■ to stop generation"
+          ? "Click ■ to stop · Shift+Enter for new line"
           : "Enter ↵ to send · Shift+Enter for new line · Drop files to attach"}
       </p>
     </form>

@@ -80,6 +80,11 @@ export default function Sidebar() {
     ? pathname.split("/session/")[1]
     : null;
 
+  const toggle = () => {
+    if (mobileOpen) setMobileOpen(false);
+    else setExpanded(v => !v);
+  };
+
   const navItem = (href: string, icon: React.ReactNode, label: string, exact = false) => {
     const active = exact ? pathname === href : pathname.startsWith(href);
     return (
@@ -90,8 +95,8 @@ export default function Sidebar() {
             background: active ? "var(--bg-active)" : "transparent",
             color: active ? "var(--t1)" : "var(--t3)",
           }}
-          onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = "var(--bg-hover)"; (e.currentTarget as HTMLElement).style.color = "var(--t1)"; }}
-          onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--t3)"; }}
+          onMouseEnter={e => { if (!active) { (e.currentTarget as HTMLElement).style.background = "var(--bg-hover)"; (e.currentTarget as HTMLElement).style.color = "var(--t1)"; } }}
+          onMouseLeave={e => { if (!active) { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--t3)"; } }}
         >
           <span className="shrink-0">{icon}</span>
           {isOpen && <span className="text-sm font-light whitespace-nowrap">{label}</span>}
@@ -102,7 +107,7 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* Mobile hamburger */}
+      {/* Mobile hamburger — outside sidebar */}
       <button
         className="md:hidden fixed top-0 left-0 z-50 w-14 h-14 flex items-center justify-center transition-colors active:scale-95"
         style={{ color: "var(--t3)" }}
@@ -138,20 +143,23 @@ export default function Sidebar() {
           borderColor: "var(--border)",
         }}
       >
-        {/* Top: logo + toggle */}
+        {/* Top: logo (non-functional) + hamburger toggle */}
         <div className="flex items-center shrink-0 h-14 px-3 gap-2">
-          {/* Ghost logo — always visible, acts as brand mark */}
-          <button
-            onClick={() => isOpen ? (mobileOpen ? setMobileOpen(false) : setExpanded(false)) : setExpanded(true)}
-            className="flex items-center gap-2.5 flex-1 min-w-0 rounded-xl px-1 py-1.5 transition-all"
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-hover)"; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
-          >
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 relative"
-              style={{ background: "linear-gradient(135deg, rgba(139,92,246,0.25), rgba(79,70,229,0.18))", border: "1px solid rgba(139,92,246,0.25)" }}>
+
+          {/* Brand mark — purely decorative, no click action */}
+          <div className="flex items-center gap-2.5 flex-1 min-w-0 px-1 py-1.5">
+            <div
+              className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 relative"
+              style={{
+                background: "linear-gradient(135deg, rgba(139,92,246,0.25), rgba(79,70,229,0.18))",
+                border: "1px solid rgba(139,92,246,0.25)",
+              }}
+            >
               <Ghost size={15} className="text-purple-400" />
-              <div className="absolute inset-0 rounded-xl blur-md -z-10 scale-125 opacity-40"
-                style={{ background: "radial-gradient(ellipse, rgba(139,92,246,0.4), transparent)" }} />
+              <div
+                className="absolute inset-0 rounded-xl blur-md -z-10 scale-125 opacity-40"
+                style={{ background: "radial-gradient(ellipse, rgba(139,92,246,0.4), transparent)" }}
+              />
             </div>
             {isOpen && (
               <motion.div
@@ -163,20 +171,18 @@ export default function Sidebar() {
                 <p className="text-[9px] uppercase tracking-widest mt-0.5" style={{ color: "var(--t4)" }}>Stealth Edition</p>
               </motion.div>
             )}
-          </button>
+          </div>
 
-          {/* Collapse button — only show when expanded */}
-          {isOpen && (
-            <button
-              className="w-7 h-7 flex items-center justify-center rounded-lg shrink-0 transition-all"
-              style={{ color: "var(--t4)" }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-hover)"; (e.currentTarget as HTMLElement).style.color = "var(--t2)"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--t4)"; }}
-              onClick={() => mobileOpen ? setMobileOpen(false) : setExpanded(false)}
-            >
-              <Menu size={15} />
-            </button>
-          )}
+          {/* Hamburger — always visible, always toggles */}
+          <button
+            onClick={toggle}
+            className="w-8 h-8 flex items-center justify-center rounded-xl shrink-0 transition-all"
+            style={{ color: "var(--t4)" }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-hover)"; (e.currentTarget as HTMLElement).style.color = "var(--t2)"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--t4)"; }}
+          >
+            <Menu size={16} />
+          </button>
         </div>
 
         {/* New Chat */}
@@ -223,16 +229,12 @@ export default function Sidebar() {
         {isOpen ? (
           <div className="flex-1 overflow-y-auto overflow-x-hidden px-2 space-y-0.5 morph-scrollbar">
             {sessions.filter(s => !searchQuery || s.title.toLowerCase().includes(searchQuery.toLowerCase())).map(s => {
-              const isActive = s.id === activeSessionId;
+              const isActive   = s.id === activeSessionId;
               const isRenaming = renamingId === s.id;
 
               if (isRenaming) {
                 return (
-                  <div
-                    key={s.id}
-                    className="flex items-center rounded-xl px-3 py-2"
-                    style={{ background: "var(--bg-active)" }}
-                  >
+                  <div key={s.id} className="flex items-center rounded-xl px-3 py-2" style={{ background: "var(--bg-active)" }}>
                     <input
                       autoFocus
                       value={renameVal}
@@ -338,7 +340,6 @@ export default function Sidebar() {
 
         {/* Footer */}
         <div className="px-2 pb-3 shrink-0 space-y-0.5 pt-2" style={{ borderTop: "1px solid var(--border)" }}>
-
           {navItem("/settings", <Settings size={16} />, "Settings")}
 
           {session ? (
