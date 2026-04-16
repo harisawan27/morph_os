@@ -6,7 +6,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession, signIn } from "next-auth/react";
 import {
-  Ghost, Plus, Settings, Menu, X, Trash2, User, LogIn, Vault, Pencil, Library,
+  Ghost, Plus, Settings, Menu, X, Trash2, User, LogIn, Vault, Pencil, Library, Search,
 } from "lucide-react";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "";
@@ -23,6 +23,7 @@ export default function Sidebar() {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [renamingId,     setRenamingId]     = useState<string | null>(null);
   const [renameVal,      setRenameVal]      = useState("");
+  const [searchQuery,    setSearchQuery]    = useState("");
 
   const isOpen = expanded || mobileOpen;
   const { data: session } = useSession();
@@ -137,33 +138,44 @@ export default function Sidebar() {
           borderColor: "var(--border)",
         }}
       >
-        {/* Top: toggle + logo */}
-        <div className="flex items-center shrink-0 h-14 px-3 gap-3">
+        {/* Top: logo + toggle */}
+        <div className="flex items-center shrink-0 h-14 px-3 gap-2">
+          {/* Ghost logo — always visible, acts as brand mark */}
           <button
-            className="w-9 h-9 flex items-center justify-center rounded-xl transition-all shrink-0"
-            style={{ color: "var(--t3)" }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-hover)"; (e.currentTarget as HTMLElement).style.color = "var(--t1)"; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--t3)"; }}
             onClick={() => isOpen ? (mobileOpen ? setMobileOpen(false) : setExpanded(false)) : setExpanded(true)}
+            className="flex items-center gap-2.5 flex-1 min-w-0 rounded-xl px-1 py-1.5 transition-all"
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-hover)"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
           >
-            <Menu size={17} />
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 relative"
+              style={{ background: "linear-gradient(135deg, rgba(139,92,246,0.25), rgba(79,70,229,0.18))", border: "1px solid rgba(139,92,246,0.25)" }}>
+              <Ghost size={15} className="text-purple-400" />
+              <div className="absolute inset-0 rounded-xl blur-md -z-10 scale-125 opacity-40"
+                style={{ background: "radial-gradient(ellipse, rgba(139,92,246,0.4), transparent)" }} />
+            </div>
+            {isOpen && (
+              <motion.div
+                initial={{ opacity: 0, x: -6 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="leading-none overflow-hidden"
+              >
+                <p className="text-sm font-semibold tracking-tight whitespace-nowrap" style={{ color: "var(--t1)" }}>Morph OS</p>
+                <p className="text-[9px] uppercase tracking-widest mt-0.5" style={{ color: "var(--t4)" }}>Stealth Edition</p>
+              </motion.div>
+            )}
           </button>
 
+          {/* Collapse button — only show when expanded */}
           {isOpen && (
-            <motion.div
-              initial={{ opacity: 0, x: -8 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0 }}
-              className="flex items-center gap-2.5 overflow-hidden"
+            <button
+              className="w-7 h-7 flex items-center justify-center rounded-lg shrink-0 transition-all"
+              style={{ color: "var(--t4)" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-hover)"; (e.currentTarget as HTMLElement).style.color = "var(--t2)"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--t4)"; }}
+              onClick={() => mobileOpen ? setMobileOpen(false) : setExpanded(false)}
             >
-              <div className="w-7 h-7 rounded-xl bg-linear-to-br from-purple-600/30 to-blue-600/30 border border-white/10 flex items-center justify-center shrink-0">
-                <Ghost size={14} className="text-white/60" />
-              </div>
-              <div className="leading-none">
-                <p className="text-sm font-medium tracking-tight whitespace-nowrap" style={{ color: "var(--t1)" }}>Morph OS</p>
-                <p className="text-[9px] uppercase tracking-widest" style={{ color: "var(--t4)" }}>Stealth</p>
-              </div>
-            </motion.div>
+              <Menu size={15} />
+            </button>
           )}
         </div>
 
@@ -182,17 +194,35 @@ export default function Sidebar() {
           {navItem("/library", <Library size={17} />, "My Library")}
         </div>
 
-        {/* Divider + recent label */}
+        {/* Search + recent label */}
         {isOpen && sessions.length > 0 && (
-          <div className="px-4 mb-1 shrink-0">
-            <p className="text-[9px] uppercase tracking-widest py-1" style={{ color: "var(--t5)" }}>Recent</p>
+          <div className="px-3 mb-1 shrink-0 space-y-2">
+            <div className="relative">
+              <Search size={11} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "var(--t5)" }} />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Search chats…"
+                className="w-full text-xs rounded-xl pl-8 pr-3 py-2 outline-none transition-colors"
+                style={{
+                  background: "var(--bg-card)",
+                  border: "1px solid var(--border)",
+                  color: "var(--t2)",
+                }}
+                onFocus={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border-md)"; }}
+                onBlur={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; }}
+              />
+              <style>{`input::placeholder { color: var(--placeholder); }`}</style>
+            </div>
+            <p className="text-[9px] uppercase tracking-widest px-1" style={{ color: "var(--t5)" }}>Recent</p>
           </div>
         )}
 
         {/* Session list */}
         {isOpen ? (
           <div className="flex-1 overflow-y-auto overflow-x-hidden px-2 space-y-0.5 morph-scrollbar">
-            {sessions.map(s => {
+            {sessions.filter(s => !searchQuery || s.title.toLowerCase().includes(searchQuery.toLowerCase())).map(s => {
               const isActive = s.id === activeSessionId;
               const isRenaming = renamingId === s.id;
 
@@ -294,6 +324,11 @@ export default function Sidebar() {
             {sessions.length === 0 && (
               <p className="text-center text-[10px] uppercase tracking-widest py-4" style={{ color: "var(--t5)" }}>
                 No chats yet
+              </p>
+            )}
+            {sessions.length > 0 && searchQuery && sessions.filter(s => s.title.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
+              <p className="text-center text-[10px] py-4" style={{ color: "var(--t5)" }}>
+                No results for &ldquo;{searchQuery}&rdquo;
               </p>
             )}
           </div>
