@@ -23,6 +23,9 @@ _TEMPLATE_NAMES: dict[str, str] = {
     "tic tac toe": "tictactoe", "tictactoe": "tictactoe", "tic-tac-toe": "tictactoe",
     "magic 8 ball": "magicball", "magic8ball": "magicball", "8 ball": "magicball", "magic ball": "magicball",
     "typing": "typing", "typing test": "typing", "typing speed": "typing", "typing speed test": "typing",
+    "chess": "chess", "chess game": "chess", "play chess": "chess",
+    "checkers": "checkers", "checkers game": "checkers", "draughts": "checkers", "play checkers": "checkers",
+    "toss": "toss", "coin toss": "toss", "flip a coin": "toss", "coin flip": "toss", "heads or tails": "toss",
     # Productivity
     "todo": "todo", "to do": "todo", "to-do": "todo", "todo list": "todo", "to do list": "todo",
     "kanban": "kanban", "kanban board": "kanban",
@@ -227,6 +230,9 @@ FEW-SHOT EXAMPLES (calibrate your judgment here)
 "trending movies this week" → search: "trending movies this week worldwide"
 "open snake" → template: snake
 "I want to play snake" → template: snake
+"open chess" → template: chess
+"play checkers" → template: checkers
+"flip a coin" → template: toss
 "launch the calculator" → template: calculator
 "show me a budget tracker" → template: budget
 "give me a todo list" → template: todo
@@ -247,7 +253,8 @@ TEMPLATE CATALOG
 ZERO-DATA (data: {{}}):
 todo, snake, calculator, timer, clock, color, habit, budget, kanban,
 password, qrcode, draw, converter, memory, tictactoe, typing,
-calendar, billsplit, gradient, pixel, matrix, magicball
+calendar, billsplit, gradient, pixel, matrix, magicball,
+chess, checkers, toss
 
 PARAMETRIC (provide rich data, no placeholders):
 - youtube:    {{ "title": "best YouTube search query" }}

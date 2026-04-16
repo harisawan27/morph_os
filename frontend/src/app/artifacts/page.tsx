@@ -67,6 +67,36 @@ const TEMPLATES: Template[] = [
     accent: "from-cyan-500/25 to-teal-500/10",
     preview: <TypingPreview />,
   },
+  {
+    id: "chess",
+    name: "Chess",
+    description: "Full chess with legal move validation, castling, en passant, and a greedy AI opponent.",
+    category: "Games",
+    icon: Gamepad2,
+    prompt: "chess game",
+    accent: "from-slate-500/20 to-indigo-500/10",
+    preview: <ChessPreview />,
+  },
+  {
+    id: "checkers",
+    name: "Checkers",
+    description: "Classic draughts with forced captures, multi-jump chains, king promotion, and AI mode.",
+    category: "Games",
+    icon: Gamepad2,
+    prompt: "checkers game",
+    accent: "from-red-500/20 to-blue-500/10",
+    preview: <CheckersPreview />,
+  },
+  {
+    id: "toss",
+    name: "Coin Toss",
+    description: "Pick heads or tails, flip with animation, track your win rate and history.",
+    category: "Fun",
+    icon: Sparkles,
+    prompt: "coin toss",
+    accent: "from-purple-500/20 to-indigo-500/10",
+    preview: <TossPreview />,
+  },
 
   // ── Productivity ──
   {
@@ -368,7 +398,7 @@ function DiaryPreview() {
       </div>
       <div className="flex gap-1.5 items-center">
         {["🌟","😊","😐","😔","😤"].map((e, i) => (
-          <div key={i} className={`w-5 h-5 rounded-lg flex items-center justify-center text-[10px] ${i === 1 ? "border border-green-500/40 bg-green-500/10" : "bg-white/[0.03] border border-white/[0.06]"}`}>{e}</div>
+          <div key={i} className={`w-5 h-5 rounded-lg flex items-center justify-center text-[10px] ${i === 1 ? "border border-green-500/40 bg-green-500/10" : "bg-white/3 border border-white/6"}`}>{e}</div>
         ))}
       </div>
       <div className="space-y-1">
@@ -389,7 +419,7 @@ function SnakePreview() {
   return (
     <div className="grid gap-0.5" style={{ gridTemplateColumns: "repeat(5,1fr)" }}>
       {grid.map((_, i) => (
-        <div key={i} className={`aspect-square rounded-sm ${snake.includes(i) ? "bg-green-400" : i === food ? "bg-red-400" : "bg-white/[0.04]"}`} />
+        <div key={i} className={`aspect-square rounded-sm ${snake.includes(i) ? "bg-green-400" : i === food ? "bg-red-400" : "bg-white/4"}`} />
       ))}
     </div>
   );
@@ -400,7 +430,7 @@ function MemoryPreview() {
   return (
     <div className="grid grid-cols-4 gap-1">
       {emojis.map((e, i) => (
-        <div key={i} className={`aspect-square rounded-lg flex items-center justify-center text-sm ${e ? "bg-white/10 border border-white/15" : "bg-white/[0.04] border border-white/[0.06]"}`}>
+        <div key={i} className={`aspect-square rounded-lg flex items-center justify-center text-sm ${e ? "bg-white/10 border border-white/15" : "bg-white/4 border border-white/6"}`}>
           {e}
         </div>
       ))}
@@ -413,7 +443,7 @@ function TicTacPreview() {
   return (
     <div className="grid grid-cols-3 gap-1 w-24 mx-auto">
       {b.map((v, i) => (
-        <div key={i} className={`aspect-square rounded-lg flex items-center justify-center text-sm border ${v === "×" ? "text-purple-400 border-white/10" : v === "○" ? "text-blue-400 border-white/10" : "border-white/[0.05]"} bg-white/[0.03]`}>
+        <div key={i} className={`aspect-square rounded-lg flex items-center justify-center text-sm border ${v === "×" ? "text-purple-400 border-white/10" : v === "○" ? "text-blue-400 border-white/10" : "border-white/5"} bg-white/3`}>
           {v}
         </div>
       ))}
@@ -450,7 +480,7 @@ function TodoPreview() {
     <div className="space-y-1.5 w-full">
       {items.map((it, i) => (
         <div key={i} className="flex items-center gap-2">
-          <div className={`w-3 h-3 rounded-md border flex-shrink-0 ${it.done ? "bg-emerald-500/40 border-emerald-500/60" : "border-white/20"}`} />
+          <div className={`w-3 h-3 rounded-md border shrink-0 ${it.done ? "bg-emerald-500/40 border-emerald-500/60" : "border-white/20"}`} />
           <span className={`text-[10px] ${it.done ? "line-through text-white/25" : "text-white/55"}`}>{it.t}</span>
         </div>
       ))}
@@ -461,7 +491,7 @@ function TodoPreview() {
 function PomodoroPreview() {
   return (
     <div className="flex items-center gap-4">
-      <div className="relative w-14 h-14 flex-shrink-0">
+      <div className="relative w-14 h-14 shrink-0">
         <svg width={56} height={56} className="-rotate-90" viewBox="0 0 56 56">
           <circle cx={28} cy={28} r={22} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth={5} />
           <circle cx={28} cy={28} r={22} fill="none" stroke="#a855f7" strokeWidth={5}
@@ -884,6 +914,68 @@ function MusicPreview() {
         {["⏮","⏸","⏭"].map(c => (
           <div key={c} className="w-6 h-6 flex items-center justify-center text-white/30 text-sm">{c}</div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+function ChessPreview() {
+  // 4×4 snapshot of a chess board corner
+  const board = [
+    ["♜","♞","♝","♛"],
+    ["♟","♟","♟","♟"],
+    ["","","",""],
+    ["♙","♙","♙","♙"],
+  ];
+  return (
+    <div className="grid grid-cols-4 gap-0 mx-auto rounded-lg overflow-hidden border border-white/[0.08]" style={{ width: 72 }}>
+      {board.flatMap((row, r) =>
+        row.map((piece, c) => {
+          const dark = (r + c) % 2 === 1;
+          return (
+            <div key={`${r}-${c}`} className="flex items-center justify-center text-[13px]"
+              style={{ width: 18, height: 18, background: dark ? "#1e1e2a" : "#0e0e14", color: r < 2 ? "rgba(96,165,250,0.85)" : "rgba(248,248,255,0.85)" }}>
+              {piece}
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
+}
+
+function CheckersPreview() {
+  const layout = [
+    [0,1,0,1],[1,0,1,0],[0,0,0,0],[0,2,0,2],
+  ];
+  return (
+    <div className="grid grid-cols-4 gap-0 mx-auto rounded-lg overflow-hidden border border-white/[0.08]" style={{ width: 72 }}>
+      {layout.flatMap((row, r) =>
+        row.map((cell, c) => {
+          const dark = (r + c) % 2 === 1;
+          return (
+            <div key={`${r}-${c}`} className="flex items-center justify-center"
+              style={{ width: 18, height: 18, background: dark ? "#1e1e1e" : "#0e0e0e" }}>
+              {cell === 1 && <div className="w-2.5 h-2.5 rounded-full" style={{ background: "radial-gradient(circle at 35% 35%, rgba(252,165,165,0.9), rgba(220,38,38,0.85))" }} />}
+              {cell === 2 && <div className="w-2.5 h-2.5 rounded-full" style={{ background: "radial-gradient(circle at 35% 35%, rgba(147,197,253,0.9), rgba(29,78,216,0.85))" }} />}
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
+}
+
+function TossPreview() {
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <div className="w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold"
+        style={{ background: "linear-gradient(135deg,#7c3aed,#6366f1)", border: "2px solid rgba(255,255,255,0.08)", boxShadow: "0 6px 24px rgba(0,0,0,0.5)" }}>
+        H
+      </div>
+      <div className="flex gap-1.5">
+        <div className="px-2.5 py-1 rounded-full text-[9px] font-medium" style={{ background: "rgba(124,58,237,0.15)", border: "1px solid rgba(124,58,237,0.3)", color: "#c4b5fd" }}>Heads</div>
+        <div className="px-2.5 py-1 rounded-full text-[9px] font-medium" style={{ background: "rgba(29,78,216,0.15)", border: "1px solid rgba(29,78,216,0.3)", color: "#93c5fd" }}>Tails</div>
       </div>
     </div>
   );

@@ -130,7 +130,7 @@ export default function Sidebar() {
       {/* Sidebar */}
       <motion.aside
         initial={false}
-        animate={{ width: isOpen ? 256 : 60 }}
+        animate={{ width: isOpen ? 256 : 68 }}
         transition={{ type: "spring", stiffness: 340, damping: 34 }}
         className={`
           fixed top-0 left-0 h-full z-40 flex flex-col
@@ -148,13 +148,13 @@ export default function Sidebar() {
 
           {/* Ghost icon — always visible, purely decorative brand mark */}
           <div
-            className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0 relative"
+            className="w-6 h-6 rounded-xl flex items-center justify-center shrink-0"
             style={{
               background: "linear-gradient(135deg, rgba(139,92,246,0.25), rgba(79,70,229,0.18))",
               border: "1px solid rgba(139,92,246,0.25)",
             }}
           >
-            <Ghost size={13} className="text-purple-400" />
+            <Ghost size={11} className="text-purple-400" />
           </div>
 
           {/* Name — only shown when open */}
@@ -171,12 +171,12 @@ export default function Sidebar() {
           {/* Hamburger — always visible, always toggles */}
           <button
             onClick={toggle}
-            className={`w-7 h-7 flex items-center justify-center rounded-xl shrink-0 transition-all ${!isOpen ? "ml-auto" : ""}`}
+            className={`w-6 h-6 flex items-center justify-center rounded-xl shrink-0 transition-all ${!isOpen ? "ml-auto" : ""}`}
             style={{ color: "var(--t4)" }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-hover)"; (e.currentTarget as HTMLElement).style.color = "var(--t2)"; }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--t4)"; }}
           >
-            <Menu size={15} />
+            <Menu size={14} />
           </button>
         </div>
 
