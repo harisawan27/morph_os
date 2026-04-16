@@ -14,7 +14,7 @@ from typing import Optional, Any
 
 from database import get_db, init_db, SessionLocal
 from models import Artifact
-from llm_pipeline import brain_plan_ui, execute_plan, embed_text, search_web
+from llm_pipeline import brain_plan_ui, execute_plan, embed_text, search_web, local_template_match
 from auth import get_current_user, get_optional_user
 
 logger = logging.getLogger(__name__)
@@ -113,19 +113,23 @@ async def generate_artifact(
             finally:
                 db.close()
 
-        # ── 3. Brain classifies + plans (in thread) ──────────────────────────
-        try:
-            brain_json = await asyncio.to_thread(
-                brain_plan_ui,
-                request.prompt,
-                request.history,
-                request.user_context,
-                bool(request.current_artifact),
-            )
-            planned = json.loads(brain_json)
-        except Exception as e:
-            logger.error(f"Brain failed: {e}")
-            planned = {"type": "chat", "reply": "Something went wrong on my end. Try again?"}
+        # ── 3. Local template fast-path (zero LLM cost, instant) ────────────
+        planned = local_template_match(request.prompt)
+
+        # ── 3b. Brain classifies + plans (in thread) — only if no local match ─
+        if planned is None:
+            try:
+                brain_json = await asyncio.to_thread(
+                    brain_plan_ui,
+                    request.prompt,
+                    request.history,
+                    request.user_context,
+                    bool(request.current_artifact),
+                )
+                planned = json.loads(brain_json)
+            except Exception as e:
+                logger.error(f"Brain failed: {e}")
+                planned = {"type": "chat", "reply": "Something went wrong on my end. Try again?"}
 
         reply       = planned.get("reply", "On it...")
         artifact_id = str(uuid.uuid4())

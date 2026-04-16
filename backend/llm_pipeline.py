@@ -14,6 +14,120 @@ FALLBACK_MODEL = 'gemini-2.0-flash'
 client = genai.Client()
 
 
+# ── Local template fast-path ─────────────────────────────────────────────────
+# Maps every recognisable name → canonical template_id
+_TEMPLATE_NAMES: dict[str, str] = {
+    # Games
+    "snake": "snake", "snake game": "snake",
+    "memory": "memory", "memory card": "memory", "memory game": "memory",
+    "tic tac toe": "tictactoe", "tictactoe": "tictactoe", "tic-tac-toe": "tictactoe",
+    "magic 8 ball": "magicball", "magic8ball": "magicball", "8 ball": "magicball", "magic ball": "magicball",
+    "typing": "typing", "typing test": "typing", "typing speed": "typing", "typing speed test": "typing",
+    # Productivity
+    "todo": "todo", "to do": "todo", "to-do": "todo", "todo list": "todo", "to do list": "todo",
+    "kanban": "kanban", "kanban board": "kanban",
+    "habit": "habit", "habit tracker": "habit",
+    "pomodoro": "pomodoro", "pomodoro timer": "pomodoro",
+    "timer": "timer", "countdown": "timer", "countdown timer": "timer",
+    "calendar": "calendar",
+    "notes": "notes", "note": "notes", "notepad": "notes", "rich notes": "notes",
+    # Finance
+    "budget": "budget", "budget tracker": "budget",
+    "bill splitter": "billsplit", "bill split": "billsplit", "split bill": "billsplit",
+    "calculator": "calculator", "calc": "calculator",
+    # Creative
+    "drawing": "draw", "drawing canvas": "draw", "draw": "draw",
+    "pixel art": "pixel", "pixel": "pixel", "pixel art editor": "pixel",
+    "gradient": "gradient", "gradient generator": "gradient",
+    "color palette": "color", "colour palette": "color",
+    "matrix": "matrix", "matrix rain": "matrix",
+    # Tools
+    "weather": "weather",
+    "music": "youtube", "music player": "youtube", "youtube": "youtube", "youtube player": "youtube",
+    "chart": "chart", "chart builder": "chart",
+    "flashcard": "flashcard", "flashcards": "flashcard",
+    "quiz": "quiz",
+    "spin wheel": "spinwheel", "spin the wheel": "spinwheel", "spinwheel": "spinwheel", "wheel": "spinwheel",
+    "password": "password", "password generator": "password",
+    "qr code": "qrcode", "qr": "qrcode", "qrcode": "qrcode",
+    "clock": "clock",
+    "converter": "converter", "unit converter": "converter",
+}
+
+# Phrases that signal "user wants to open/use a specific tool"
+_OPEN_TRIGGERS = (
+    "open ", "launch ", "start ", "play ", "load ",
+    "show me ", "give me ", "get me ", "bring up ",
+    "i want to play ", "i want to use ", "i want a ", "i want the ",
+    "let's play ", "lets play ",
+)
+
+def local_template_match(prompt: str) -> dict | None:
+    """
+    Returns a brain-compatible plan dict if the prompt clearly targets a template,
+    or None if the brain should decide.
+    Only fires on explicit open/launch/play signals to avoid false positives.
+    """
+    p = prompt.strip().lower().rstrip("!?.").strip()
+
+    # 1. Whole message IS just a template name (e.g. "snake", "calculator")
+    if p in _TEMPLATE_NAMES:
+        tid = _TEMPLATE_NAMES[p]
+        return {"type": "template", "template_id": tid, "data": {}, "reply": _open_reply(tid)}
+
+    # 2. Message starts with an explicit trigger phrase
+    for trigger in _OPEN_TRIGGERS:
+        if p.startswith(trigger):
+            remainder = p[len(trigger):].rstrip("!?.").strip()
+            # try exact match first, then prefix match
+            tid = _TEMPLATE_NAMES.get(remainder)
+            if not tid:
+                for name, template_id in _TEMPLATE_NAMES.items():
+                    if remainder.startswith(name) or name.startswith(remainder):
+                        tid = template_id
+                        break
+            if tid:
+                return {"type": "template", "template_id": tid, "data": {}, "reply": _open_reply(tid)}
+
+    return None
+
+
+def _open_reply(template_id: str) -> str:
+    friendly = {
+        "snake": "Here's Snake — use arrow keys to move!",
+        "memory": "Memory card game loaded — flip to match!",
+        "tictactoe": "Tic-Tac-Toe ready — X goes first!",
+        "magicball": "The Magic 8-Ball is ready for your question!",
+        "typing": "Typing Speed Test ready — start when you are!",
+        "todo": "Your Todo List is ready!",
+        "kanban": "Kanban board loaded!",
+        "habit": "Habit Tracker ready — start building streaks!",
+        "pomodoro": "Pomodoro Timer ready — stay focused!",
+        "timer": "Timer ready!",
+        "calendar": "Calendar loaded!",
+        "notes": "Notes opened — start writing!",
+        "budget": "Budget Tracker ready!",
+        "billsplit": "Bill Splitter ready — add your expenses!",
+        "calculator": "Calculator ready!",
+        "draw": "Drawing Canvas open — create something!",
+        "pixel": "Pixel Art Editor ready!",
+        "gradient": "Gradient Generator loaded!",
+        "color": "Color Palette ready!",
+        "matrix": "Matrix Rain initiated...",
+        "weather": "Opening weather widget!",
+        "youtube": "Music Player ready!",
+        "chart": "Chart Builder loaded!",
+        "flashcard": "Flashcards ready!",
+        "quiz": "Quiz loaded — good luck!",
+        "spinwheel": "Spin the Wheel ready!",
+        "password": "Password Generator ready!",
+        "qrcode": "QR Code Generator loaded!",
+        "clock": "Clock loaded!",
+        "converter": "Unit Converter ready!",
+    }
+    return friendly.get(template_id, f"Opening {template_id}!")
+
+
 def embed_text(text: str) -> list[float]:
     response = client.models.embed_content(
         model='gemini-embedding-001',
