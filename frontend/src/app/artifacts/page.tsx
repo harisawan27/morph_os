@@ -10,7 +10,7 @@ import {
   DollarSign, Kanban, Lock, QrCode, Pencil,
   ArrowLeftRight, BookOpen, ClipboardList, Layers,
   Brain, Keyboard, CalendarDays, Users, Wand2,
-  Cpu, Sparkles, Grid3X3, Ghost, RotateCcw,
+  Cpu, Sparkles, Grid3X3, Ghost, RotateCcw, NotebookPen,
 } from "lucide-react";
 
 // ─── Template catalog ──────────────────────────────────────────────────────────
@@ -69,6 +69,16 @@ const TEMPLATES: Template[] = [
   },
 
   // ── Productivity ──
+  {
+    id: "diary",
+    name: "Daily Diary",
+    description: "A personal diary with mood tracking, writing prompts, date navigation, and persistent entries.",
+    category: "Productivity",
+    icon: NotebookPen,
+    prompt: "open diary",
+    accent: "from-violet-500/20 to-indigo-500/10",
+    preview: <DiaryPreview />,
+  },
   {
     id: "todo",
     name: "Todo List",
@@ -345,6 +355,32 @@ const CATEGORIES = ["All", "Games", "Productivity", "Finance", "Creative", "Visu
 
 // ─── Mini preview components ───────────────────────────────────────────────────
 // Each is a tiny static visual hint of what the template looks like
+
+function DiaryPreview() {
+  return (
+    <div className="space-y-2 w-full text-left">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5">
+          <span className="text-sm">📔</span>
+          <span className="text-[10px] font-semibold" style={{ color: "rgba(255,255,255,0.55)" }}>Daily Diary</span>
+        </div>
+        <span className="text-[8px] uppercase tracking-widest" style={{ color: "rgba(167,139,250,0.6)" }}>Today</span>
+      </div>
+      <div className="flex gap-1.5 items-center">
+        {["🌟","😊","😐","😔","😤"].map((e, i) => (
+          <div key={i} className={`w-5 h-5 rounded-lg flex items-center justify-center text-[10px] ${i === 1 ? "border border-green-500/40 bg-green-500/10" : "bg-white/[0.03] border border-white/[0.06]"}`}>{e}</div>
+        ))}
+      </div>
+      <div className="space-y-1">
+        <div className="h-1.5 rounded-full bg-white/10 w-full" />
+        <div className="h-1.5 rounded-full bg-white/8 w-5/6" />
+        <div className="h-1.5 rounded-full bg-white/6 w-4/5" />
+        <div className="h-1.5 rounded-full bg-white/10 w-full" />
+      </div>
+      <div className="text-[9px] italic" style={{ color: "rgba(255,255,255,0.2)" }}>"What made today worth remembering?"</div>
+    </div>
+  );
+}
 
 function SnakePreview() {
   const grid = Array(25).fill(0);

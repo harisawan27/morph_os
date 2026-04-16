@@ -31,6 +31,7 @@ _TEMPLATE_NAMES: dict[str, str] = {
     "timer": "timer", "countdown": "timer", "countdown timer": "timer",
     "calendar": "calendar",
     "notes": "notes", "note": "notes", "notepad": "notes", "rich notes": "notes",
+    "diary": "diary", "daily diary": "diary", "journal": "diary", "my diary": "diary",
     # Finance
     "budget": "budget", "budget tracker": "budget",
     "bill splitter": "billsplit", "bill split": "billsplit", "split bill": "billsplit",
@@ -122,6 +123,7 @@ def _open_reply(template_id: str) -> str:
         "spinwheel": "Spin the Wheel ready!",
         "password": "Password Generator ready!",
         "qrcode": "QR Code Generator loaded!",
+        "diary": "Your diary is open — write freely.",
         "clock": "Clock loaded!",
         "converter": "Unit Converter ready!",
     }
@@ -245,7 +247,7 @@ TEMPLATE CATALOG
 ZERO-DATA (data: {{}}):
 todo, snake, calculator, timer, clock, color, habit, budget, kanban,
 password, qrcode, draw, converter, memory, tictactoe, typing,
-calendar, billsplit, gradient, pixel, matrix, magicball
+calendar, billsplit, gradient, pixel, matrix, magicball, diary
 
 PARAMETRIC (provide rich data, no placeholders):
 - youtube:    {{ "title": "best YouTube search query" }}
