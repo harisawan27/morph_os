@@ -65,7 +65,7 @@ export default function OmniBar({ onGenerate, isLoading, autoFocus }: OmniBarPro
           onChange={e => setPrompt(e.target.value)}
           onKeyDown={onKey}
           disabled={isLoading}
-          placeholder="Ask anything or describe what to build…"
+          placeholder="Ask anything, build a tool, or open an app…"
           className="flex-1 bg-transparent text-[15px] leading-relaxed resize-none outline-none disabled:opacity-40 min-h-[24px]"
           style={{
             color: "var(--t1)",

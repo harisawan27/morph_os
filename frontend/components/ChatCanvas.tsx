@@ -222,49 +222,64 @@ export default function ChatCanvas({
     <div className="flex flex-col h-full" style={{ background: "var(--bg-panel)" }}>
 
       {isEmpty ? (
-        /* ── EMPTY STATE: centered layout like Claude ── */
-        <div className="flex-1 flex flex-col items-center justify-center px-4 gap-8 pb-8">
+        /* ── EMPTY STATE ── */
+        <div className="flex-1 flex flex-col items-center justify-center px-4 pb-4 relative overflow-hidden">
 
-          <OnboardingNudge />
+          {/* Ambient glow */}
+          <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[260px] rounded-full pointer-events-none"
+            style={{ background: "radial-gradient(ellipse, rgba(147,51,234,0.06) 0%, transparent 70%)" }} />
 
-          {/* Logo */}
-          <div className="flex flex-col items-center gap-4 select-none">
+          {/* Icon + Heading */}
+          <div className="flex flex-col items-center gap-5 mb-8 select-none">
             <div className="relative">
-              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-linear-to-br from-purple-600/20 to-blue-600/20 flex items-center justify-center"
-                style={{ border: "1px solid var(--border)" }}>
-                <Ghost size={26} className="text-purple-400/60" />
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center"
+                style={{ background: "linear-gradient(135deg, rgba(147,51,234,0.18), rgba(37,99,235,0.14))", border: "1px solid rgba(147,51,234,0.18)" }}>
+                <Ghost size={22} className="text-purple-400/80" />
               </div>
-              <div className="absolute inset-0 rounded-2xl bg-linear-to-br from-purple-600/10 to-blue-600/10 blur-xl -z-10 scale-150" />
+              <div className="absolute inset-0 rounded-2xl scale-150 -z-10 blur-xl"
+                style={{ background: "radial-gradient(ellipse, rgba(147,51,234,0.12), transparent)" }} />
             </div>
             <div className="text-center">
-              <h1 className="text-xl sm:text-2xl font-light tracking-tight" style={{ color: "var(--t1)" }}>Morph OS</h1>
-              <p className="text-xs sm:text-sm mt-1" style={{ color: "var(--t4)" }}>Morph any idea into a living interface</p>
+              <h1 className="text-2xl sm:text-[28px] font-semibold tracking-tight mb-2" style={{ color: "var(--t1)" }}>
+                What can I make for you?
+              </h1>
+              <p className="text-sm sm:text-[15px]" style={{ color: "var(--t4)" }}>
+                Build apps, get answers, create tools — just describe it.
+              </p>
             </div>
           </div>
 
-          {/* Hint chips */}
-          <div className="flex flex-wrap justify-center gap-1.5 sm:gap-2 max-w-sm">
-            {HINTS.map(h => (
-              <button
-                key={h.prompt}
-                onClick={() => handleGenerate(h.prompt)}
-                className="px-3 py-1.5 text-[11px] rounded-full transition-all active:scale-95"
-                style={{
-                  background: "var(--bg-card)",
-                  border: "1px solid var(--border)",
-                  color: "var(--t3)",
-                }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-hover)"; (e.currentTarget as HTMLElement).style.color = "var(--t2)"; (e.currentTarget as HTMLElement).style.borderColor = "var(--border-md)"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-card)"; (e.currentTarget as HTMLElement).style.color = "var(--t3)"; (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; }}
-              >
-                {h.label}
-              </button>
-            ))}
+          {/* OmniBar */}
+          <div className="w-full max-w-2xl mb-4">
+            <OmniBar onGenerate={handleGenerate} isLoading={isGenerating} autoFocus />
           </div>
 
-          {/* OmniBar — centered with the content */}
-          <div className="w-full max-w-2xl">
-            <OmniBar onGenerate={handleGenerate} isLoading={isGenerating} autoFocus />
+          {/* Suggestion chips — horizontal scroll on mobile */}
+          <div className="w-full max-w-2xl overflow-x-auto" style={{ WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
+            <div className="flex gap-2 pb-1 justify-start sm:justify-center" style={{ minWidth: "max-content", padding: "2px 2px 4px" }}>
+              {HINTS.map(h => (
+                <button
+                  key={h.prompt}
+                  onClick={() => handleGenerate(h.prompt)}
+                  className="shrink-0 px-3.5 py-2 text-[12px] rounded-xl transition-all active:scale-95"
+                  style={{
+                    background: "var(--bg-card)",
+                    border: "1px solid var(--border)",
+                    color: "var(--t3)",
+                    whiteSpace: "nowrap",
+                  }}
+                  onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = "var(--bg-hover)"; el.style.color = "var(--t2)"; el.style.borderColor = "var(--border-md)"; }}
+                  onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = "var(--bg-card)"; el.style.color = "var(--t3)"; el.style.borderColor = "var(--border)"; }}
+                >
+                  {h.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Onboarding nudge — compact, below chips */}
+          <div className="mt-6 w-full max-w-2xl">
+            <OnboardingNudge />
           </div>
         </div>
 
@@ -391,12 +406,14 @@ export default function ChatCanvas({
 
 // ─── Hints ────────────────────────────────────────────────────────────────────
 const HINTS = [
-  { label: "Weather Tokyo",   prompt: "weather in Tokyo"     },
-  { label: "Snake Game",      prompt: "snake game"           },
-  { label: "Pomodoro Timer",  prompt: "pomodoro timer"       },
-  { label: "Kanban Board",    prompt: "kanban board"         },
-  { label: "Color Palette",   prompt: "color palette"        },
-  { label: "Bill Splitter",   prompt: "bill split calculator"},
+  { label: "Build a habit tracker",       prompt: "build me a habit tracker"        },
+  { label: "Open Snake",                  prompt: "open snake"                      },
+  { label: "Weather in Tokyo",            prompt: "weather in Tokyo"                },
+  { label: "Pomodoro timer",              prompt: "open pomodoro timer"             },
+  { label: "Explain quantum computing",   prompt: "explain quantum computing simply"},
+  { label: "Kanban board",               prompt: "open kanban board"               },
+  { label: "Play lofi music",             prompt: "play me some lofi music"         },
+  { label: "Bill splitter",              prompt: "open bill splitter"              },
 ];
 
 // ─── Message row ──────────────────────────────────────────────────────────────
