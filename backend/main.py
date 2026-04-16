@@ -14,7 +14,7 @@ from typing import Optional, Any
 
 from database import get_db, init_db, SessionLocal
 from models import Artifact
-from llm_pipeline import brain_plan_ui, execute_plan, embed_text
+from llm_pipeline import brain_plan_ui, execute_plan, embed_text, search_web
 from auth import get_current_user, get_optional_user
 
 logger = logging.getLogger(__name__)
@@ -129,6 +129,38 @@ async def generate_artifact(
 
         reply       = planned.get("reply", "On it...")
         artifact_id = str(uuid.uuid4())
+
+        # ── 4a. Web search — fetch live result before yielding reply ─────────
+        if planned.get("type") == "search":
+            query = planned.get("query", request.prompt)
+            try:
+                search_result = await asyncio.to_thread(search_web, query)
+                reply = search_result
+            except Exception as e:
+                logger.error(f"Web search failed: {e}")
+                reply = "I tried to search the web but hit an error. Please try again."
+            yield _sse({"type": "reply", "text": reply, "id": artifact_id, "pending": False})
+            if user_id:
+                db = SessionLocal()
+                try:
+                    from models import Artifact as ArtifactModel
+                    artifact = ArtifactModel(
+                        id=artifact_id,
+                        user_id=user_id,
+                        session_id=request.session_id,
+                        prompt=request.prompt,
+                        reply=reply,
+                        embedding=embedding,
+                    )
+                    db.add(artifact)
+                    db.commit()
+                except Exception as e:
+                    logger.error(f"Persist search failed: {e}")
+                    db.rollback()
+                finally:
+                    db.close()
+            yield _sse({"type": "done"})
+            return
 
         # ── 4. Yield reply immediately — user sees this right away ───────────
         needs_artifact = planned.get("type") in ("template", "build", "edit") or planned.get("requires_ui")

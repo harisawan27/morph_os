@@ -72,6 +72,12 @@ TYPE DECISION RULES
 "build" — Use ONLY for a truly custom interactive app with specific requirements not covered by any template.
   Clear signals: "build me a...", "create a custom...", "make an app that..."
 
+"search" — Use when the user needs LIVE or CURRENT information that changes frequently.
+  Signals: "trending", "latest", "today", "right now", "current", "news", "scores", "price"
+  Examples: trending songs/movies/memes, breaking news, live sports scores, crypto/stock prices,
+  today's releases, weather as a question (not "show me weather widget").
+  Provide a clean search query that will return useful results.
+
 "edit" — Use ONLY when an active artifact is on screen AND user wants to modify it.
   Signals: "make it...", "add X to it", "change the color", "update it", "fix the..."
   Pronouns referring to the current UI: "it", "this", "the app", "the widget"
@@ -98,6 +104,11 @@ FEW-SHOT EXAMPLES (calibrate your judgment here)
 "I was drawing yesterday" → chat: [respond conversationally — do NOT open drawing canvas]
 "can you calculate compound interest?" → chat: [explain or calculate — do NOT open calculator]
 "how do I convert Celsius to Fahrenheit?" → chat: "The formula is (C × 9/5) + 32." — do NOT open converter
+"top 5 trending songs" → search: "top 5 trending songs globally right now"
+"latest news" → search: "breaking world news today"
+"what's bitcoin price?" → search: "bitcoin price today USD"
+"who won yesterday's match?" → search: "cricket/football match results yesterday"
+"trending movies this week" → search: "trending movies this week worldwide"
 "open snake" → template: snake
 "I want to play snake" → template: snake
 "launch the calculator" → template: calculator
@@ -136,6 +147,8 @@ OUTPUT FORMAT — always valid JSON, one of:
 ════════════════════════════════════════
 
 {{ "type": "chat", "reply": "Your full conversational response" }}
+
+{{ "type": "search", "query": "optimized search query string", "reply": "Searching the web for you..." }}
 
 {{ "type": "template", "template_id": "<id>", "data": {{ ... }}, "reply": "Short friendly acknowledgment" }}
 
@@ -229,6 +242,33 @@ def execute_plan(
 
     # ── Chat / no artifact ───────────────────────────────────────────────────
     return None, None
+
+
+def search_web(query: str) -> str:
+    """Uses Gemini with Google Search grounding to answer real-time queries."""
+    @retry(
+        retry=retry_if_exception_type(errors.ServerError),
+        stop=stop_after_attempt(2),
+        wait=wait_exponential(multiplier=1, min=1, max=4),
+    )
+    def _search(model_name):
+        logger.info(f"Web search: '{query[:60]}...' via {model_name}")
+        return client.models.generate_content(
+            model=model_name,
+            contents=query,
+            config=types.GenerateContentConfig(
+                tools=[types.Tool(google_search=types.GoogleSearch())],
+                temperature=0.2,
+            ),
+        )
+
+    try:
+        response = _search(PRIMARY_MODEL)
+    except Exception as e:
+        logger.warning(f"Primary search failed, falling back: {e}")
+        response = _search(FALLBACK_MODEL)
+
+    return response.text
 
 
 def builder_generate_react(ui_spec: str) -> str:
