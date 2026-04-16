@@ -40,7 +40,10 @@ app.add_middleware(
 
 @app.on_event("startup")
 def on_startup():
-    init_db()
+    try:
+        init_db()
+    except Exception as e:
+        logger.error(f"Database init failed (continuing anyway): {e}")
 
 
 # ─── Auth ────────────────────────────────────────────────────────────────────
