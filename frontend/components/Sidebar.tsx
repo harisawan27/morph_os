@@ -143,45 +143,40 @@ export default function Sidebar() {
           borderColor: "var(--border)",
         }}
       >
-        {/* Top: logo (non-functional) + hamburger toggle */}
-        <div className="flex items-center shrink-0 h-14 px-3 gap-2">
+        {/* Top: logo always visible + hamburger always visible */}
+        <div className="flex items-center shrink-0 h-14 px-2 gap-1.5">
 
-          {/* Brand mark — purely decorative, no click action */}
-          <div className="flex items-center gap-2.5 flex-1 min-w-0 px-1 py-1.5">
-            <div
-              className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 relative"
-              style={{
-                background: "linear-gradient(135deg, rgba(139,92,246,0.25), rgba(79,70,229,0.18))",
-                border: "1px solid rgba(139,92,246,0.25)",
-              }}
-            >
-              <Ghost size={15} className="text-purple-400" />
-              <div
-                className="absolute inset-0 rounded-xl blur-md -z-10 scale-125 opacity-40"
-                style={{ background: "radial-gradient(ellipse, rgba(139,92,246,0.4), transparent)" }}
-              />
-            </div>
-            {isOpen && (
-              <motion.div
-                initial={{ opacity: 0, x: -6 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="leading-none overflow-hidden"
-              >
-                <p className="text-sm font-semibold tracking-tight whitespace-nowrap" style={{ color: "var(--t1)" }}>Morph OS</p>
-                <p className="text-[9px] uppercase tracking-widest mt-0.5" style={{ color: "var(--t4)" }}>Stealth Edition</p>
-              </motion.div>
-            )}
+          {/* Ghost icon — always visible, purely decorative brand mark */}
+          <div
+            className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0 relative"
+            style={{
+              background: "linear-gradient(135deg, rgba(139,92,246,0.25), rgba(79,70,229,0.18))",
+              border: "1px solid rgba(139,92,246,0.25)",
+            }}
+          >
+            <Ghost size={13} className="text-purple-400" />
           </div>
+
+          {/* Name — only shown when open */}
+          {isOpen && (
+            <motion.div
+              initial={{ opacity: 0, x: -6 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="leading-none flex-1 min-w-0 overflow-hidden"
+            >
+              <p className="text-sm font-semibold tracking-tight whitespace-nowrap" style={{ color: "var(--t1)" }}>Morph OS</p>
+            </motion.div>
+          )}
 
           {/* Hamburger — always visible, always toggles */}
           <button
             onClick={toggle}
-            className="w-8 h-8 flex items-center justify-center rounded-xl shrink-0 transition-all"
+            className={`w-7 h-7 flex items-center justify-center rounded-xl shrink-0 transition-all ${!isOpen ? "ml-auto" : ""}`}
             style={{ color: "var(--t4)" }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-hover)"; (e.currentTarget as HTMLElement).style.color = "var(--t2)"; }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--t4)"; }}
           >
-            <Menu size={16} />
+            <Menu size={15} />
           </button>
         </div>
 

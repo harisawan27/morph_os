@@ -119,7 +119,7 @@ export default function OmniBar({ onGenerate, onStop, isLoading, autoFocus }: Om
         )}
 
         {/* Textarea — full width, no side buttons */}
-        <div className="px-4 pt-3.5 pb-1">
+        <div className="px-4 pt-3 pb-0">
           <textarea
             ref={textareaRef}
             rows={1}
@@ -132,14 +132,14 @@ export default function OmniBar({ onGenerate, onStop, isLoading, autoFocus }: Om
             style={{
               color: "var(--t1)",
               caretColor: "var(--t1)",
-              minHeight: "28px",
+              minHeight: "26px",
               maxHeight: "200px",
             }}
           />
         </div>
 
         {/* Bottom row: attachment (left) + send/stop (right) */}
-        <div className="flex items-center justify-between px-3 pb-3 pt-1">
+        <div className="flex items-center justify-between px-3 pb-2.5 pt-1">
           {/* Paperclip */}
           <button
             type="button"

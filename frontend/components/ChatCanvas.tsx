@@ -262,62 +262,54 @@ export default function ChatCanvas({
 
       {isEmpty ? (
         /* ── EMPTY STATE ── */
-        <div className="flex-1 flex flex-col items-center justify-center px-4 pb-4 relative overflow-hidden">
+        <div className="flex-1 flex flex-col items-center justify-center px-4 pb-8 relative overflow-hidden">
 
           {/* Ambient glow */}
-          <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-125 h-65 rounded-full pointer-events-none"
-            style={{ background: "radial-gradient(ellipse, rgba(147,51,234,0.06) 0%, transparent 70%)" }} />
+          <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-150 h-75 rounded-full pointer-events-none"
+            style={{ background: "radial-gradient(ellipse, rgba(147,51,234,0.07) 0%, transparent 70%)" }} />
 
-          {/* Icon + Heading */}
-          <div className="flex flex-col items-center gap-5 mb-8 select-none">
-            <div className="relative">
-              <div className="w-12 h-12 rounded-2xl flex items-center justify-center"
-                style={{ background: "linear-gradient(135deg, rgba(147,51,234,0.18), rgba(37,99,235,0.14))", border: "1px solid rgba(147,51,234,0.18)" }}>
-                <Ghost size={22} className="text-purple-400/80" />
-              </div>
-              <div className="absolute inset-0 rounded-2xl scale-150 -z-10 blur-xl"
-                style={{ background: "radial-gradient(ellipse, rgba(147,51,234,0.12), transparent)" }} />
-            </div>
-            <div className="text-center">
-              <h1 className="text-2xl sm:text-[28px] font-semibold tracking-tight mb-2" style={{ color: "var(--t1)" }}>
-                What can I make for you?
-              </h1>
-              <p className="text-sm sm:text-[15px]" style={{ color: "var(--t4)" }}>
-                Build apps, get answers, create tools — just describe it.
-              </p>
-            </div>
+          {/* Greeting */}
+          <div className="mb-7 select-none text-center">
+            <p className="text-base font-normal mb-1" style={{
+              background: "linear-gradient(90deg, rgba(192,132,252,0.9), rgba(129,140,248,0.9))",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+            }}>
+              Welcome to Morph OS
+            </p>
+            <h1 className="text-[32px] sm:text-[40px] font-semibold tracking-tight leading-tight" style={{ color: "var(--t1)" }}>
+              What can I build for you?
+            </h1>
           </div>
 
           {/* OmniBar */}
-          <div className="w-full max-w-2xl mb-4">
+          <div className="w-full max-w-170 mb-5">
             <OmniBar onGenerate={handleGenerate} onStop={handleStop} isLoading={isGenerating} autoFocus />
           </div>
 
-          {/* Suggestion chips — horizontal scroll on mobile */}
-          <div className="w-full max-w-2xl overflow-x-auto" style={{ WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
-            <div className="flex gap-2 pb-1 justify-start sm:justify-center" style={{ minWidth: "max-content", padding: "2px 2px 4px" }}>
-              {HINTS.map(h => (
-                <button
-                  key={h.prompt}
-                  onClick={() => handleGenerate(h.prompt)}
-                  className="shrink-0 px-3.5 py-2 text-[12px] rounded-xl transition-all active:scale-95"
-                  style={{
-                    background: "var(--bg-card)",
-                    border: "1px solid var(--border)",
-                    color: "var(--t3)",
-                    whiteSpace: "nowrap",
-                  }}
-                  onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = "var(--bg-hover)"; el.style.color = "var(--t2)"; el.style.borderColor = "var(--border-md)"; }}
-                  onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = "var(--bg-card)"; el.style.color = "var(--t3)"; el.style.borderColor = "var(--border)"; }}
-                >
-                  {h.label}
-                </button>
-              ))}
-            </div>
+          {/* Suggestion chips — 2 centered rows */}
+          <div className="w-full max-w-170 flex flex-wrap justify-center gap-2">
+            {HINTS.map(h => (
+              <button
+                key={h.prompt}
+                onClick={() => handleGenerate(h.prompt)}
+                className="px-4 py-2 text-[13px] rounded-full transition-all duration-150 active:scale-95"
+                style={{
+                  background: "var(--bg-card)",
+                  border: "1px solid var(--border)",
+                  color: "var(--t3)",
+                  whiteSpace: "nowrap",
+                }}
+                onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = "var(--bg-hover)"; el.style.color = "var(--t1)"; el.style.borderColor = "var(--border-md)"; }}
+                onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = "var(--bg-card)"; el.style.color = "var(--t3)"; el.style.borderColor = "var(--border)"; }}
+              >
+                {h.label}
+              </button>
+            ))}
           </div>
 
-          {/* Onboarding nudge — compact, below chips */}
-          <div className="mt-6 w-full max-w-2xl">
+          {/* Onboarding nudge */}
+          <div className="mt-6 w-full max-w-170">
             <OnboardingNudge />
           </div>
         </div>

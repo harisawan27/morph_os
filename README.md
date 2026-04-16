@@ -1,4 +1,4 @@
-# Morph OS — Stealth Edition
+# Morph OS
 
 > **The AI workspace that thinks before it builds.**
 
