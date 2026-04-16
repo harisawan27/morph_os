@@ -10,9 +10,10 @@ load_dotenv()
 # If DATABASE_URL is not set, fallback to local docker postgres
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://morph:morphpassword@localhost:5432/morph_db")
 
-# Neon requires sslmode=require in the connection string usually, or connect_args
-# Check if sslmode is in the url, if it's external we might need to handle it.
-# As an easier approach, let SQLAlchemy handle the DSN parsing.
+# Neon / Supabase / Heroku use postgres:// — SQLAlchemy requires postgresql://
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
 engine = create_engine(
     DATABASE_URL,
     pool_pre_ping=True
