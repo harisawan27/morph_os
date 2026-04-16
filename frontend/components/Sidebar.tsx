@@ -90,7 +90,7 @@ export default function Sidebar() {
     return (
       <Link href={href} onClick={() => setMobileOpen(false)}>
         <div
-          className="flex items-center gap-3 rounded-xl px-3 py-2.5 cursor-pointer transition-all"
+          className={`flex items-center rounded-xl py-2.5 cursor-pointer transition-all ${isOpen ? "gap-3 px-3" : "justify-center"}`}
           style={{
             background: active ? "var(--bg-active)" : "transparent",
             color: active ? "var(--t1)" : "var(--t3)",
@@ -143,22 +143,20 @@ export default function Sidebar() {
           borderColor: "var(--border)",
         }}
       >
-        {/* Top: logo always visible + hamburger always visible */}
-        <div className="flex items-center shrink-0 h-14 px-2 gap-1.5">
-
-          {/* Ghost icon — always visible, purely decorative brand mark */}
-          <div
-            className="w-6 h-6 rounded-xl flex items-center justify-center shrink-0"
-            style={{
-              background: "linear-gradient(135deg, rgba(139,92,246,0.25), rgba(79,70,229,0.18))",
-              border: "1px solid rgba(139,92,246,0.25)",
-            }}
-          >
-            <Ghost size={11} className="text-purple-400" />
-          </div>
-
-          {/* Name — only shown when open */}
-          {isOpen && (
+        {/* Top: logo + hamburger */}
+        {isOpen ? (
+          <div className="flex items-center shrink-0 h-14 px-3 gap-2">
+            {/* Ghost icon */}
+            <div
+              className="w-6 h-6 rounded-xl flex items-center justify-center shrink-0"
+              style={{
+                background: "linear-gradient(135deg, rgba(139,92,246,0.25), rgba(79,70,229,0.18))",
+                border: "1px solid rgba(139,92,246,0.25)",
+              }}
+            >
+              <Ghost size={11} className="text-purple-400" />
+            </div>
+            {/* Name */}
             <motion.div
               initial={{ opacity: 0, x: -6 }}
               animate={{ opacity: 1, x: 0 }}
@@ -166,19 +164,41 @@ export default function Sidebar() {
             >
               <p className="text-sm font-semibold tracking-tight whitespace-nowrap" style={{ color: "var(--t1)" }}>Morph OS</p>
             </motion.div>
-          )}
-
-          {/* Hamburger — always visible, always toggles */}
-          <button
-            onClick={toggle}
-            className={`w-6 h-6 flex items-center justify-center rounded-xl shrink-0 transition-all ${!isOpen ? "ml-auto" : ""}`}
-            style={{ color: "var(--t4)" }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-hover)"; (e.currentTarget as HTMLElement).style.color = "var(--t2)"; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--t4)"; }}
-          >
-            <Menu size={14} />
-          </button>
-        </div>
+            {/* Hamburger */}
+            <button
+              onClick={toggle}
+              className="w-7 h-7 flex items-center justify-center rounded-xl shrink-0 transition-all"
+              style={{ color: "var(--t4)" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-hover)"; (e.currentTarget as HTMLElement).style.color = "var(--t2)"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--t4)"; }}
+            >
+              <Menu size={15} />
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center shrink-0 pt-3 pb-1 gap-1.5">
+            {/* Ghost icon */}
+            <div
+              className="w-7 h-7 rounded-xl flex items-center justify-center"
+              style={{
+                background: "linear-gradient(135deg, rgba(139,92,246,0.25), rgba(79,70,229,0.18))",
+                border: "1px solid rgba(139,92,246,0.25)",
+              }}
+            >
+              <Ghost size={13} className="text-purple-400" />
+            </div>
+            {/* Hamburger */}
+            <button
+              onClick={toggle}
+              className="w-7 h-7 flex items-center justify-center rounded-xl transition-all"
+              style={{ color: "var(--t4)" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-hover)"; (e.currentTarget as HTMLElement).style.color = "var(--t2)"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--t4)"; }}
+            >
+              <Menu size={15} />
+            </button>
+          </div>
+        )}
 
         {/* New Chat */}
         <div className="px-2 mb-1 shrink-0">
@@ -340,7 +360,7 @@ export default function Sidebar() {
           {session ? (
             <Link href="/settings">
               <div
-                className="flex items-center gap-3 rounded-xl px-3 py-2.5 cursor-pointer transition-all"
+                className={`flex items-center rounded-xl py-2.5 cursor-pointer transition-all ${isOpen ? "gap-3 px-3" : "justify-center"}`}
                 style={{ color: "var(--t3)" }}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-hover)"; (e.currentTarget as HTMLElement).style.color = "var(--t1)"; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--t3)"; }}
@@ -364,7 +384,7 @@ export default function Sidebar() {
           ) : (
             <button
               onClick={() => signIn("google")}
-              className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all"
+              className={`w-full flex items-center rounded-xl py-2.5 transition-all ${isOpen ? "gap-3 px-3" : "justify-center"}`}
               style={{ color: "var(--t4)" }}
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-hover)"; (e.currentTarget as HTMLElement).style.color = "var(--t2)"; }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--t4)"; }}

@@ -80,8 +80,35 @@ export default function OmniBar({ onGenerate, onStop, isLoading, autoFocus }: Om
 
   return (
     <form onSubmit={e => { e.preventDefault(); submit(); }} className="w-full max-w-2xl mx-auto">
+
+      {/* File preview chip — sits above the bar */}
+      {file && (
+        <div className="mb-2 px-1">
+          <div
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-[12px]"
+            style={{ background: "rgba(147,51,234,0.08)", border: "1px solid rgba(147,51,234,0.15)" }}
+          >
+            {previewUrl
+              ? <img src={previewUrl} alt="" className="w-5 h-5 rounded-lg object-cover shrink-0" />
+              : <FileText size={12} style={{ color: "rgba(192,132,252,0.7)" }} className="shrink-0" />}
+            <span className="truncate" style={{ color: "var(--t2)", maxWidth: "200px" }}>{file.name}</span>
+            <button
+              type="button"
+              onClick={clearFile}
+              className="shrink-0 w-4 h-4 rounded-full flex items-center justify-center transition-colors"
+              style={{ background: "rgba(255,255,255,0.06)", color: "var(--t4)" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "var(--t2)"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--t4)"; }}
+            >
+              <X size={9} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Single-row bar */}
       <div
-        className="rounded-2xl transition-all duration-150"
+        className="flex items-end gap-1.5 rounded-2xl px-2 py-2 transition-all duration-150"
         style={{
           background: "var(--bg-input)",
           border: `1px solid ${borderColor}`,
@@ -93,92 +120,61 @@ export default function OmniBar({ onGenerate, onStop, isLoading, autoFocus }: Om
         onDragLeave={onDragLeave}
         onDrop={onDrop}
       >
-        {/* File preview chip */}
-        {file && (
-          <div className="px-4 pt-3 pb-0">
-            <div
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-[12px]"
-              style={{ background: "rgba(147,51,234,0.08)", border: "1px solid rgba(147,51,234,0.15)" }}
-            >
-              {previewUrl
-                ? <img src={previewUrl} alt="" className="w-6 h-6 rounded-lg object-cover shrink-0" />
-                : <FileText size={13} style={{ color: "rgba(192,132,252,0.7)" }} className="shrink-0" />}
-              <span className="truncate" style={{ color: "var(--t2)", maxWidth: "200px" }}>{file.name}</span>
-              <button
-                type="button"
-                onClick={clearFile}
-                className="shrink-0 w-4 h-4 rounded-full flex items-center justify-center transition-colors"
-                style={{ background: "rgba(255,255,255,0.06)", color: "var(--t4)" }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "var(--t2)"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--t4)"; }}
-              >
-                <X size={9} />
-              </button>
-            </div>
-          </div>
-        )}
+        {/* Paperclip */}
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isLoading}
+          className="w-8 h-8 flex items-center justify-center rounded-xl shrink-0 transition-all duration-150 disabled:opacity-30"
+          style={{ color: "var(--t4)" }}
+          title="Attach file"
+          onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = "var(--bg-hover)"; el.style.color = "var(--t2)"; }}
+          onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = "transparent"; el.style.color = "var(--t4)"; }}
+        >
+          <Paperclip size={15} />
+        </button>
 
-        {/* Textarea — full width, no side buttons */}
-        <div className="px-4 pt-3 pb-0">
-          <textarea
-            ref={textareaRef}
-            rows={1}
-            value={prompt}
-            onChange={e => setPrompt(e.target.value)}
-            onKeyDown={onKey}
-            disabled={isLoading}
-            placeholder={file ? "Ask about this file…" : "Ask anything, build a tool, or open an app…"}
-            className="w-full bg-transparent text-[15px] leading-relaxed resize-none outline-none disabled:opacity-40"
-            style={{
-              color: "var(--t1)",
-              caretColor: "var(--t1)",
-              minHeight: "26px",
-              maxHeight: "200px",
-            }}
-          />
-        </div>
+        {/* Textarea — expands vertically */}
+        <textarea
+          ref={textareaRef}
+          rows={1}
+          value={prompt}
+          onChange={e => setPrompt(e.target.value)}
+          onKeyDown={onKey}
+          disabled={isLoading}
+          placeholder={file ? "Ask about this file…" : "Ask anything, build a tool, or open an app…"}
+          className="flex-1 bg-transparent text-[15px] leading-relaxed resize-none outline-none disabled:opacity-40 py-1"
+          style={{
+            color: "var(--t1)",
+            caretColor: "var(--t1)",
+            minHeight: "24px",
+            maxHeight: "200px",
+          }}
+        />
 
-        {/* Bottom row: attachment (left) + send/stop (right) */}
-        <div className="flex items-center justify-between px-3 pb-2.5 pt-1">
-          {/* Paperclip */}
+        {/* Stop / Send */}
+        {isLoading ? (
           <button
             type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isLoading}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[12px] transition-all duration-150 disabled:opacity-30"
-            style={{ color: "var(--t4)", background: "transparent" }}
-            title="Attach file (image, PDF, text)"
-            onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = "var(--bg-hover)"; el.style.color = "var(--t2)"; }}
-            onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = "transparent"; el.style.color = "var(--t4)"; }}
+            onClick={onStop}
+            className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-all duration-150 active:scale-90"
+            style={{ background: "var(--t1)", color: "var(--bg-page)" }}
+            title="Stop"
           >
-            <Paperclip size={15} />
-            {file && <span className="text-[11px]" style={{ color: "rgba(192,132,252,0.7)" }}>1 file</span>}
+            <Square size={11} fill="currentColor" strokeWidth={0} />
           </button>
-
-          {/* Stop / Send */}
-          {isLoading ? (
-            <button
-              type="button"
-              onClick={onStop}
-              className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-150 active:scale-90"
-              style={{ background: "var(--t1)", color: "var(--bg-page)" }}
-              title="Stop generating"
-            >
-              <Square size={12} fill="currentColor" strokeWidth={0} />
-            </button>
-          ) : (
-            <button
-              type="submit"
-              disabled={!canSubmit}
-              className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-150 active:scale-90"
-              style={canSubmit
-                ? { background: "var(--t1)", color: "var(--bg-page)" }
-                : { background: "var(--bg-card)", color: "var(--t5)", cursor: "default" }}
-            >
-              <ArrowUp size={15} strokeWidth={2.5} />
-            </button>
-          )}
-        </div>
+        ) : (
+          <button
+            type="submit"
+            disabled={!canSubmit}
+            className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-all duration-150 active:scale-90"
+            style={canSubmit
+              ? { background: "var(--t1)", color: "var(--bg-page)" }
+              : { background: "var(--bg-card)", color: "var(--t5)", cursor: "default" }}
+          >
+            <ArrowUp size={15} strokeWidth={2.5} />
+          </button>
+        )}
       </div>
 
       <input
