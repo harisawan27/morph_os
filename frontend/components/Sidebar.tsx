@@ -30,11 +30,7 @@ export default function Sidebar() {
 
   const fetchSessions = useCallback(async () => {
     try {
-      const deviceId = typeof window !== "undefined" ? (localStorage.getItem("morph_device_id") ?? "") : "";
-      const res = await fetch(`${API}/api/sessions`, {
-        credentials: "include",
-        headers: deviceId ? { "X-Device-ID": deviceId } : {},
-      });
+      const res = await fetch(`${API}/api/sessions`, { credentials: "include" });
       if (res.ok) setSessions(await res.json());
     } catch {}
   }, []);

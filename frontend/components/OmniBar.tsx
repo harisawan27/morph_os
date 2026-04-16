@@ -106,9 +106,9 @@ export default function OmniBar({ onGenerate, onStop, isLoading, autoFocus }: Om
         </div>
       )}
 
-      {/* Single-row bar */}
+      {/* Bar */}
       <div
-        className="flex items-center gap-1.5 rounded-2xl px-2 py-1.5 transition-all duration-150"
+        className="rounded-2xl transition-all duration-150"
         style={{
           background: "var(--bg-input)",
           border: `1px solid ${borderColor}`,
@@ -120,63 +120,66 @@ export default function OmniBar({ onGenerate, onStop, isLoading, autoFocus }: Om
         onDragLeave={onDragLeave}
         onDrop={onDrop}
       >
-        {/* Paperclip */}
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={isLoading}
-          className="w-8 h-8 flex items-center justify-center rounded-xl shrink-0 transition-all duration-150 disabled:opacity-30"
-          style={{ color: "var(--t4)" }}
-          title="Attach file"
-          onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = "var(--bg-hover)"; el.style.color = "var(--t2)"; }}
-          onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = "transparent"; el.style.color = "var(--t4)"; }}
-        >
-          <Paperclip size={15} />
-        </button>
+        {/* Full-width textarea */}
+        <div className="px-4 pt-3 pb-1">
+          <textarea
+            ref={textareaRef}
+            rows={1}
+            value={prompt}
+            onChange={e => setPrompt(e.target.value)}
+            onKeyDown={onKey}
+            disabled={isLoading}
+            placeholder={file ? "Ask about this file…" : "Ask Morph anything…"}
+            className="w-full bg-transparent text-[15px] resize-none outline-none disabled:opacity-40"
+            style={{
+              color: "var(--t1)",
+              caretColor: "var(--t1)",
+              lineHeight: "1.5rem",
+              minHeight: "1.5rem",
+              maxHeight: "200px",
+              padding: 0,
+              margin: 0,
+            }}
+          />
+        </div>
 
-        {/* Textarea — expands vertically */}
-        <textarea
-          ref={textareaRef}
-          rows={1}
-          value={prompt}
-          onChange={e => setPrompt(e.target.value)}
-          onKeyDown={onKey}
-          disabled={isLoading}
-          placeholder={file ? "Ask about this file…" : "Ask anything, build a tool, or open an app…"}
-          className="flex-1 bg-transparent text-[15px] resize-none outline-none disabled:opacity-40"
-          style={{
-            color: "var(--t1)",
-            caretColor: "var(--t1)",
-            lineHeight: "1.5",
-            minHeight: "22px",
-            maxHeight: "200px",
-            paddingTop: "3px",
-          }}
-        />
-
-        {/* Stop / Send */}
-        {isLoading ? (
+        {/* Bottom action row — attach left, send right */}
+        <div className="flex items-center justify-between px-3 pb-2.5 pt-1">
           <button
             type="button"
-            onClick={onStop}
-            className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-all duration-150 active:scale-90"
-            style={{ background: "var(--t1)", color: "var(--bg-page)" }}
-            title="Stop"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isLoading}
+            className="w-8 h-8 flex items-center justify-center rounded-xl transition-all duration-150 disabled:opacity-30"
+            style={{ color: "var(--t4)" }}
+            title="Attach file"
+            onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = "var(--bg-hover)"; el.style.color = "var(--t2)"; }}
+            onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = "transparent"; el.style.color = "var(--t4)"; }}
           >
-            <Square size={11} fill="currentColor" strokeWidth={0} />
+            <Paperclip size={16} />
           </button>
-        ) : (
-          <button
-            type="submit"
-            disabled={!canSubmit}
-            className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-all duration-150 active:scale-90"
-            style={canSubmit
-              ? { background: "var(--t1)", color: "var(--bg-page)" }
-              : { background: "var(--bg-card)", color: "var(--t5)", cursor: "default" }}
-          >
-            <ArrowUp size={15} strokeWidth={2.5} />
-          </button>
-        )}
+
+          {isLoading ? (
+            <button
+              type="button"
+              onClick={onStop}
+              className="w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-150 active:scale-90"
+              style={{ background: "var(--t1)", color: "var(--bg-page)" }}
+            >
+              <Square size={11} fill="currentColor" strokeWidth={0} />
+            </button>
+          ) : (
+            <button
+              type="submit"
+              disabled={!canSubmit}
+              className="w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-150 active:scale-90"
+              style={canSubmit
+                ? { background: "var(--t1)", color: "var(--bg-page)" }
+                : { background: "var(--bg-card)", color: "var(--t5)", cursor: "default" }}
+            >
+              <ArrowUp size={15} strokeWidth={2.5} />
+            </button>
+          )}
+        </div>
       </div>
 
       <input
@@ -189,10 +192,8 @@ export default function OmniBar({ onGenerate, onStop, isLoading, autoFocus }: Om
 
       <style>{`textarea::placeholder { color: var(--placeholder); }`}</style>
 
-      <p className="hidden sm:block text-center text-[10px] tracking-wide mt-2 select-none" style={{ color: "var(--t5)" }}>
-        {isLoading
-          ? "Click ■ to stop · Shift+Enter for new line"
-          : "Enter ↵ to send · Shift+Enter for new line · Drop files to attach"}
+      <p className="hidden sm:block text-center text-[10px] mt-2 select-none" style={{ color: "var(--t5)" }}>
+        {isLoading ? "■ to stop  ·  Shift+Enter new line" : "Enter to send  ·  Shift+Enter new line"}
       </p>
     </form>
   );

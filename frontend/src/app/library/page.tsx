@@ -278,11 +278,7 @@ export default function LibraryPage() {
   const [category,  setCategory]  = useState("All");
 
   useEffect(() => {
-    const deviceId = typeof window !== "undefined" ? (localStorage.getItem("morph_device_id") ?? "") : "";
-    fetch(`${API}/api/artifacts`, {
-      credentials: "include",
-      headers: deviceId ? { "X-Device-ID": deviceId } : {},
-    })
+    fetch(`${API}/api/artifacts`, { credentials: "include" })
       .then(r => r.ok ? r.json() : { artifacts: [] })
       .then(data => {
         setArtifacts((data.artifacts ?? []).map(parseArtifact));

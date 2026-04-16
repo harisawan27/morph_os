@@ -7,6 +7,7 @@ import OmniBar from "./OmniBar";
 import ArtifactRenderer from "./ArtifactRenderer";
 import { Ghost, Layers, ChevronRight, Sparkles, X, Copy, Check, Pencil, CornerDownLeft, FileText, Image } from "lucide-react";
 import Link from "next/link";
+import MarkdownRenderer from "./MarkdownRenderer";
 
 type Message = {
   id: string;
@@ -28,15 +29,6 @@ interface ChatCanvasProps {
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "";
 
-function getDeviceId(): string {
-  if (typeof window === "undefined") return "";
-  let id = localStorage.getItem("morph_device_id");
-  if (!id) {
-    id = crypto.randomUUID();
-    localStorage.setItem("morph_device_id", id);
-  }
-  return id;
-}
 
 export default function ChatCanvas({
   sessionId,
@@ -155,7 +147,6 @@ export default function ChatCanvas({
         res = await fetch(`${API}/api/generate-with-file`, {
           method: "POST",
           credentials: "include",
-          headers: { "X-Device-ID": getDeviceId() },
           body: form,
           signal: controller.signal,
         });
@@ -163,7 +154,7 @@ export default function ChatCanvas({
         res = await fetch(`${API}/api/generate`, {
           method: "POST",
           credentials: "include",
-          headers: { "Content-Type": "application/json", "X-Device-ID": getDeviceId() },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             prompt,
             session_id: sessionId,
@@ -358,10 +349,8 @@ export default function ChatCanvas({
             </div>
           </div>
 
-          <div className="shrink-0 px-3 sm:px-4 pt-2 pb-safe" style={{ borderTop: "1px solid var(--border)" }}>
-            <div className="py-2">
-              <OmniBar onGenerate={handleGenerate} onStop={handleStop} isLoading={isGenerating} />
-            </div>
+          <div className="shrink-0 px-3 sm:px-4 py-3 pb-safe" style={{ borderTop: "1px solid var(--border)" }}>
+            <OmniBar onGenerate={handleGenerate} onStop={handleStop} isLoading={isGenerating} />
           </div>
         </>
       )}
@@ -593,12 +582,11 @@ function MessageRow({
         <Ghost size={12} className="text-purple-300/70" />
       </div>
       <div className="flex-1 min-w-0">
-        <p
-          className="text-sm leading-relaxed whitespace-pre-wrap wrap-break-word"
-          style={{ color: isError ? "#f87171" : "var(--t2)" }}
-        >
-          {m.text}
-        </p>
+        {isError ? (
+          <p className="text-sm leading-relaxed" style={{ color: "#f87171" }}>{m.text}</p>
+        ) : (
+          <MarkdownRenderer content={m.text} />
+        )}
 
         {m.pending && !m.code ? (
           <div

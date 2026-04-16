@@ -4,7 +4,7 @@ import uuid
 import asyncio
 import logging
 import httpx
-from fastapi import FastAPI, Depends, HTTPException, Query, File, UploadFile, Form, Header
+from fastapi import FastAPI, Depends, HTTPException, Query, File, UploadFile, Form
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -212,9 +212,8 @@ async def _generate_stream(
 async def generate_artifact(
     request: GenerateRequest,
     user: dict | None = Depends(get_optional_user),
-    x_device_id: Optional[str] = Header(None),
 ):
-    user_id = (user.get("email") or user.get("sub")) if user else x_device_id
+    user_id = (user.get("email") or user.get("sub")) if user else None
     return StreamingResponse(
         _generate_stream(
             prompt=request.prompt,
@@ -238,9 +237,8 @@ async def generate_with_file(
     current_artifact: Optional[str] = Form(None),
     file: UploadFile = File(...),
     user: dict | None = Depends(get_optional_user),
-    x_device_id: Optional[str] = Header(None),
 ):
-    user_id = (user.get("email") or user.get("sub")) if user else x_device_id
+    user_id = (user.get("email") or user.get("sub")) if user else None
     file_bytes = await file.read()
     mime_type  = file.content_type or "application/octet-stream"
     filename   = file.filename or "attachment"
@@ -276,14 +274,13 @@ async def generate_with_file(
 def get_artifacts(
     db: Session = Depends(get_db),
     user: dict | None = Depends(get_optional_user),
-    x_device_id: Optional[str] = Header(None),
     limit: int = Query(100, le=200),
     offset: int = Query(0, ge=0),
 ):
     """Returns all artifacts (with generated code) for the current user."""
-    user_id = ((user.get("email") or user.get("sub")) if user else None) or x_device_id
-    if not user_id:
+    if not user:
         return {"artifacts": [], "total": 0}
+    user_id = user.get("email") or user.get("sub")
     items = (
         db.query(Artifact)
         .filter(Artifact.user_id == user_id, Artifact.code.isnot(None))
@@ -337,11 +334,10 @@ def delete_artifact(
 def get_sessions(
     db: Session = Depends(get_db),
     user: dict | None = Depends(get_optional_user),
-    x_device_id: Optional[str] = Header(None),
 ):
-    user_id = ((user.get("email") or user.get("sub")) if user else None) or x_device_id
-    if not user_id:
+    if not user:
         return []
+    user_id = user.get("email") or user.get("sub")
     query = text("""
         SELECT session_id,
                MAX(created_at) as last_activity,
@@ -362,11 +358,10 @@ def delete_session(
     session_id: str,
     db: Session = Depends(get_db),
     user: dict | None = Depends(get_optional_user),
-    x_device_id: Optional[str] = Header(None),
 ):
-    user_id = ((user.get("email") or user.get("sub")) if user else None) or x_device_id
-    if not user_id:
+    if not user:
         return {"deleted": 0}
+    user_id = user.get("email") or user.get("sub")
     deleted = (
         db.query(Artifact)
         .filter(Artifact.session_id == session_id, Artifact.user_id == user_id)
@@ -385,11 +380,10 @@ def rename_session(
     request: RenameSessionRequest,
     db: Session = Depends(get_db),
     user: dict | None = Depends(get_optional_user),
-    x_device_id: Optional[str] = Header(None),
 ):
-    user_id = ((user.get("email") or user.get("sub")) if user else None) or x_device_id
-    if not user_id:
+    if not user:
         raise HTTPException(status_code=401, detail="Not authenticated")
+    user_id = user.get("email") or user.get("sub")
     db.execute(
         text("UPDATE artifacts SET session_title = :title WHERE session_id = :sid AND user_id = :uid"),
         {"title": request.title, "sid": session_id, "uid": user_id},
@@ -403,11 +397,10 @@ def get_session_history(
     session_id: str,
     db: Session = Depends(get_db),
     user: dict | None = Depends(get_optional_user),
-    x_device_id: Optional[str] = Header(None),
 ):
-    user_id = ((user.get("email") or user.get("sub")) if user else None) or x_device_id
-    if not user_id:
+    if not user:
         return {"messages": [], "active_artifact": None}
+    user_id = user.get("email") or user.get("sub")
     artifacts = (
         db.query(Artifact)
         .filter(Artifact.session_id == session_id, Artifact.user_id == user_id)
