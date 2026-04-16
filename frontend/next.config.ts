@@ -20,8 +20,12 @@ const nextConfig: NextConfig = {
     if (!backendUrl) return [];
     return [
       {
-        source: "/api/:path*",
-        destination: `${backendUrl}/api/:path*`,
+        // Proxy everything under /api/* to the backend EXCEPT /api/auth/**
+        // which must be handled by NextAuth on the frontend itself.
+        // The capture group ((?!auth/).*) uses a negative lookahead so
+        // /api/auth/callback, /api/auth/error, etc. are never forwarded.
+        source: "/api/((?!auth/).*)",
+        destination: `${backendUrl}/api/$1`,
       },
     ];
   },
