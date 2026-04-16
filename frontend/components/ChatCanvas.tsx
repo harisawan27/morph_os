@@ -28,6 +28,16 @@ interface ChatCanvasProps {
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "";
 
+function getDeviceId(): string {
+  if (typeof window === "undefined") return "";
+  let id = localStorage.getItem("morph_device_id");
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem("morph_device_id", id);
+  }
+  return id;
+}
+
 export default function ChatCanvas({
   sessionId,
   initialMessages = [],
@@ -145,6 +155,7 @@ export default function ChatCanvas({
         res = await fetch(`${API}/api/generate-with-file`, {
           method: "POST",
           credentials: "include",
+          headers: { "X-Device-ID": getDeviceId() },
           body: form,
           signal: controller.signal,
         });
@@ -152,7 +163,7 @@ export default function ChatCanvas({
         res = await fetch(`${API}/api/generate`, {
           method: "POST",
           credentials: "include",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", "X-Device-ID": getDeviceId() },
           body: JSON.stringify({
             prompt,
             session_id: sessionId,

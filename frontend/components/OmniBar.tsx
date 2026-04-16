@@ -108,7 +108,7 @@ export default function OmniBar({ onGenerate, onStop, isLoading, autoFocus }: Om
 
       {/* Single-row bar */}
       <div
-        className="flex items-end gap-1.5 rounded-2xl px-2 py-2 transition-all duration-150"
+        className="flex items-center gap-1.5 rounded-2xl px-2 py-1.5 transition-all duration-150"
         style={{
           background: "var(--bg-input)",
           border: `1px solid ${borderColor}`,
@@ -143,12 +143,14 @@ export default function OmniBar({ onGenerate, onStop, isLoading, autoFocus }: Om
           onKeyDown={onKey}
           disabled={isLoading}
           placeholder={file ? "Ask about this file…" : "Ask anything, build a tool, or open an app…"}
-          className="flex-1 bg-transparent text-[15px] leading-relaxed resize-none outline-none disabled:opacity-40 py-1"
+          className="flex-1 bg-transparent text-[15px] resize-none outline-none disabled:opacity-40"
           style={{
             color: "var(--t1)",
             caretColor: "var(--t1)",
-            minHeight: "24px",
+            lineHeight: "1.5",
+            minHeight: "22px",
             maxHeight: "200px",
+            paddingTop: "3px",
           }}
         />
 

@@ -30,7 +30,11 @@ export default function Sidebar() {
 
   const fetchSessions = useCallback(async () => {
     try {
-      const res = await fetch(`${API}/api/sessions`, { credentials: "include" });
+      const deviceId = typeof window !== "undefined" ? (localStorage.getItem("morph_device_id") ?? "") : "";
+      const res = await fetch(`${API}/api/sessions`, {
+        credentials: "include",
+        headers: deviceId ? { "X-Device-ID": deviceId } : {},
+      });
       if (res.ok) setSessions(await res.json());
     } catch {}
   }, []);
@@ -148,13 +152,13 @@ export default function Sidebar() {
           <div className="flex items-center shrink-0 h-14 px-3 gap-2">
             {/* Ghost icon */}
             <div
-              className="w-6 h-6 rounded-xl flex items-center justify-center shrink-0"
+              className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
               style={{
-                background: "linear-gradient(135deg, rgba(139,92,246,0.25), rgba(79,70,229,0.18))",
-                border: "1px solid rgba(139,92,246,0.25)",
+                background: "linear-gradient(135deg, rgba(139,92,246,0.35), rgba(79,70,229,0.25))",
+                border: "1px solid rgba(139,92,246,0.35)",
               }}
             >
-              <Ghost size={11} className="text-purple-400" />
+              <Ghost size={14} className="text-purple-300" />
             </div>
             {/* Name */}
             <motion.div
@@ -179,13 +183,13 @@ export default function Sidebar() {
           <div className="flex flex-col items-center shrink-0 pt-3 pb-1 gap-1.5">
             {/* Ghost icon */}
             <div
-              className="w-7 h-7 rounded-xl flex items-center justify-center"
+              className="w-9 h-9 rounded-full flex items-center justify-center"
               style={{
-                background: "linear-gradient(135deg, rgba(139,92,246,0.25), rgba(79,70,229,0.18))",
-                border: "1px solid rgba(139,92,246,0.25)",
+                background: "linear-gradient(135deg, rgba(139,92,246,0.35), rgba(79,70,229,0.25))",
+                border: "1px solid rgba(139,92,246,0.35)",
               }}
             >
-              <Ghost size={13} className="text-purple-400" />
+              <Ghost size={16} className="text-purple-300" />
             </div>
             {/* Hamburger */}
             <button
@@ -202,17 +206,17 @@ export default function Sidebar() {
 
         {/* New Chat */}
         <div className="px-2 mb-1 shrink-0">
-          {navItem("/", <Plus size={17} />, "New Chat", true)}
+          {navItem("/", <Plus size={20} />, "New Chat", true)}
         </div>
 
         {/* The Vault */}
         <div className="px-2 mb-1 shrink-0">
-          {navItem("/artifacts", <Vault size={17} />, "The Vault")}
+          {navItem("/artifacts", <Vault size={20} />, "The Vault")}
         </div>
 
         {/* My Library */}
         <div className="px-2 mb-1 shrink-0">
-          {navItem("/library", <Library size={17} />, "My Library")}
+          {navItem("/library", <Library size={20} />, "My Library")}
         </div>
 
         {/* Search + recent label */}
