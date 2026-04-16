@@ -112,7 +112,7 @@ export default function BudgetTracker() {
           <p className="text-center text-white/15 text-xs pt-8">No transactions yet</p>
         )}
         {visible.map(t => (
-          <div key={t.id} className="group flex items-center gap-3 bg-white/[0.03] hover:bg-white/5 border border-white/5 rounded-xl px-3 py-2.5 transition-all">
+          <div key={t.id} className="group flex items-center gap-3 bg-white/3 hover:bg-white/5 border border-white/5 rounded-xl px-3 py-2.5 transition-all">
             <div className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 ${t.type === 'income' ? 'bg-emerald-500/15' : 'bg-red-500/10'}`}>
               {t.type === 'income'
                 ? <ArrowUpCircle size={14} className="text-emerald-400" />

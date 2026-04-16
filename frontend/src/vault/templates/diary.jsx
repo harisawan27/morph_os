@@ -3,6 +3,9 @@ import { BookOpen, ChevronLeft, ChevronRight, Save, Clock, RefreshCw, History, X
 
 // [MORZ_VAULT_TEMPLATE: diary]
 
+const CONTENT_RAW     = "{{CONTENT}}";
+const INITIAL_CONTENT = (!CONTENT_RAW || CONTENT_RAW.includes('{{')) ? '' : CONTENT_RAW;
+
 const STORAGE_KEY = 'morph_diary_v1';
 
 const MOODS = [
@@ -78,10 +81,10 @@ export default function Diary() {
   const [saveFlash,   setSaveFlash]   = useState(false);
   const taRef = useRef(null);
 
-  // Load entry when date changes
+  // Load entry when date changes (pre-fill with INITIAL_CONTENT on first open if no existing entry)
   useEffect(() => {
     const e = entries[date];
-    setText(e?.text ?? '');
+    setText(e?.text ?? INITIAL_CONTENT);
     setMood(e?.mood ?? null);
     setSavedFlag(!!e?.text);
   }, [date]);
@@ -268,7 +271,7 @@ export default function Diary() {
           onChange={e => { setText(e.target.value); setSavedFlag(false); }}
           onBlur={onBlur}
           placeholder={`Write freely — this is your space.\n\n${prompt}`}
-          className="w-full h-full min-h-[200px] outline-none resize-none rounded-2xl px-5 py-4 text-[15px] leading-[1.9] transition-colors"
+          className="w-full h-full min-h-50 outline-none resize-none rounded-2xl px-5 py-4 text-[15px] leading-[1.9] transition-colors"
           style={{
             background: 'rgba(255,255,255,0.025)',
             border: '1px solid rgba(255,255,255,0.07)',

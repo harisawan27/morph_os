@@ -100,7 +100,7 @@ export default function TicTacToe() {
     <div className="h-full bg-[#0a0a0a] text-white flex flex-col items-center justify-center gap-5 p-5 overflow-hidden select-none">
 
       {/* Mode toggle */}
-      <div className="flex bg-white/[0.04] border border-white/[0.07] rounded-full p-0.5 gap-0.5">
+      <div className="flex bg-white/4 border border-white/[0.07] rounded-full p-0.5 gap-0.5">
         {[{label:'vs AI', val:true, icon:<Bot size={12}/>},{label:'2 Player', val:false, icon:<Users size={12}/>}].map(({label,val,icon}) => (
           <button key={label} onClick={() => { setVsAI(val); reset(); setScore({X:0,O:0,D:0}); }}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium transition-all ${vsAI===val ? 'bg-white/10 text-white' : 'text-white/30 hover:text-white/60'}`}>

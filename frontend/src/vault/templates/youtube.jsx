@@ -232,7 +232,7 @@ export default function MorphPlayer() {
         <>
           <div className="absolute inset-0 bg-cover bg-center scale-110 blur-3xl opacity-25"
                style={{ backgroundImage: `url(${thumb})` }} />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-black/90" />
+          <div className="absolute inset-0 bg-linear-to-b from-black/40 via-black/20 to-black/90" />
         </>
       )}
 

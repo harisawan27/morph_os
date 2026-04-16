@@ -74,7 +74,7 @@ export default function KanbanBoard() {
             key={col.id}
             onDrop={e => onDrop(e, col.id)}
             onDragOver={onDragOver}
-            className={`flex-1 flex flex-col bg-white/[0.025] border ${col.accent} rounded-2xl overflow-hidden min-w-0`}
+            className={`flex-1 flex flex-col bg-white/2.5 border ${col.accent} rounded-2xl overflow-hidden min-w-0`}
           >
             {/* Column header */}
             <div className="flex items-center gap-2 px-3 py-3 border-b border-white/5 shrink-0">

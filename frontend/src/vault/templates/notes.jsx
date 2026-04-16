@@ -3,8 +3,10 @@ import { FileText, Download, Copy, Check, Trash2, ChevronDown } from 'lucide-rea
 
 // [MORZ_VAULT_TEMPLATE: notes]
 
-const TITLE_RAW   = "{{TITLE}}";
-const NOTE_TITLE  = (!TITLE_RAW || TITLE_RAW.includes('{{')) ? 'Untitled Note' : TITLE_RAW;
+const TITLE_RAW    = "{{TITLE}}";
+const NOTE_TITLE   = (!TITLE_RAW || TITLE_RAW.includes('{{')) ? 'Untitled Note' : TITLE_RAW;
+const CONTENT_RAW  = "{{CONTENT}}";
+const NOTE_CONTENT = (!CONTENT_RAW || CONTENT_RAW.includes('{{')) ? '' : CONTENT_RAW;
 const STORAGE_KEY = `morph_notes_v2_${NOTE_TITLE.replace(/\s+/g, '_').toLowerCase()}`;
 
 function loadHtml() {
@@ -43,7 +45,7 @@ export default function NotesArtifact() {
   const editorRef  = useRef(null);
   const saveTimer  = useRef(null);
 
-  // Mount: restore saved content
+  // Mount: restore saved content, or pre-fill from file extraction
   useEffect(() => {
     if (!editorRef.current) return;
     const saved = loadHtml();
@@ -51,6 +53,10 @@ export default function NotesArtifact() {
       editorRef.current.innerHTML = saved;
       setIsEmpty(false);
       refreshStats(editorRef.current.innerText);
+    } else if (NOTE_CONTENT) {
+      editorRef.current.innerText = NOTE_CONTENT;
+      setIsEmpty(false);
+      refreshStats(NOTE_CONTENT);
     }
     editorRef.current.focus();
   }, []);
@@ -159,7 +165,7 @@ export default function NotesArtifact() {
     <div className="flex flex-col h-full bg-[#050505] text-white overflow-hidden">
 
       {/* Title bar */}
-      <div className="flex items-center gap-2.5 px-5 py-3 border-b border-white/[0.05] shrink-0">
+      <div className="flex items-center gap-2.5 px-5 py-3 border-b border-white/5 shrink-0">
         <FileText size={14} className="text-white/22 shrink-0" />
         <input
           value={title}
@@ -211,7 +217,7 @@ export default function NotesArtifact() {
       </div>
 
       {/* Formatting toolbar */}
-      <div className="flex items-center flex-wrap gap-0.5 px-3 py-1.5 border-b border-white/[0.04] bg-black/20 shrink-0">
+      <div className="flex items-center flex-wrap gap-0.5 px-3 py-1.5 border-b border-white/4 bg-black/20 shrink-0">
         <TB onClick={() => cmd('bold')}      title="Bold (Ctrl+B)"><strong>B</strong></TB>
         <TB onClick={() => cmd('italic')}    title="Italic (Ctrl+I)"><em className="not-italic" style={{fontStyle:'italic'}}>I</em></TB>
         <TB onClick={() => cmd('underline')} title="Underline (Ctrl+U)"><u>U</u></TB>
@@ -250,7 +256,7 @@ export default function NotesArtifact() {
       </div>
 
       {/* Status bar */}
-      <div className="px-6 py-2 border-t border-white/[0.04] flex justify-between items-center text-[8px] uppercase tracking-widest text-white/12 shrink-0">
+      <div className="px-6 py-2 border-t border-white/4 flex justify-between items-center text-[8px] uppercase tracking-widest text-white/12 shrink-0">
         <span>{words} word{words !== 1 ? 's' : ''}</span>
         <span>Rich Text · Morph Notes</span>
       </div>

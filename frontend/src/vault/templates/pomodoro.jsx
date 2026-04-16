@@ -98,10 +98,10 @@ export default function PomodoroPlus() {
     <div className="h-full bg-[#0a0a0a] text-white flex flex-col sm:flex-row overflow-hidden">
 
       {/* ── Timer side ── */}
-      <div className="flex flex-col items-center justify-center gap-4 p-6 sm:w-56 sm:border-r border-white/[0.06] shrink-0">
+      <div className="flex flex-col items-center justify-center gap-4 p-6 sm:w-56 sm:border-r border-white/6 shrink-0">
 
         {/* Mode tabs */}
-        <div className="flex gap-1 bg-white/[0.04] rounded-full p-0.5">
+        <div className="flex gap-1 bg-white/4 rounded-full p-0.5">
           {[['work','Focus'],['break','Break'],['longbreak','Long']].map(([m,l]) => (
             <button key={m} onClick={() => switchMode(m)}
               className={`px-2.5 py-1 rounded-full text-[10px] transition-all ${mode === m ? 'bg-white/12 text-white' : 'text-white/30 hover:text-white/60'}`}>
@@ -153,7 +153,7 @@ export default function PomodoroPlus() {
             )}
             {tasks.map(t => (
               <motion.div key={t.id} initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 8 }}
-                className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border transition-all ${t.done ? 'bg-white/[0.02] border-white/[0.04] opacity-50' : 'bg-white/[0.03] border-white/[0.07]'}`}>
+                className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border transition-all ${t.done ? 'bg-white/2 border-white/4 opacity-50' : 'bg-white/3 border-white/[0.07]'}`}>
                 <button onClick={() => toggleTask(t.id)}
                   className={`w-4 h-4 rounded-md border flex items-center justify-center shrink-0 transition-all ${t.done ? 'bg-emerald-500/30 border-emerald-500/50' : 'border-white/20 hover:border-white/40'}`}>
                   {t.done && <Check size={9} className="text-emerald-400" />}
@@ -171,7 +171,7 @@ export default function PomodoroPlus() {
           <input value={newTask} onChange={e => setNewTask(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && addTask()}
             placeholder="Add a task…"
-            className="flex-1 bg-white/[0.03] border border-white/[0.06] focus:border-white/15 rounded-xl px-3 py-2.5 text-sm text-white/70 placeholder-white/18 outline-none transition-colors" />
+            className="flex-1 bg-white/3 border border-white/6 focus:border-white/15 rounded-xl px-3 py-2.5 text-sm text-white/70 placeholder-white/18 outline-none transition-colors" />
           <button onClick={addTask}
             className="px-3 bg-white/5 border border-white/10 rounded-xl text-white/40 hover:text-white transition-all">
             <Plus size={14} />

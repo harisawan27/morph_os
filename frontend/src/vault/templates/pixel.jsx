@@ -85,7 +85,7 @@ export default function PixelArt() {
       {/* Toolbar */}
       <div className="flex items-center gap-2 flex-wrap shrink-0">
         {/* Tools */}
-        <div className="flex bg-white/[0.04] border border-white/[0.07] rounded-xl p-0.5 gap-0.5">
+        <div className="flex bg-white/4 border border-white/[0.07] rounded-xl p-0.5 gap-0.5">
           {[{t:'draw',icon:<Paintbrush size={13}/>},{t:'erase',icon:<Eraser size={13}/>},{t:'fill',icon:<Droplets size={13}/>}].map(({t,icon}) => (
             <button key={t} onClick={() => setTool(t)}
               className={`p-1.5 rounded-lg transition-all ${tool===t ? 'bg-white/12 text-white' : 'text-white/30 hover:text-white/60'}`} title={t}>
@@ -95,7 +95,7 @@ export default function PixelArt() {
         </div>
 
         {/* Custom color */}
-        <div className="flex items-center gap-1.5 bg-white/[0.04] border border-white/[0.07] rounded-xl px-2 py-1">
+        <div className="flex items-center gap-1.5 bg-white/4 border border-white/[0.07] rounded-xl px-2 py-1">
           <input type="color" value={color} onChange={e => setColor(e.target.value)}
             className="w-5 h-5 rounded border-0 cursor-pointer bg-transparent" style={{padding:'1px'}} />
           <span className="text-[10px] text-white/30 font-mono">{color}</span>

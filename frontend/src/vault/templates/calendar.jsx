@@ -100,7 +100,7 @@ export default function CalendarApp() {
 
           return (
             <button key={key} onClick={() => setSel(day === sel ? null : day)}
-              className={`flex flex-col items-center justify-start pt-1 rounded-xl transition-all min-h-[40px] ${
+              className={`flex flex-col items-center justify-start pt-1 rounded-xl transition-all min-h-10 ${
                 isSel    ? 'bg-purple-600/20 border border-purple-500/30' :
                 isToday  ? 'bg-white/8 border border-white/15' :
                            'hover:bg-white/5 border border-transparent'
@@ -126,7 +126,7 @@ export default function CalendarApp() {
         {sel && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }} className="overflow-hidden shrink-0">
-            <div className="border-t border-white/[0.06] pt-3 mt-2">
+            <div className="border-t border-white/6 pt-3 mt-2">
               <p className="text-white/40 text-xs mb-2">{MONTHS[month]} {sel}</p>
 
               {/* Events list */}
@@ -134,7 +134,7 @@ export default function CalendarApp() {
                 {selEvents.length === 0
                   ? <p className="text-white/15 text-xs">No events</p>
                   : selEvents.map((ev, idx) => (
-                    <div key={idx} className="flex items-center gap-2 bg-white/[0.03] rounded-xl px-3 py-1.5">
+                    <div key={idx} className="flex items-center gap-2 bg-white/3 rounded-xl px-3 py-1.5">
                       <span className="w-1.5 h-1.5 rounded-full bg-purple-400/60 shrink-0" />
                       <span className="text-xs text-white/60 flex-1 truncate">{ev}</span>
                       <button onClick={() => removeEvent(selKey, idx)} className="text-white/20 hover:text-red-400 transition-colors">
@@ -151,7 +151,7 @@ export default function CalendarApp() {
                   onChange={e => setInput(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && addEvent()}
                   placeholder="Add event…"
-                  className="flex-1 bg-white/[0.03] border border-white/[0.07] focus:border-white/15 rounded-xl px-3 py-2 text-xs text-white/70 placeholder-white/18 outline-none transition-colors"
+                  className="flex-1 bg-white/3 border border-white/[0.07] focus:border-white/15 rounded-xl px-3 py-2 text-xs text-white/70 placeholder-white/18 outline-none transition-colors"
                 />
                 <button onClick={addEvent}
                   className="px-3 py-2 bg-purple-600/15 border border-purple-500/25 rounded-xl text-purple-400 hover:bg-purple-600/25 transition-all">

@@ -11,3 +11,5 @@ greenlet
 tenacity
 python-jose[cryptography]
 httpx
+pypdf
+python-multipart

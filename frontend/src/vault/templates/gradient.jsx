@@ -64,11 +64,11 @@ export default function GradientGen() {
       </div>
 
       {/* Controls */}
-      <div className="shrink-0 p-4 space-y-4 border-t border-white/[0.06]">
+      <div className="shrink-0 p-4 space-y-4 border-t border-white/6">
 
         {/* Type + angle */}
         <div className="flex items-center gap-4">
-          <div className="flex bg-white/[0.04] border border-white/[0.07] rounded-full p-0.5 gap-0.5">
+          <div className="flex bg-white/4 border border-white/[0.07] rounded-full p-0.5 gap-0.5">
             {TYPES.map(t => (
               <button key={t} onClick={() => setType(t)}
                 className={`px-3 py-1 rounded-full text-[11px] capitalize transition-all ${type === t ? 'bg-white/10 text-white' : 'text-white/30 hover:text-white/60'}`}>
@@ -91,7 +91,7 @@ export default function GradientGen() {
         {/* Color stops */}
         <div className="flex items-center gap-2 flex-wrap">
           {colors.map((c, i) => (
-            <div key={i} className="flex items-center gap-1 bg-white/[0.04] border border-white/[0.08] rounded-xl px-2 py-1.5">
+            <div key={i} className="flex items-center gap-1 bg-white/4 border border-white/8 rounded-xl px-2 py-1.5">
               <input type="color" value={c} onChange={e => updateColor(i, e.target.value)}
                 className="w-5 h-5 rounded-md border-0 cursor-pointer bg-transparent" style={{ padding: '1px' }} />
               <span className="text-xs text-white/40 font-mono w-16">{c}</span>
@@ -104,7 +104,7 @@ export default function GradientGen() {
           ))}
           {colors.length < 5 && (
             <button onClick={addColor}
-              className="p-1.5 bg-white/[0.03] border border-white/[0.07] rounded-xl text-white/25 hover:text-white transition-all">
+              className="p-1.5 bg-white/3 border border-white/[0.07] rounded-xl text-white/25 hover:text-white transition-all">
               <Plus size={13} />
             </button>
           )}

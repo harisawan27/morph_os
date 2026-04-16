@@ -63,7 +63,7 @@ export default function HabitTracker() {
         {/* Today progress bar */}
         <div className="w-full h-1 bg-white/6 rounded-full overflow-hidden">
           <div
-            className="h-full bg-gradient-to-r from-purple-500 to-blue-500 rounded-full transition-all duration-500"
+            className="h-full bg-linear-to-r from-purple-500 to-blue-500 rounded-full transition-all duration-500"
             style={{ width: habits.length ? `${(totalToday / habits.length) * 100}%` : '0%' }}
           />
         </div>

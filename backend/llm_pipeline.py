@@ -247,16 +247,36 @@ TEMPLATE CATALOG
 ZERO-DATA (data: {{}}):
 todo, snake, calculator, timer, clock, color, habit, budget, kanban,
 password, qrcode, draw, converter, memory, tictactoe, typing,
-calendar, billsplit, gradient, pixel, matrix, magicball, diary
+calendar, billsplit, gradient, pixel, matrix, magicball
 
 PARAMETRIC (provide rich data, no placeholders):
 - youtube:    {{ "title": "best YouTube search query" }}
 - weather:    {{ "city": "city name" }}
-- notes:      {{ "title": "note title or empty string" }}
+- notes:      {{ "title": "note title or empty string", "content": "pre-filled text — use extracted file text if a file was attached, otherwise empty string" }}
+- diary:      {{ "content": "pre-filled entry text — use extracted file text if a file was attached, otherwise empty string" }}
 - flashcard:  {{ "topic": "string", "cards": [{{"front": "Q", "back": "A"}}, ...8-12 cards] }}
 - quiz:       {{ "topic": "string", "questions": [{{"question":"...","options":["A","B","C","D"],"correct":0}}, ...5-10] }}
 - chart:      {{ "type": "bar|line|pie", "title": "string", "labels": [...], "values": [...], "color": "blue|purple|green|orange|pink" }}
 - spinwheel:  {{ "options": ["option1", "option2", ...up to 12] }}
+
+════════════════════════════════════════
+FILE CONTEXT RULES (when [ATTACHED FILE] block appears)
+════════════════════════════════════════
+
+When an [ATTACHED FILE] block is present, the extracted text is available under "Content:".
+Route based on the user's intent AND the file type:
+
+→ "add to diary" / "write this in diary" / "put this in diary"
+    → template: diary, data.content = extracted text from the file
+→ "add to notes" / "write this in notes" / "open notes with this"
+    → template: notes, data.title = "...", data.content = extracted text
+→ "what does this say?" / "read this" / "summarize this"
+    → chat: answer using the extracted text as context
+→ "make this pixel art" / "pixelate this image"
+    → template: pixel, data: {{}}
+→ "what are the brand colors?" / "extract colors"
+    → chat: list the detected colors from the file analysis block
+→ Otherwise: answer conversationally using the file content as context
 
 ════════════════════════════════════════
 OUTPUT FORMAT — always valid JSON, one of:
@@ -426,6 +446,73 @@ Include all necessary React imports."""
         lines = code.split("\n")
         code = "\n".join(lines[1:-1])
     return code
+
+
+def analyze_file(file_bytes: bytes, mime_type: str, filename: str, user_prompt: str) -> dict:
+    """Analyzes an uploaded file using Gemini vision (images) or text extraction (PDFs/text)."""
+    import base64, io
+
+    fname_lower = filename.lower()
+
+    # ── PDF ──────────────────────────────────────────────────────────────────
+    if mime_type == "application/pdf" or fname_lower.endswith(".pdf"):
+        from pypdf import PdfReader
+        reader = PdfReader(io.BytesIO(file_bytes))
+        text = "\n\n".join(p.extract_text() or "" for p in reader.pages)
+        return {
+            "type": "pdf",
+            "filename": filename,
+            "description": f"PDF document with {len(reader.pages)} page(s)",
+            "text": text[:8000],
+            "colors": [],
+        }
+
+    # ── Plain text / markdown / CSV / JSON ───────────────────────────────────
+    if mime_type.startswith("text/") or fname_lower.endswith((".txt", ".md", ".csv", ".json")):
+        text = file_bytes.decode("utf-8", errors="replace")
+        return {
+            "type": "text",
+            "filename": filename,
+            "description": f"Text file ({filename})",
+            "text": text[:8000],
+            "colors": [],
+        }
+
+    # ── Image — Gemini vision (OCR + color extraction + intent) ─────────────
+    if mime_type.startswith("image/"):
+        encoded = base64.b64encode(file_bytes).decode()
+        response = client.models.generate_content(
+            model=PRIMARY_MODEL,
+            contents=[
+                types.Content(role="user", parts=[
+                    types.Part(inline_data=types.Blob(mime_type=mime_type, data=encoded)),
+                    types.Part(text=(
+                        f'Analyze this image. The user said: "{user_prompt}". '
+                        'Return ONLY valid JSON: '
+                        '{"description":"one-sentence description",'
+                        '"text":"any visible text in the image or empty string",'
+                        '"colors":["#hex1","#hex2","#hex3"],'
+                        '"suggested_action":"chat|notes|colors|pixel|build"}'
+                    )),
+                ])
+            ],
+            config=types.GenerateContentConfig(
+                temperature=0.1,
+                response_mime_type="application/json",
+            ),
+        )
+        result = json.loads(response.text)
+        result.update({"type": "image", "filename": filename})
+        return result
+
+    # ── Unknown ───────────────────────────────────────────────────────────────
+    return {
+        "type": "unknown",
+        "filename": filename,
+        "description": "Unsupported file type",
+        "text": "",
+        "colors": [],
+    }
 
 
 def builder_edit_react(current_code: str, instruction: str) -> str:

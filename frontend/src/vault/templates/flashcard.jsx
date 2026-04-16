@@ -85,7 +85,7 @@ export default function Flashcards() {
           className="w-full max-w-md"
         >
           <div
-            className={`relative w-full aspect-[4/3] cursor-pointer`}
+            className={`relative w-full aspect-4/3 cursor-pointer`}
             style={{ perspective: '1000px' }}
             onClick={() => setFlipped(f => !f)}
           >
@@ -103,7 +103,7 @@ export default function Flashcards() {
                 <p className="text-white/15 text-xs mt-4">Tap to reveal</p>
               </div>
               {/* Back */}
-              <div className="absolute inset-0 bg-white/[0.06] border border-white/15 rounded-3xl flex flex-col items-center justify-center p-6"
+              <div className="absolute inset-0 bg-white/6 border border-white/15 rounded-3xl flex flex-col items-center justify-center p-6"
                 style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
                 <p className="text-[9px] uppercase tracking-widest text-white/20 mb-3">Answer</p>
                 <p className="text-white/90 text-center text-base font-light leading-relaxed">{card.back}</p>

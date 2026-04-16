@@ -67,7 +67,7 @@ export default function MagicBall() {
           onChange={e => setQuestion(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && shake()}
           placeholder="Ask a yes/no question…"
-          className="w-full bg-white/[0.03] border border-white/[0.07] focus:border-white/15 rounded-2xl px-4 py-3 text-sm text-white/65 placeholder-white/18 outline-none text-center transition-colors"
+          className="w-full bg-white/3 border border-white/[0.07] focus:border-white/15 rounded-2xl px-4 py-3 text-sm text-white/65 placeholder-white/18 outline-none text-center transition-colors"
         />
       </div>
 
@@ -135,7 +135,7 @@ export default function MagicBall() {
         <div className="w-full max-w-xs space-y-1.5">
           <p className="text-[9px] uppercase tracking-widest text-white/15 mb-2">Recent</p>
           {history.map((item, i) => (
-            <div key={i} className={`flex items-start justify-between gap-3 bg-gradient-to-r ${TYPE_COLORS[item.a.type].bg} border border-white/[0.05] rounded-xl px-3 py-2`}>
+            <div key={i} className={`flex items-start justify-between gap-3 bg-linear-to-r ${TYPE_COLORS[item.a.type].bg} border border-white/5 rounded-xl px-3 py-2`}>
               <p className="text-white/40 text-xs truncate flex-1">{item.q}</p>
               <p className={`text-[11px] font-medium shrink-0 ${TYPE_COLORS[item.a.type].text}`}>{item.a.text}</p>
             </div>

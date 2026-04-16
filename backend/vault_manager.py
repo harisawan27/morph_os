@@ -36,7 +36,18 @@ def get_hydrated_template(template_id: str, data: dict) -> str:
     # 1. Direct key replacements (camelCase → UPPER_SNAKE_CASE)
     for key, value in data.items():
         placeholder = "{{" + camel_to_upper_snake(key) + "}}"
-        hydrated = hydrated.replace(placeholder, str(value))
+        if isinstance(value, str):
+            # Escape for safe embedding inside JS double-quoted string literals
+            safe = (value
+                .replace('\\', '\\\\')
+                .replace('"', '\\"')
+                .replace('\n', '\\n')
+                .replace('\r', '\\r')
+                .replace('\t', '\\t')
+            )
+            hydrated = hydrated.replace(placeholder, safe)
+        else:
+            hydrated = hydrated.replace(placeholder, str(value))
 
     # 2. Bulk JSON data replacement (for complex objects like weather/forecast)
     if "{{DATA_JSON}}" in hydrated:

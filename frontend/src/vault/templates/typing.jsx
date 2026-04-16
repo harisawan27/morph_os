@@ -142,7 +142,7 @@ export default function TypingTest() {
       </AnimatePresence>
 
       {/* Passage display */}
-      <div className="flex-1 bg-white/[0.02] border border-white/[0.06] rounded-2xl p-4 font-mono text-sm leading-relaxed overflow-hidden">
+      <div className="flex-1 bg-white/2 border border-white/6 rounded-2xl p-4 font-mono text-sm leading-relaxed overflow-hidden">
         {[...passage].map((ch, i) => {
           let cls = 'text-white/20';
           if (i < typed.length) cls = typed[i] === ch ? 'text-white/70' : 'text-red-400 bg-red-500/15 rounded';
@@ -158,7 +158,7 @@ export default function TypingTest() {
         onChange={handleInput}
         disabled={done}
         placeholder={started ? '' : 'Start typing to begin…'}
-        className="shrink-0 bg-white/[0.03] border border-white/[0.07] focus:border-white/15 rounded-2xl px-4 py-3 text-sm text-white/80 placeholder-white/18 outline-none font-mono transition-colors"
+        className="shrink-0 bg-white/3 border border-white/[0.07] focus:border-white/15 rounded-2xl px-4 py-3 text-sm text-white/80 placeholder-white/18 outline-none font-mono transition-colors"
         autoComplete="off" autoCorrect="off" spellCheck="false"
       />
     </div>

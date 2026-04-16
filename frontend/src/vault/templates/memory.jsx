@@ -152,7 +152,7 @@ export default function MemoryGame() {
                 ? 'bg-emerald-500/15 border-emerald-500/30 cursor-default'
                 : card.flipped
                 ? 'bg-white/8 border-white/15'
-                : 'bg-white/[0.04] border-white/[0.08] hover:bg-white/[0.07] cursor-pointer'
+                : 'bg-white/4 border-white/8 hover:bg-white/[0.07] cursor-pointer'
             }`}
           >
             <motion.span

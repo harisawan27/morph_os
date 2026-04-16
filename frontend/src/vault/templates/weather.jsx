@@ -300,10 +300,10 @@ export default function WeatherApp() {
         </div>
 
         {suggestions.length > 0 && (
-          <div className="absolute left-4 right-4 top-full mt-1 bg-[#0d1626]/95 border border-white/[0.08] rounded-2xl overflow-hidden shadow-2xl backdrop-blur-xl z-30">
+          <div className="absolute left-4 right-4 top-full mt-1 bg-[#0d1626]/95 border border-white/8 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-xl z-30">
             {suggestions.map((s, i) => (
               <button key={s.id || i} onMouseDown={() => selectLocation(s)}
-                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/[0.05] transition-all text-left border-b border-white/[0.04] last:border-0">
+                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-all text-left border-b border-white/4 last:border-0">
                 <MapPin size={13} className="text-white/25 shrink-0" />
                 <div className="min-w-0">
                   <span className="text-sm text-white/75">{s.name}</span>
@@ -321,7 +321,7 @@ export default function WeatherApp() {
       {/* ── Empty state ─────────────────────────────────────────────────────── */}
       {!loading && !weather && !error && (
         <div className="flex-1 flex flex-col items-center justify-center gap-4 px-6 pb-10">
-          <div className="w-16 h-16 rounded-3xl bg-white/[0.04] border border-white/[0.07] flex items-center justify-center">
+          <div className="w-16 h-16 rounded-3xl bg-white/4 border border-white/[0.07] flex items-center justify-center">
             <Cloud size={28} className="text-white/20" />
           </div>
           <p className="text-white/28 text-sm text-center leading-relaxed">
@@ -334,16 +334,16 @@ export default function WeatherApp() {
       {loading && (
         <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-3 animate-pulse">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="h-44 rounded-3xl bg-white/[0.04] border border-white/[0.05]" />
-            <div className="h-44 rounded-3xl bg-white/[0.04] border border-white/[0.05]" />
+            <div className="h-44 rounded-3xl bg-white/4 border border-white/5" />
+            <div className="h-44 rounded-3xl bg-white/4 border border-white/5" />
           </div>
-          <div className="h-28 rounded-3xl bg-white/[0.03] border border-white/[0.04]" />
+          <div className="h-28 rounded-3xl bg-white/3 border border-white/4" />
           <div className="grid grid-cols-2 gap-3">
-            <div className="h-28 rounded-3xl bg-white/[0.03] border border-white/[0.04]" />
-            <div className="h-28 rounded-3xl bg-white/[0.03] border border-white/[0.04]" />
+            <div className="h-28 rounded-3xl bg-white/3 border border-white/4" />
+            <div className="h-28 rounded-3xl bg-white/3 border border-white/4" />
           </div>
-          <div className="h-52 rounded-3xl bg-white/[0.03] border border-white/[0.04]" />
-          <div className="h-36 rounded-3xl bg-white/[0.03] border border-white/[0.04]" />
+          <div className="h-52 rounded-3xl bg-white/3 border border-white/4" />
+          <div className="h-36 rounded-3xl bg-white/3 border border-white/4" />
         </div>
       )}
 
@@ -363,7 +363,7 @@ export default function WeatherApp() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
 
               {/* Hero */}
-              <div className="relative overflow-hidden bg-white/[0.05] border border-white/[0.07] rounded-3xl p-5">
+              <div className="relative overflow-hidden bg-white/5 border border-white/[0.07] rounded-3xl p-5">
                 <div className="absolute top-0 right-0 w-48 h-48 rounded-full blur-[80px] -mr-16 -mt-16 opacity-40" style={{ background: theme.accent }} />
                 <div className="relative">
                   <div className="flex items-start justify-between mb-3">
@@ -386,13 +386,13 @@ export default function WeatherApp() {
                         <span className="text-xs text-white/32">H:{Math.round(today?.max ?? cur.temperature_2m)}° L:{Math.round(today?.min ?? cur.temperature_2m)}°</span>
                       </div>
                     </div>
-                    <div className="p-3 bg-white/[0.04] rounded-2xl border border-white/[0.07] shrink-0">
+                    <div className="p-3 bg-white/4 rounded-2xl border border-white/[0.07] shrink-0">
                       <WIcon type={curMeta.type} size={42} className={iconColor(curMeta.type)} />
                     </div>
                   </div>
 
                   {/* Quick stats */}
-                  <div className="grid grid-cols-3 gap-1 pt-3 border-t border-white/[0.05]">
+                  <div className="grid grid-cols-3 gap-1 pt-3 border-t border-white/5">
                     {[
                       { Icon: Wind,     val: `${Math.round(cur.wind_speed_10m)} km/h`, label: 'Wind'     },
                       { Icon: Droplets, val: `${cur.relative_humidity_2m}%`,           label: 'Humidity' },
@@ -410,7 +410,7 @@ export default function WeatherApp() {
 
               {/* Sunrise / Sunset */}
               {today && (
-                <div className="bg-white/[0.035] border border-white/[0.055] rounded-3xl p-4 flex flex-col justify-between">
+                <div className="bg-white/[0.035] border border-white/5.5 rounded-3xl p-4 flex flex-col justify-between">
                   <p className="text-[9px] uppercase tracking-[0.14em] text-white/25 mb-1">Sun & Daylight</p>
 
                   <SunArc sunrise={today.sunrise} sunset={today.sunset} />
@@ -437,7 +437,7 @@ export default function WeatherApp() {
                   </div>
 
                   {dayLength(today.sunrise, today.sunset) && (
-                    <p className="text-center text-[10px] text-white/28 mt-2 pt-2 border-t border-white/[0.05]">
+                    <p className="text-center text-[10px] text-white/28 mt-2 pt-2 border-t border-white/5">
                       {dayLength(today.sunrise, today.sunset)}
                     </p>
                   )}
@@ -446,7 +446,7 @@ export default function WeatherApp() {
             </div>
 
             {/* ── Hourly forecast ── */}
-            <div className="bg-white/[0.035] border border-white/[0.055] rounded-3xl overflow-hidden">
+            <div className="bg-white/[0.035] border border-white/5.5 rounded-3xl overflow-hidden">
               <div className="px-4 pt-3.5 pb-0.5">
                 <p className="text-[9px] uppercase tracking-[0.14em] text-white/25">Hourly Forecast · 24h</p>
               </div>
@@ -457,7 +457,7 @@ export default function WeatherApp() {
                     const isNow = i === 0;
                     const barH  = h.precip > 0 ? Math.max(4, Math.round((h.precip / maxPrecip) * 28)) : 0;
                     return (
-                      <div key={i} className={`flex flex-col items-center gap-1 px-2 py-2.5 rounded-2xl min-w-[52px] transition-all ${isNow ? 'bg-white/[0.06] border border-white/[0.09]' : ''}`}>
+                      <div key={i} className={`flex flex-col items-center gap-1 px-2 py-2.5 rounded-2xl min-w-13 transition-all ${isNow ? 'bg-white/6 border border-white/9' : ''}`}>
                         <span className="text-[10px] text-white/35 whitespace-nowrap">{isNow ? 'Now' : fmtHour(h.time)}</span>
                         <WIcon type={meta.type} size={13} className={iconColor(meta.type)} />
                         <span className="text-sm font-light tabular-nums">{Math.round(h.temp)}°</span>
@@ -470,7 +470,7 @@ export default function WeatherApp() {
                               style={{ height: barH, background: `rgba(56,189,248,${0.25 + (h.precip / maxPrecip) * 0.55})` }}
                             />
                           ) : (
-                            <div className="w-4 h-px bg-white/[0.04] rounded" />
+                            <div className="w-4 h-px bg-white/4 rounded" />
                           )}
                         </div>
                         {h.precip > 0 ? (
@@ -488,7 +488,7 @@ export default function WeatherApp() {
             {/* ── UV Index + Cloud Cover ── */}
             <div className="grid grid-cols-2 gap-3">
               {/* UV Index */}
-              <div className="bg-white/[0.035] border border-white/[0.055] rounded-3xl p-4">
+              <div className="bg-white/[0.035] border border-white/5.5 rounded-3xl p-4">
                 <p className="text-[9px] uppercase tracking-[0.14em] text-white/25 mb-3">UV Index</p>
                 <div className="flex items-end gap-2 mb-2.5">
                   <span className="text-3xl font-extralight tabular-nums" style={{ color: uvInfo.color }}>
@@ -512,7 +512,7 @@ export default function WeatherApp() {
               </div>
 
               {/* Cloud Cover */}
-              <div className="bg-white/[0.035] border border-white/[0.055] rounded-3xl p-4">
+              <div className="bg-white/[0.035] border border-white/5.5 rounded-3xl p-4">
                 <p className="text-[9px] uppercase tracking-[0.14em] text-white/25 mb-3">Cloud Cover</p>
                 <div className="flex items-end gap-2 mb-1">
                   <span className="text-3xl font-extralight tabular-nums">{cur.cloud_cover}%</span>
@@ -528,7 +528,7 @@ export default function WeatherApp() {
             </div>
 
             {/* ── 7-Day Forecast ── */}
-            <div className="bg-white/[0.035] border border-white/[0.055] rounded-3xl p-4">
+            <div className="bg-white/[0.035] border border-white/5.5 rounded-3xl p-4">
               <p className="text-[9px] uppercase tracking-[0.14em] text-white/25 mb-3">7-Day Forecast</p>
               <div className="space-y-0.5">
                 {daily.map((d, i) => {
@@ -536,7 +536,7 @@ export default function WeatherApp() {
                   const barL = ((d.min - weekMin) / weekRange) * 100;
                   const barW = ((d.max - d.min) / weekRange) * 100;
                   return (
-                    <div key={i} className="flex items-center gap-2 sm:gap-3 py-2 border-b border-white/[0.03] last:border-0">
+                    <div key={i} className="flex items-center gap-2 sm:gap-3 py-2 border-b border-white/3 last:border-0">
                       <span className="text-xs text-white/50 w-14 sm:w-16 shrink-0">{fmtDay(d.date, i)}</span>
                       <WIcon type={meta.type} size={14} className={`${iconColor(meta.type)} shrink-0`} />
                       <span className={`text-[10px] w-8 shrink-0 ${d.rain > 0 ? 'text-sky-400/60' : 'text-transparent'}`}>
@@ -637,7 +637,7 @@ export default function WeatherApp() {
                   sub: `Chance now: ${hourlySlice[0]?.rain ?? 0}%`,
                 },
               ].map(({ key, Icon, label, val, sub, rotate }) => (
-                <div key={key} className="bg-white/[0.035] border border-white/[0.05] rounded-2xl p-3.5">
+                <div key={key} className="bg-white/[0.035] border border-white/5 rounded-2xl p-3.5">
                   <div className="flex items-center gap-2 mb-2">
                     <div
                       className="shrink-0"

@@ -5,7 +5,7 @@ import { Panel, Group, Separator } from "react-resizable-panels";
 import { AnimatePresence, motion } from "framer-motion";
 import OmniBar from "./OmniBar";
 import ArtifactRenderer from "./ArtifactRenderer";
-import { Ghost, Layers, ChevronRight, Sparkles, X, Copy, Check, Pencil, CornerDownLeft } from "lucide-react";
+import { Ghost, Layers, ChevronRight, Sparkles, X, Copy, Check, Pencil, CornerDownLeft, FileText, Image } from "lucide-react";
 import Link from "next/link";
 
 type Message = {
@@ -13,7 +13,8 @@ type Message = {
   role: "user" | "assistant";
   text: string;
   code?: string | null;
-  pending?: boolean; // true while artifact is still streaming in
+  pending?: boolean;
+  attachment?: { name: string; isImage: boolean } | null;
 };
 type ActiveArtifact = { code: string; id: string } | null;
 
@@ -39,9 +40,10 @@ export default function ChatCanvas({
   const [activeArtifact, setActiveArtifact] = useState<ActiveArtifact>(initialArtifact);
   const [mobileView,     setMobileView]     = useState<"chat" | "artifact">("chat");
   const [isMobile,       setIsMobile]       = useState(false);
-  const bottomRef    = useRef<HTMLDivElement>(null);
-  const autoFiredRef = useRef(false);
+  const bottomRef        = useRef<HTMLDivElement>(null);
+  const autoFiredRef     = useRef(false);
   const historyLoadedRef = useRef(false);
+  const abortRef         = useRef<AbortController | null>(null);
 
   // ── Sync parent async history ───────────────────────────────────────────
   useEffect(() => {
@@ -107,9 +109,17 @@ export default function ChatCanvas({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const handleStop = useCallback(() => {
+    abortRef.current?.abort();
+  }, []);
+
   // ── Core generate (streaming SSE) ───────────────────────────────────────
-  const handleGenerate = useCallback(async (prompt: string) => {
-    const userMsg: Message = { id: Date.now().toString(), role: "user", text: prompt };
+  const handleGenerate = useCallback(async (prompt: string, file?: File | null) => {
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    const attachment = file ? { name: file.name, isImage: file.type.startsWith("image/") } : null;
+    const userMsg: Message = { id: Date.now().toString(), role: "user", text: prompt, attachment };
     setMessages(prev => [...prev, userMsg]);
     setIsGenerating(true);
 
@@ -122,18 +132,37 @@ export default function ChatCanvas({
     let botMsgId: string | null = null;
 
     try {
-      const res = await fetch(`${API}/api/generate`, {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          prompt,
-          session_id: sessionId,
-          history: messages.map(m => ({ role: m.role, text: m.text })),
-          user_context,
-          current_artifact: activeArtifact?.code ?? null,
-        }),
-      });
+      let res: Response;
+
+      if (file) {
+        const form = new FormData();
+        form.append("prompt", prompt);
+        if (sessionId) form.append("session_id", sessionId);
+        form.append("history", JSON.stringify(messages.map(m => ({ role: m.role, text: m.text }))));
+        form.append("user_context", JSON.stringify(user_context ?? {}));
+        if (activeArtifact?.code) form.append("current_artifact", activeArtifact.code);
+        form.append("file", file);
+        res = await fetch(`${API}/api/generate-with-file`, {
+          method: "POST",
+          credentials: "include",
+          body: form,
+          signal: controller.signal,
+        });
+      } else {
+        res = await fetch(`${API}/api/generate`, {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            prompt,
+            session_id: sessionId,
+            history: messages.map(m => ({ role: m.role, text: m.text })),
+            user_context,
+            current_artifact: activeArtifact?.code ?? null,
+          }),
+          signal: controller.signal,
+        });
+      }
 
       if (!res.ok || !res.body) throw new Error(`Error ${res.status}`);
 
@@ -192,13 +221,23 @@ export default function ChatCanvas({
         }
       }
     } catch (e) {
-      setMessages(prev => [...prev, {
-        id:   Date.now().toString(),
-        role: "assistant",
-        text: `Signal lost — ${e instanceof Error ? e.message : "Unknown error"}`,
-      }]);
+      if (e instanceof Error && e.name === "AbortError") {
+        // User cancelled — clear pending state on partial reply, no error message
+        if (botMsgId) {
+          setMessages(prev => prev.map(m =>
+            m.id === botMsgId ? { ...m, pending: false } : m
+          ));
+        }
+      } else {
+        setMessages(prev => [...prev, {
+          id:   Date.now().toString(),
+          role: "assistant",
+          text: `Signal lost — ${e instanceof Error ? e.message : "Unknown error"}`,
+        }]);
+      }
     } finally {
       setIsGenerating(false);
+      abortRef.current = null;
       if (botMsgId) {
         setMessages(prev => prev.map(m =>
           m.id === botMsgId ? { ...m, pending: false } : m
@@ -226,7 +265,7 @@ export default function ChatCanvas({
         <div className="flex-1 flex flex-col items-center justify-center px-4 pb-4 relative overflow-hidden">
 
           {/* Ambient glow */}
-          <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[260px] rounded-full pointer-events-none"
+          <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-125 h-65 rounded-full pointer-events-none"
             style={{ background: "radial-gradient(ellipse, rgba(147,51,234,0.06) 0%, transparent 70%)" }} />
 
           {/* Icon + Heading */}
@@ -251,7 +290,7 @@ export default function ChatCanvas({
 
           {/* OmniBar */}
           <div className="w-full max-w-2xl mb-4">
-            <OmniBar onGenerate={handleGenerate} isLoading={isGenerating} autoFocus />
+            <OmniBar onGenerate={handleGenerate} onStop={handleStop} isLoading={isGenerating} autoFocus />
           </div>
 
           {/* Suggestion chips — horizontal scroll on mobile */}
@@ -318,7 +357,7 @@ export default function ChatCanvas({
 
           <div className="shrink-0 px-3 sm:px-4 pt-2 pb-safe" style={{ borderTop: "1px solid var(--border)" }}>
             <div className="py-2">
-              <OmniBar onGenerate={handleGenerate} isLoading={isGenerating} />
+              <OmniBar onGenerate={handleGenerate} onStop={handleStop} isLoading={isGenerating} />
             </div>
           </div>
         </>
@@ -438,6 +477,7 @@ function MessageRow({
   const [copied,   setCopied]   = useState(false);
   const [editing,  setEditing]  = useState(false);
   const [editText, setEditText] = useState(m.text);
+  const [hovered,  setHovered]  = useState(false);
 
   const copy = (text: string) => {
     navigator.clipboard.writeText(text).then(() => {
@@ -455,7 +495,11 @@ function MessageRow({
 
   if (isUser) {
     return (
-      <div className="flex flex-col items-end py-1 gap-1">
+      <div
+        className="flex flex-col items-end py-1 gap-1"
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+      >
         {editing ? (
           <div className="max-w-[82%] sm:max-w-[75%] w-full">
             <textarea
@@ -494,10 +538,20 @@ function MessageRow({
               className="max-w-[82%] sm:max-w-[75%] px-4 py-2.5 rounded-2xl rounded-tr-sm text-sm leading-relaxed"
               style={{ background: "var(--msg-bg)", border: "1px solid var(--msg-border)", color: "var(--t1)" }}
             >
+              {m.attachment && (
+                <div className="mb-2 inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px]"
+                  style={{ background: "rgba(147,51,234,0.08)", border: "1px solid rgba(147,51,234,0.15)", color: "var(--t3)" }}>
+                  {m.attachment.isImage ? <Image size={10} /> : <FileText size={10} />}
+                  <span className="truncate" style={{ maxWidth: "180px" }}>{m.attachment.name}</span>
+                </div>
+              )}
               <p className="whitespace-pre-wrap wrap-break-word">{m.text}</p>
             </div>
-            {/* action bar — always visible */}
-            <div className="flex items-center gap-0.5 pr-1">
+            {/* action bar — fades in on hover */}
+            <div
+              className="flex items-center gap-0.5 pr-1 transition-opacity duration-150"
+              style={{ opacity: hovered || copied ? 1 : 0 }}
+            >
               <button
                 onClick={() => { setEditing(true); setEditText(m.text); }}
                 className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] transition-all"
@@ -526,7 +580,11 @@ function MessageRow({
   }
 
   return (
-    <div className="flex items-start gap-3 py-1">
+    <div
+      className="flex items-start gap-3 py-1 group"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
       <div className="w-7 h-7 rounded-full bg-linear-to-br from-purple-600/50 to-blue-600/50 shrink-0 mt-0.5 flex items-center justify-center"
         style={{ border: "1px solid var(--border)" }}>
         <Ghost size={12} className="text-purple-300/70" />
@@ -540,19 +598,18 @@ function MessageRow({
         </p>
 
         {m.pending && !m.code ? (
-          /* Artifact still generating — show pulsing placeholder */
           <div
-            className="mt-2.5 flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px]"
+            className="mt-2.5 flex items-center gap-2 px-3 py-2 rounded-xl text-[11px]"
             style={{
               background: "rgba(147,51,234,0.05)",
-              border: "1px solid rgba(147,51,234,0.12)",
-              color: "rgba(192,132,252,0.5)",
+              border: "1px solid rgba(147,51,234,0.10)",
+              color: "rgba(192,132,252,0.45)",
             }}
           >
-            <span className="flex gap-0.75 items-center">
+            <span className="flex gap-1 items-center shrink-0">
               {[0,1,2].map(i => (
                 <span key={i} className="w-1 h-1 rounded-full animate-bounce"
-                  style={{ background: "rgba(192,132,252,0.5)", animationDelay: `${i * 0.12}s` }} />
+                  style={{ background: "rgba(192,132,252,0.45)", animationDelay: `${i * 0.15}s` }} />
               ))}
             </span>
             <span>Building canvas…</span>
@@ -563,11 +620,11 @@ function MessageRow({
             className="mt-2.5 flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-medium transition-all active:scale-[0.97]"
             style={{
               background: "rgba(147,51,234,0.07)",
-              border: "1px solid rgba(147,51,234,0.18)",
-              color: "rgba(192,132,252,0.75)",
+              border: "1px solid rgba(147,51,234,0.16)",
+              color: "rgba(192,132,252,0.7)",
             }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(147,51,234,0.12)"; (e.currentTarget as HTMLElement).style.color = "rgba(192,132,252,1)"; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(147,51,234,0.07)"; (e.currentTarget as HTMLElement).style.color = "rgba(192,132,252,0.75)"; }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(147,51,234,0.13)"; (e.currentTarget as HTMLElement).style.color = "rgba(192,132,252,1)"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(147,51,234,0.07)"; (e.currentTarget as HTMLElement).style.color = "rgba(192,132,252,0.7)"; }}
           >
             <Layers size={11} />
             <span>Open in Canvas</span>
@@ -576,8 +633,8 @@ function MessageRow({
         ) : !isError && (
           <button
             onClick={() => copy(m.text)}
-            className="mt-1.5 flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] transition-all"
-            style={{ color: "var(--t4)" }}
+            className="mt-1.5 flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] transition-all duration-150"
+            style={{ color: "var(--t4)", opacity: hovered || copied ? 1 : 0 }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-hover)"; (e.currentTarget as HTMLElement).style.color = "var(--t2)"; }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--t4)"; }}
           >

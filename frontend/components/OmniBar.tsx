@@ -1,17 +1,23 @@
 "use client";
 
 import { useRef, useState, useCallback, useEffect } from "react";
-import { ArrowUp, Loader2 } from "lucide-react";
+import { ArrowUp, Square, Paperclip, X, FileText } from "lucide-react";
 
 interface OmniBarProps {
-  onGenerate: (prompt: string) => void;
+  onGenerate: (prompt: string, file?: File | null) => void;
+  onStop?: () => void;
   isLoading: boolean;
   autoFocus?: boolean;
 }
 
-export default function OmniBar({ onGenerate, isLoading, autoFocus }: OmniBarProps) {
-  const [prompt, setPrompt] = useState("");
+export default function OmniBar({ onGenerate, onStop, isLoading, autoFocus }: OmniBarProps) {
+  const [prompt,     setPrompt]     = useState("");
+  const [file,       setFile]       = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [focused,    setFocused]    = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const resize = useCallback(() => {
     const el = textareaRef.current;
@@ -26,75 +32,151 @@ export default function OmniBar({ onGenerate, isLoading, autoFocus }: OmniBarPro
     if (autoFocus) textareaRef.current?.focus();
   }, [autoFocus]);
 
+  const handleFile = useCallback((f: File) => {
+    setFile(f);
+    if (f.type.startsWith("image/")) {
+      const url = URL.createObjectURL(f);
+      setPreviewUrl(prev => { if (prev) URL.revokeObjectURL(prev); return url; });
+    } else {
+      setPreviewUrl(prev => { if (prev) URL.revokeObjectURL(prev); return null; });
+    }
+  }, []);
+
+  const clearFile = useCallback(() => {
+    setFile(null);
+    setPreviewUrl(prev => { if (prev) URL.revokeObjectURL(prev); return null; });
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }, []);
+
   const submit = useCallback(() => {
     const val = prompt.trim();
-    if (!val || isLoading) return;
-    onGenerate(val);
+    if ((!val && !file) || isLoading) return;
+    onGenerate(val || "Analyze this file", file);
     setPrompt("");
+    clearFile();
     if (textareaRef.current) textareaRef.current.style.height = "auto";
-  }, [prompt, isLoading, onGenerate]);
+  }, [prompt, file, isLoading, onGenerate, clearFile]);
 
   const onKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      submit();
-    }
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); }
   };
 
-  const canSubmit = !!prompt.trim() && !isLoading;
+  const canSubmit = (!!(prompt.trim() || file)) && !isLoading;
+
+  const onDragOver  = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(true); };
+  const onDragLeave = () => setIsDragging(false);
+  const onDrop      = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const f = e.dataTransfer.files[0];
+    if (f) handleFile(f);
+  };
+
+  const borderColor = isDragging || focused ? "var(--border-hi)" : "var(--border)";
 
   return (
-    <form
-      onSubmit={e => { e.preventDefault(); submit(); }}
-      className="w-full max-w-2xl mx-auto"
-    >
+    <form onSubmit={e => { e.preventDefault(); submit(); }} className="w-full max-w-2xl mx-auto">
       <div
-        className="flex items-end gap-2.5 px-4 py-3 rounded-2xl transition-all duration-150"
-        style={{
-          background: "var(--bg-input)",
-          border: "1px solid var(--border)",
-          outline: "none",
-        }}
-        onFocusCapture={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border-hi)"; }}
-        onBlurCapture={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; }}
+        className="rounded-2xl transition-all duration-150"
+        style={{ background: "var(--bg-input)", border: `1px solid ${borderColor}` }}
+        onFocusCapture={() => setFocused(true)}
+        onBlurCapture={() => setFocused(false)}
+        onDragOver={onDragOver}
+        onDragLeave={onDragLeave}
+        onDrop={onDrop}
       >
-        <textarea
-          ref={textareaRef}
-          rows={1}
-          value={prompt}
-          onChange={e => setPrompt(e.target.value)}
-          onKeyDown={onKey}
-          disabled={isLoading}
-          placeholder="Ask anything, build a tool, or open an app…"
-          className="flex-1 bg-transparent text-[15px] leading-relaxed resize-none outline-none disabled:opacity-40 min-h-[24px]"
-          style={{
-            color: "var(--t1)",
-            caretColor: "var(--t1)",
-            maxHeight: "180px",
-          }}
-          onFocus={e => { (e.currentTarget.parentElement as HTMLElement).style.borderColor = "var(--border-hi)"; }}
-          onBlur={e => { (e.currentTarget.parentElement as HTMLElement).style.borderColor = "var(--border)"; }}
-        />
-        {/* Placeholder workaround for CSS vars */}
-        <style>{`textarea::placeholder { color: var(--placeholder); }`}</style>
+        {/* File preview chip */}
+        {file && (
+          <div className="px-3 pt-2.5 pb-0">
+            <div
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px]"
+              style={{ background: "rgba(147,51,234,0.08)", border: "1px solid rgba(147,51,234,0.15)" }}
+            >
+              {previewUrl
+                ? <img src={previewUrl} alt="" className="w-5 h-5 rounded object-cover shrink-0" />
+                : <FileText size={11} style={{ color: "rgba(192,132,252,0.7)" }} className="shrink-0" />}
+              <span className="truncate" style={{ color: "var(--t3)", maxWidth: "180px" }}>{file.name}</span>
+              <button
+                type="button"
+                onClick={clearFile}
+                className="shrink-0 ml-0.5 transition-colors"
+                style={{ color: "var(--t4)" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "var(--t2)"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--t4)"; }}
+              >
+                <X size={9} />
+              </button>
+            </div>
+          </div>
+        )}
 
-        <button
-          type="submit"
-          disabled={!canSubmit}
-          className="shrink-0 mb-0.5 w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-150 active:scale-90"
-          style={canSubmit
-            ? { background: "var(--t1)", color: "var(--bg-page)" }
-            : { background: "var(--bg-card)", color: "var(--t5)", cursor: "default" }
-          }
-        >
-          {isLoading
-            ? <Loader2 size={13} className="animate-spin" style={{ color: "var(--t4)" }} />
-            : <ArrowUp size={14} strokeWidth={2.5} />}
-        </button>
+        {/* Input row */}
+        <div className="flex items-end gap-2 px-3 py-3">
+          {/* Paperclip */}
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isLoading}
+            className="shrink-0 mb-0.5 w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-150 disabled:opacity-30"
+            style={{ color: "var(--t4)" }}
+            title="Attach file (image, PDF, text)"
+            onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = "var(--bg-hover)"; el.style.color = "var(--t2)"; }}
+            onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = "transparent"; el.style.color = "var(--t4)"; }}
+          >
+            <Paperclip size={15} />
+          </button>
+
+          <textarea
+            ref={textareaRef}
+            rows={1}
+            value={prompt}
+            onChange={e => setPrompt(e.target.value)}
+            onKeyDown={onKey}
+            disabled={isLoading}
+            placeholder={file ? "Ask about this file…" : "Ask anything, build a tool, or open an app…"}
+            className="flex-1 bg-transparent text-[15px] leading-relaxed resize-none outline-none disabled:opacity-40 min-h-6"
+            style={{ color: "var(--t1)", caretColor: "var(--t1)", maxHeight: "180px" }}
+          />
+
+          {isLoading ? (
+            <button
+              type="button"
+              onClick={onStop}
+              className="shrink-0 mb-0.5 w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-150 active:scale-90"
+              style={{ background: "var(--t1)", color: "var(--bg-page)" }}
+              title="Stop generating"
+            >
+              <Square size={11} fill="currentColor" strokeWidth={0} />
+            </button>
+          ) : (
+            <button
+              type="submit"
+              disabled={!canSubmit}
+              className="shrink-0 mb-0.5 w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-150 active:scale-90"
+              style={canSubmit
+                ? { background: "var(--t1)", color: "var(--bg-page)" }
+                : { background: "var(--bg-card)", color: "var(--t5)", cursor: "default" }}
+            >
+              <ArrowUp size={14} strokeWidth={2.5} />
+            </button>
+          )}
+        </div>
       </div>
 
-      <p className="hidden sm:block text-center text-[10px] tracking-wide mt-1.5 select-none" style={{ color: "var(--t5)" }}>
-        Enter ↵ to send · Shift+Enter for new line
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*,.pdf,.txt,.md,.csv,.json"
+        className="hidden"
+        onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
+      />
+
+      <style>{`textarea::placeholder { color: var(--placeholder); }`}</style>
+
+      <p className="hidden sm:block text-center text-[10px] tracking-wide mt-1.5 select-none transition-all duration-200" style={{ color: "var(--t5)" }}>
+        {isLoading
+          ? "Click ■ to stop generation"
+          : "Enter ↵ to send · Shift+Enter for new line · Drop files to attach"}
       </p>
     </form>
   );

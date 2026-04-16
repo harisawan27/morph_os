@@ -4,7 +4,7 @@ import uuid
 import asyncio
 import logging
 import httpx
-from fastapi import FastAPI, Depends, HTTPException, Query
+from fastapi import FastAPI, Depends, HTTPException, Query, File, UploadFile, Form
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -14,7 +14,7 @@ from typing import Optional, Any
 
 from database import get_db, init_db, SessionLocal
 from models import Artifact
-from llm_pipeline import brain_plan_ui, execute_plan, embed_text, search_web, local_template_match
+from llm_pipeline import brain_plan_ui, execute_plan, embed_text, search_web, local_template_match, analyze_file
 from auth import get_current_user, get_optional_user
 
 logger = logging.getLogger(__name__)
@@ -76,142 +76,190 @@ def _sse(event: dict) -> str:
     return f"data: {json.dumps(event)}\n\n"
 
 
+async def _generate_stream(
+    prompt: str,
+    session_id: Optional[str],
+    history: list[dict],
+    user_context: Optional[dict],
+    current_artifact: Optional[str],
+    user_id: Optional[str],
+    file_analysis: Optional[dict] = None,
+):
+    """Core SSE generator — shared by JSON and multipart endpoints."""
+
+    # ── 1. Embed original prompt ─────────────────────────────────────────────
+    try:
+        embedding = await asyncio.to_thread(embed_text, prompt)
+    except Exception as e:
+        yield _sse({"type": "error", "text": f"Embedding failed: {e}"})
+        return
+
+    # ── 2. Semantic cache (skip on file uploads — always fresh) ─────────────
+    if user_id and not file_analysis:
+        db = SessionLocal()
+        try:
+            distance_col = Artifact.embedding.cosine_distance(embedding).label("distance")
+            closest = (
+                db.query(Artifact, distance_col)
+                .filter(Artifact.user_id == user_id)
+                .order_by(distance_col)
+                .first()
+            )
+            if closest:
+                hit, distance = closest
+                if distance is not None and distance < 0.1:
+                    yield _sse({"type": "reply", "text": hit.reply or "Found in memory.", "id": hit.id})
+                    if hit.code:
+                        yield _sse({"type": "artifact", "code": hit.code, "id": hit.id})
+                    yield _sse({"type": "done"})
+                    return
+        finally:
+            db.close()
+
+    # ── 3. Build brain prompt (inject file context when present) ─────────────
+    brain_prompt = prompt
+    if file_analysis:
+        ftype  = file_analysis.get("type", "file")
+        fname  = file_analysis.get("filename", "attachment")
+        fdesc  = file_analysis.get("description", "")
+        ftext  = file_analysis.get("text", "")
+        fcolor = file_analysis.get("colors", [])
+        parts  = [f"[ATTACHED FILE: {fname} | {ftype.upper()}]"]
+        if fdesc:  parts.append(f"Description: {fdesc}")
+        if ftext:  parts.append(f"Content:\n{ftext[:4000]}")
+        if fcolor: parts.append(f"Brand colors detected: {', '.join(fcolor)}")
+        brain_prompt = "\n".join(parts) + f"\n\nUser message: {prompt}"
+
+    # ── 4. Local template fast-path (only when no file) ──────────────────────
+    planned = None if file_analysis else local_template_match(prompt)
+
+    # ── 5. Brain classifies + plans ──────────────────────────────────────────
+    if planned is None:
+        try:
+            brain_json = await asyncio.to_thread(
+                brain_plan_ui,
+                brain_prompt,
+                history,
+                user_context,
+                bool(current_artifact),
+            )
+            planned = json.loads(brain_json)
+        except Exception as e:
+            logger.error(f"Brain failed: {e}")
+            planned = {"type": "chat", "reply": "Something went wrong on my end. Try again?"}
+
+    reply       = planned.get("reply", "On it...")
+    artifact_id = str(uuid.uuid4())
+
+    # ── 6a. Web search ────────────────────────────────────────────────────────
+    if planned.get("type") == "search":
+        query = planned.get("query", prompt)
+        try:
+            reply = await asyncio.to_thread(search_web, query)
+        except Exception as e:
+            logger.error(f"Web search failed: {e}")
+            reply = "I tried to search the web but hit an error. Please try again."
+        yield _sse({"type": "reply", "text": reply, "id": artifact_id, "pending": False})
+        if user_id:
+            db = SessionLocal()
+            try:
+                db.add(Artifact(id=artifact_id, user_id=user_id, session_id=session_id,
+                                prompt=prompt, reply=reply, embedding=embedding))
+                db.commit()
+            except Exception as e:
+                logger.error(f"Persist search failed: {e}"); db.rollback()
+            finally:
+                db.close()
+        yield _sse({"type": "done"})
+        return
+
+    # ── 6b. Yield reply immediately ───────────────────────────────────────────
+    needs_artifact = planned.get("type") in ("template", "build", "edit") or planned.get("requires_ui")
+    yield _sse({"type": "reply", "text": reply, "id": artifact_id, "pending": bool(needs_artifact)})
+
+    # ── 7. Execute plan ───────────────────────────────────────────────────────
+    code    = None
+    ui_spec = None
+    if needs_artifact:
+        try:
+            code, ui_spec = await asyncio.to_thread(execute_plan, planned, current_artifact)
+        except Exception as e:
+            logger.error(f"Plan execution failed: {e}")
+
+    if code:
+        yield _sse({"type": "artifact", "code": code, "id": artifact_id})
+
+    # ── 8. Persist ────────────────────────────────────────────────────────────
+    if user_id:
+        db = SessionLocal()
+        try:
+            db.add(Artifact(id=artifact_id, user_id=user_id, session_id=session_id,
+                            prompt=prompt, reply=reply, ui_spec=ui_spec, code=code, embedding=embedding))
+            db.commit()
+            logger.info(f"Persisted artifact {artifact_id}")
+        except Exception as e:
+            logger.error(f"Persist failed: {e}"); db.rollback()
+        finally:
+            db.close()
+
+    yield _sse({"type": "done"})
+
+
 @app.post("/api/generate")
 async def generate_artifact(
     request: GenerateRequest,
     user: dict | None = Depends(get_optional_user),
 ):
     user_id = (user.get("email") or user.get("sub")) if user else None
+    return StreamingResponse(
+        _generate_stream(
+            prompt=request.prompt,
+            session_id=request.session_id,
+            history=request.history,
+            user_context=request.user_context,
+            current_artifact=request.current_artifact,
+            user_id=user_id,
+        ),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
-    async def stream():
-        # ── 1. Embed (in thread — blocking network call) ────────────────────
-        try:
-            embedding = await asyncio.to_thread(embed_text, request.prompt)
-        except Exception as e:
-            yield _sse({"type": "error", "text": f"Embedding failed: {e}"})
-            return
 
-        # ── 2. Semantic cache (DB — sync, stays in main thread) ─────────────
-        if user_id:
-            db = SessionLocal()
-            try:
-                distance_col = Artifact.embedding.cosine_distance(embedding).label("distance")
-                closest = (
-                    db.query(Artifact, distance_col)
-                    .filter(Artifact.user_id == user_id)
-                    .order_by(distance_col)
-                    .first()
-                )
-                if closest:
-                    hit, distance = closest
-                    if distance is not None and distance < 0.1:
-                        yield _sse({"type": "reply", "text": hit.reply or "Found in memory.", "id": hit.id})
-                        if hit.code:
-                            yield _sse({"type": "artifact", "code": hit.code, "id": hit.id})
-                        yield _sse({"type": "done"})
-                        return
-            finally:
-                db.close()
+@app.post("/api/generate-with-file")
+async def generate_with_file(
+    prompt: str = Form(...),
+    session_id: Optional[str] = Form(None),
+    history: str = Form("[]"),
+    user_context: str = Form("{}"),
+    current_artifact: Optional[str] = Form(None),
+    file: UploadFile = File(...),
+    user: dict | None = Depends(get_optional_user),
+):
+    user_id = (user.get("email") or user.get("sub")) if user else None
+    file_bytes = await file.read()
+    mime_type  = file.content_type or "application/octet-stream"
+    filename   = file.filename or "attachment"
 
-        # ── 3. Local template fast-path (zero LLM cost, instant) ────────────
-        planned = local_template_match(request.prompt)
+    try:
+        file_analysis = await asyncio.to_thread(analyze_file, file_bytes, mime_type, filename, prompt)
+    except Exception as e:
+        logger.error(f"File analysis failed: {e}")
+        file_analysis = {"type": "unknown", "filename": filename,
+                         "description": "Could not analyze file", "text": "", "colors": []}
 
-        # ── 3b. Brain classifies + plans (in thread) — only if no local match ─
-        if planned is None:
-            try:
-                brain_json = await asyncio.to_thread(
-                    brain_plan_ui,
-                    request.prompt,
-                    request.history,
-                    request.user_context,
-                    bool(request.current_artifact),
-                )
-                planned = json.loads(brain_json)
-            except Exception as e:
-                logger.error(f"Brain failed: {e}")
-                planned = {"type": "chat", "reply": "Something went wrong on my end. Try again?"}
-
-        reply       = planned.get("reply", "On it...")
-        artifact_id = str(uuid.uuid4())
-
-        # ── 4a. Web search — fetch live result before yielding reply ─────────
-        if planned.get("type") == "search":
-            query = planned.get("query", request.prompt)
-            try:
-                search_result = await asyncio.to_thread(search_web, query)
-                reply = search_result
-            except Exception as e:
-                logger.error(f"Web search failed: {e}")
-                reply = "I tried to search the web but hit an error. Please try again."
-            yield _sse({"type": "reply", "text": reply, "id": artifact_id, "pending": False})
-            if user_id:
-                db = SessionLocal()
-                try:
-                    from models import Artifact as ArtifactModel
-                    artifact = ArtifactModel(
-                        id=artifact_id,
-                        user_id=user_id,
-                        session_id=request.session_id,
-                        prompt=request.prompt,
-                        reply=reply,
-                        embedding=embedding,
-                    )
-                    db.add(artifact)
-                    db.commit()
-                except Exception as e:
-                    logger.error(f"Persist search failed: {e}")
-                    db.rollback()
-                finally:
-                    db.close()
-            yield _sse({"type": "done"})
-            return
-
-        # ── 4. Yield reply immediately — user sees this right away ───────────
-        needs_artifact = planned.get("type") in ("template", "build", "edit") or planned.get("requires_ui")
-        yield _sse({"type": "reply", "text": reply, "id": artifact_id, "pending": bool(needs_artifact)})
-
-        # ── 5. Execute plan if artifact needed (in thread — slow for builds) ─
-        code     = None
-        ui_spec  = None
-        if needs_artifact:
-            try:
-                code, ui_spec = await asyncio.to_thread(
-                    execute_plan, planned, request.current_artifact
-                )
-            except Exception as e:
-                logger.error(f"Plan execution failed: {e}")
-
-        # ── 6. Yield artifact ────────────────────────────────────────────────
-        if code:
-            yield _sse({"type": "artifact", "code": code, "id": artifact_id})
-
-        # ── 7. Persist to DB (sync, in main thread) ──────────────────────────
-        if user_id:
-            db = SessionLocal()
-            try:
-                artifact = Artifact(
-                    id=artifact_id,
-                    user_id=user_id,
-                    session_id=request.session_id,
-                    prompt=request.prompt,
-                    reply=reply,
-                    ui_spec=ui_spec,
-                    code=code,
-                    embedding=embedding,
-                )
-                db.add(artifact)
-                db.commit()
-                logger.info(f"Persisted artifact {artifact_id}")
-            except Exception as e:
-                logger.error(f"Persist failed: {e}")
-                db.rollback()
-            finally:
-                db.close()
-
-        yield _sse({"type": "done"})
+    history_list = json.loads(history) if history else []
+    user_ctx     = json.loads(user_context) if user_context and user_context != "{}" else None
 
     return StreamingResponse(
-        stream(),
+        _generate_stream(
+            prompt=prompt,
+            session_id=session_id,
+            history=history_list,
+            user_context=user_ctx,
+            current_artifact=current_artifact,
+            user_id=user_id,
+            file_analysis=file_analysis,
+        ),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )

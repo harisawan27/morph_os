@@ -81,7 +81,7 @@ export default function SpinWheel() {
       <div className="relative shrink-0">
         {/* Pointer */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 z-10">
-          <div className="w-0 h-0 border-l-[10px] border-r-[10px] border-t-[18px] border-l-transparent border-r-transparent border-t-white drop-shadow-lg" />
+          <div className="w-0 h-0 border-l-10 border-r-10 border-t-18 border-l-transparent border-r-transparent border-t-white drop-shadow-lg" />
         </div>
 
         <motion.svg
@@ -132,7 +132,7 @@ export default function SpinWheel() {
       <AnimatePresence>
         {result && (
           <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
-            className="bg-gradient-to-r from-purple-600/15 to-blue-600/15 border border-purple-500/25 rounded-2xl px-6 py-3 text-center">
+            className="bg-linear-to-r from-purple-600/15 to-blue-600/15 border border-purple-500/25 rounded-2xl px-6 py-3 text-center">
             <p className="text-white/40 text-xs uppercase tracking-widest mb-1">Result</p>
             <p className="text-white text-lg">{result}</p>
           </motion.div>
@@ -144,7 +144,7 @@ export default function SpinWheel() {
         <p className="text-[9px] uppercase tracking-widest text-white/20 mb-2">Options ({options.length}/12)</p>
         <div className="flex flex-wrap gap-1.5 mb-2">
           {options.map((opt, i) => (
-            <div key={i} className="flex items-center gap-1.5 bg-white/[0.04] border border-white/[0.08] rounded-full px-2.5 py-1">
+            <div key={i} className="flex items-center gap-1.5 bg-white/4 border border-white/8 rounded-full px-2.5 py-1">
               <span className="text-xs text-white/55">{opt}</span>
               {options.length > 2 && (
                 <button onClick={() => removeOption(i)} className="text-white/20 hover:text-red-400 transition-colors">
@@ -159,7 +159,7 @@ export default function SpinWheel() {
             <input value={newOpt} onChange={e => setNewOpt(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && addOption()}
               placeholder="Add option…"
-              className="flex-1 bg-white/[0.03] border border-white/[0.06] rounded-xl px-3 py-2 text-xs text-white/60 placeholder-white/18 outline-none" />
+              className="flex-1 bg-white/3 border border-white/6 rounded-xl px-3 py-2 text-xs text-white/60 placeholder-white/18 outline-none" />
             <button onClick={addOption}
               className="px-3 bg-white/5 border border-white/10 rounded-xl text-white/40 hover:text-white transition-all">
               <Plus size={13} />

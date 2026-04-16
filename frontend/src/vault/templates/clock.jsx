@@ -247,7 +247,7 @@ export default function ClockArtifact() {
       <div className="flex-1 overflow-y-auto flex flex-col items-center pt-5 px-4 pb-4">
 
         {/* Analog clock */}
-        <div className="p-4 bg-white/[0.018] border border-white/[0.055] rounded-full shadow-[0_0_60px_rgba(59,130,246,0.06)] mb-4 shrink-0">
+        <div className="p-4 bg-white/[0.018] border border-white/5.5 rounded-full shadow-[0_0_60px_rgba(59,130,246,0.06)] mb-4 shrink-0">
           <AnalogClock date={displayTime} size={168} />
         </div>
 
@@ -281,7 +281,7 @@ export default function ClockArtifact() {
                 className={`w-full flex items-center justify-between px-4 py-2.5 rounded-2xl border transition-all group
                   ${isActive
                     ? 'bg-blue-600/10 border-blue-500/22 text-white'
-                    : 'bg-white/[0.022] border-white/[0.045] text-white/45 hover:text-white hover:bg-white/[0.05]'
+                    : 'bg-white/[0.022] border-white/4.5 text-white/45 hover:text-white hover:bg-white/5'
                   }`}
               >
                 <div className="flex items-center gap-2 min-w-0">
@@ -313,7 +313,7 @@ export default function ClockArtifact() {
           {!searchOpen ? (
             <button
               onClick={openSearch}
-              className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-2xl border border-dashed border-white/[0.08] text-white/18 hover:text-white/45 hover:border-white/15 transition-all text-xs"
+              className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-2xl border border-dashed border-white/8 text-white/18 hover:text-white/45 hover:border-white/15 transition-all text-xs"
             >
               + Add city
             </button>
@@ -326,7 +326,7 @@ export default function ClockArtifact() {
                 onBlur={() => { if (!search) { setSearchOpen(false); } }}
                 onKeyDown={e => { if (e.key === 'Escape') { setSearch(''); setSearchOpen(false); } }}
                 placeholder="Search city or country..."
-                className="w-full bg-white/[0.04] border border-white/[0.09] rounded-2xl px-4 py-2.5 text-sm text-white/80 placeholder-white/18 outline-none focus:border-blue-500/30 transition-colors"
+                className="w-full bg-white/4 border border-white/9 rounded-2xl px-4 py-2.5 text-sm text-white/80 placeholder-white/18 outline-none focus:border-blue-500/30 transition-colors"
               />
               {results.length > 0 && (
                 <div className="absolute top-full mt-1.5 w-full bg-[#101010] border border-white/[0.07] rounded-2xl overflow-hidden z-10 shadow-2xl">
@@ -334,7 +334,7 @@ export default function ClockArtifact() {
                     <button
                       key={i}
                       onMouseDown={() => addCity(c)}
-                      className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-white/[0.04] transition-all text-left"
+                      className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-white/4 transition-all text-left"
                     >
                       <span className="text-sm text-white/65">{c.city}</span>
                       <div className="flex items-center gap-2.5">
