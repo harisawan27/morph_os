@@ -20,12 +20,12 @@ const nextConfig: NextConfig = {
     if (!backendUrl) return [];
     return [
       {
-        // Proxy everything under /api/* to the backend EXCEPT /api/auth/**
-        // which must be handled by NextAuth on the frontend itself.
-        // The capture group ((?!auth/).*) uses a negative lookahead so
-        // /api/auth/callback, /api/auth/error, etc. are never forwarded.
-        source: "/api/((?!auth/).*)",
-        destination: `${backendUrl}/api/$1`,
+        // Proxy /api/* to the backend.
+        // Next.js rewrites run AFTER filesystem routes, so /api/auth/**
+        // is already handled by the NextAuth route handler and never
+        // reaches this rewrite.
+        source: "/api/:path*",
+        destination: `${backendUrl}/api/:path*`,
       },
     ];
   },

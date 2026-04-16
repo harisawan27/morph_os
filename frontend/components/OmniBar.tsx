@@ -22,8 +22,8 @@ export default function OmniBar({ onGenerate, onStop, isLoading, autoFocus }: Om
   const resize = useCallback(() => {
     const el = textareaRef.current;
     if (!el) return;
-    el.style.height = "auto";
-    el.style.height = Math.min(el.scrollHeight, 200) + "px";
+    el.style.height = "0px";                                   // collapse first so scrollHeight shrinks too
+    el.style.height = Math.min(el.scrollHeight, 200) + "px";  // expand to content, cap at 200px
   }, []);
 
   useEffect(() => { resize(); }, [prompt, resize]);
@@ -139,6 +139,7 @@ export default function OmniBar({ onGenerate, onStop, isLoading, autoFocus }: Om
               maxHeight: "200px",
               padding: 0,
               margin: 0,
+              overflowY: "hidden",
             }}
           />
         </div>
