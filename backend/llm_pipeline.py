@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 PRIMARY_MODEL  = 'gemini-2.5-flash'
 FALLBACK_MODEL = 'gemini-2.0-flash'
 
-client = genai.Client()
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 
 # ── Local template fast-path ─────────────────────────────────────────────────
