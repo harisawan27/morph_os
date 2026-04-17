@@ -88,8 +88,11 @@ export default function ArtifactRenderer({
   return (
     <div className="flex flex-col h-full" style={{ background: "var(--bg-page)", color: "var(--t1)" }}>
 
-      {/* ── Toolbar ── always dark, independent of app theme ───────────── */}
-      <div className={`morph-static-dark flex items-center justify-between border-b border-white/[0.05] bg-black/90 backdrop-blur-2xl shrink-0 ${isMobile ? "px-3 py-3" : "px-5 py-3.5"}`}>
+      {/* ── Toolbar ─────────────────────────────────────────────────────── */}
+      <div
+        className={`flex items-center justify-between border-b shrink-0 backdrop-blur-2xl ${isMobile ? "px-3 py-3" : "px-5 py-3.5"}`}
+        style={{ background: "var(--bg-panel)", borderColor: "var(--border)" }}
+      >
 
         <div className="flex items-center gap-3">
           {/* Mobile back button */}
@@ -166,9 +169,12 @@ export default function ArtifactRenderer({
         )}
       </div>
 
-      {/* ── Status bar — desktop only, always dark ─────────────────────── */}
+      {/* ── Status bar — desktop only ──────────────────────────────────── */}
       {!isMobile && (
-        <div className="morph-static-dark px-5 py-2 border-t border-white/[0.04] bg-black/90 text-[7px] text-white/15 uppercase tracking-[0.3em] flex justify-between shrink-0">
+        <div
+          className="px-5 py-2 border-t text-[7px] uppercase tracking-[0.3em] flex justify-between shrink-0"
+          style={{ background: "var(--bg-panel)", borderColor: "var(--border)", color: "var(--t4)" }}
+        >
           <div className="flex items-center gap-2">
             <span className="w-1 h-1 rounded-full bg-blue-500/60 animate-pulse" />
             MORPH OS · ZERO LAG ENGINE

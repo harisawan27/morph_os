@@ -218,7 +218,7 @@ export default function Checkers() {
   const bCount = board.filter(p => p?.c === 'b').length;
 
   return (
-    <div className="morph-static-dark h-full text-white flex flex-col items-center justify-center gap-4 p-4 overflow-hidden select-none" style={{ background: '#0a0a0a' }}>
+    <div className="h-full flex flex-col items-center justify-center gap-4 p-4 overflow-hidden select-none" style={{ background: 'var(--bg-page)', color: 'var(--t1)' }}>
 
       {/* Mode toggle */}
       <div className="flex bg-white/4 border border-white/[0.07] rounded-full p-0.5 gap-0.5">
@@ -268,8 +268,8 @@ export default function Checkers() {
                   : isLast && dark
                   ? 'var(--morph-06)'
                   : dark
-                  ? '#1a1a1a'
-                  : '#0e0e0e',
+                  ? 'var(--checker-dark)'
+                  : 'var(--checker-light)',
                 cursor: dark ? 'pointer' : 'default',
                 aspectRatio: '1',
               }}

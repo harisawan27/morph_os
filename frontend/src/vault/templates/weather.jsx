@@ -48,7 +48,15 @@ function iconColor(type) {
   return 'text-slate-400';
 }
 
-function bgTheme(type) {
+function bgTheme(type, light = false) {
+  if (light) {
+    if (type === 'sun')    return { from: '#e8f4fd', mid: '#d0eafc', accent: 'rgba(251,191,36,0.28)', bar: '#f59e0b' };
+    if (type === 'rain' || type === 'shower') return { from: '#e0eff8', mid: '#cce3f5', accent: 'rgba(56,189,248,0.22)', bar: '#38bdf8' };
+    if (type === 'snow')   return { from: '#eff5ff', mid: '#dceefb', accent: 'rgba(186,230,253,0.35)', bar: '#7dd3fc' };
+    if (type === 'thunder')return { from: '#f0ecff', mid: '#e4d8fc', accent: 'rgba(139,92,246,0.20)', bar: '#a78bfa' };
+    if (type === 'fog')    return { from: '#f0f2f5', mid: '#e4e8ec', accent: 'rgba(148,163,184,0.22)', bar: '#94a3b8' };
+    return                        { from: '#eef5ff', mid: '#d8ecff', accent: 'rgba(96,165,250,0.22)', bar: '#60a5fa' };
+  }
   if (type === 'sun')    return { from: '#0a1628', mid: '#0d1f3e', accent: 'rgba(251,191,36,0.18)', bar: '#f59e0b' };
   if (type === 'rain' || type === 'shower') return { from: '#060d1a', mid: '#0a1628', accent: 'rgba(56,189,248,0.14)', bar: '#38bdf8' };
   if (type === 'snow')   return { from: '#080f1f', mid: '#0e1c38', accent: 'rgba(186,230,253,0.14)', bar: '#bae6fd' };
@@ -183,8 +191,19 @@ export default function WeatherApp() {
   const [loading,     setLoading]     = useState(false);
   const [error,       setError]       = useState(null);
   const [searchFocus, setSearchFocus] = useState(false);
+  const [isLight,     setIsLight]     = useState(() =>
+    typeof document !== 'undefined' && document.documentElement.classList.contains('light')
+  );
   const debounce = useRef(null);
   const inputRef = useRef(null);
+
+  useEffect(() => {
+    const obs = new MutationObserver(() =>
+      setIsLight(document.documentElement.classList.contains('light'))
+    );
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => obs.disconnect();
+  }, []);
 
   useEffect(() => {
     const city = (typeof seedData === 'object' && seedData?.city && !String(seedData.city).includes('{{'))
@@ -231,7 +250,7 @@ export default function WeatherApp() {
   // ── Derived data ─────────────────────────────────────────────────────────────
   const cur     = weather?.current;
   const curMeta = cur ? wmoMeta(cur.weather_code) : null;
-  const theme   = curMeta ? bgTheme(curMeta.type) : bgTheme('cloud');
+  const theme   = curMeta ? bgTheme(curMeta.type, isLight) : bgTheme('cloud', isLight);
 
   const hourlySlice = (() => {
     if (!weather?.hourly || !cur) return [];
@@ -273,7 +292,7 @@ export default function WeatherApp() {
   // ── Render ────────────────────────────────────────────────────────────────────
   return (
     <div
-      className="morph-static-dark h-full flex flex-col overflow-hidden text-white relative"
+      className="h-full flex flex-col overflow-hidden text-white relative"
       style={{ background: `radial-gradient(ellipse at 60% 0%, ${theme.accent} 0%, transparent 55%), linear-gradient(180deg, ${theme.from} 0%, ${theme.mid} 100%)` }}
     >
 
@@ -300,7 +319,7 @@ export default function WeatherApp() {
         </div>
 
         {suggestions.length > 0 && (
-          <div className="absolute left-4 right-4 top-full mt-1 bg-[#0d1626]/95 border border-white/8 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-xl z-30">
+          <div className="absolute left-4 right-4 top-full mt-1 border border-white/8 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-xl z-30" style={{ background: isLight ? 'rgba(255,255,255,0.92)' : 'rgba(13,22,38,0.95)' }}>
             {suggestions.map((s, i) => (
               <button key={s.id || i} onMouseDown={() => selectLocation(s)}
                 className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-all text-left border-b border-white/4 last:border-0">

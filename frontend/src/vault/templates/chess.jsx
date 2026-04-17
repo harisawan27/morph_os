@@ -310,7 +310,7 @@ export default function Chess() {
   const capturedStr = (color) => captured[color].map(t=>PIECES[color[0]+t]||'').join('');
 
   return (
-    <div className="morph-static-dark h-full text-white flex flex-col items-center justify-center gap-3 p-3 overflow-hidden select-none" style={{ background: '#0a0a0a' }}>
+    <div className="h-full flex flex-col items-center justify-center gap-3 p-3 overflow-hidden select-none" style={{ background: 'var(--bg-page)', color: 'var(--t1)' }}>
 
       {/* Mode */}
       <div className="flex bg-white/4 border border-white/[0.07] rounded-full p-0.5 gap-0.5">

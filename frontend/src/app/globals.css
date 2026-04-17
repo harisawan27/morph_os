@@ -9,27 +9,27 @@
 /* ─── Theme CSS variables ────────────────────────────────────────────────────── */
 :root {
   /* Dark (default) */
-  --bg-page:     #050505;
-  --bg-panel:    #0a0a0a;
-  --bg-sidebar:  #0d0d0d;
-  --bg-card:     rgba(255,255,255,0.03);
-  --bg-input:    rgba(255,255,255,0.04);
-  --bg-hover:    rgba(255,255,255,0.05);
-  --bg-active:   rgba(255,255,255,0.08);
-  --border:      rgba(255,255,255,0.07);
-  --border-md:   rgba(255,255,255,0.10);
-  --border-hi:   rgba(255,255,255,0.18);
-  --t1:          rgba(255,255,255,0.88);
-  --t2:          rgba(255,255,255,0.55);
-  --t3:          rgba(255,255,255,0.30);
-  --t4:          rgba(255,255,255,0.15);
-  --t5:          rgba(255,255,255,0.08);
+  --bg-page:     #0d0d0d;
+  --bg-panel:    #111111;
+  --bg-sidebar:  #141414;
+  --bg-card:     rgba(255,255,255,0.05);
+  --bg-input:    rgba(255,255,255,0.07);
+  --bg-hover:    rgba(255,255,255,0.07);
+  --bg-active:   rgba(255,255,255,0.11);
+  --border:      rgba(255,255,255,0.10);
+  --border-md:   rgba(255,255,255,0.14);
+  --border-hi:   rgba(255,255,255,0.22);
+  --t1:          rgba(255,255,255,0.95);
+  --t2:          rgba(255,255,255,0.70);
+  --t3:          rgba(255,255,255,0.48);
+  --t4:          rgba(255,255,255,0.30);
+  --t5:          rgba(255,255,255,0.14);
   --msg-bg:      rgba(255,255,255,0.07);
-  --msg-border:  rgba(255,255,255,0.10);
-  --scroll-fg:   rgba(255,255,255,0.07);
-  --scroll-hover:rgba(255,255,255,0.13);
-  --placeholder: rgba(255,255,255,0.18);
-  --icon-brand:        rgb(216,180,254);   /* purple-300 */
+  --msg-border:  rgba(255,255,255,0.11);
+  --scroll-fg:   rgba(255,255,255,0.09);
+  --scroll-hover:rgba(255,255,255,0.16);
+  --placeholder: rgba(255,255,255,0.32);
+  --icon-brand:        rgb(216,180,254);
   --bg-code:           #0d0d12;
   --code-inline-color: rgba(216,180,254,0.9);
 
@@ -38,7 +38,9 @@
      same values in dark mode and flip to dark equivalents in light mode.
      Usage: style={{ color: 'var(--morph-60)' }} instead of rgba(255,255,255,.6)
   ───────────────────────────────────────────────────────────────────────── */
-  --morph-bg:  #050505;
+  --checker-dark:  #252525;
+  --checker-light: #181818;
+  --morph-bg:  #0d0d0d;
   --morph-92:  rgba(255,255,255,0.92);
   --morph-88:  rgba(255,255,255,0.88);
   --morph-85:  rgba(255,255,255,0.85);
@@ -68,40 +70,44 @@
 }
 
 html.light {
-  --bg-page:     #f7f7f5;
+  --bg-page:     #f5f5f2;
   --bg-panel:    #fafaf8;
-  --bg-sidebar:  #eeecea;
-  --bg-card:     rgba(0,0,0,0.025);
-  --bg-input:    rgba(0,0,0,0.04);
-  --bg-hover:    rgba(0,0,0,0.04);
-  --bg-active:   rgba(0,0,0,0.07);
-  --border:      rgba(0,0,0,0.08);
-  --border-md:   rgba(0,0,0,0.12);
-  --border-hi:   rgba(0,0,0,0.20);
-  --t1:          rgba(0,0,0,0.90);
-  --t2:          rgba(0,0,0,0.68);
-  --t3:          rgba(0,0,0,0.48);
-  --t4:          rgba(0,0,0,0.30);
-  --t5:          rgba(0,0,0,0.08);
-  --msg-bg:      rgba(0,0,0,0.05);
-  --msg-border:  rgba(0,0,0,0.09);
-  --scroll-fg:   rgba(0,0,0,0.10);
-  --scroll-hover:rgba(0,0,0,0.18);
-  --placeholder: rgba(0,0,0,0.28);
-  --icon-brand:        rgb(109,40,217);    /* purple-700 */
-  --bg-code:           #f0ede8;
+  --bg-sidebar:  #ebebeb;
+  --bg-card:     rgba(0,0,0,0.04);
+  --bg-input:    rgba(0,0,0,0.055);
+  --bg-hover:    rgba(0,0,0,0.055);
+  --bg-active:   rgba(0,0,0,0.09);
+  --border:      rgba(0,0,0,0.12);
+  --border-md:   rgba(0,0,0,0.18);
+  --border-hi:   rgba(0,0,0,0.26);
+  --t1:          rgba(0,0,0,0.92);
+  --t2:          rgba(0,0,0,0.72);
+  --t3:          rgba(0,0,0,0.52);
+  --t4:          rgba(0,0,0,0.36);
+  --t5:          rgba(0,0,0,0.14);
+  --msg-bg:      rgba(0,0,0,0.055);
+  --msg-border:  rgba(0,0,0,0.10);
+  --scroll-fg:   rgba(0,0,0,0.12);
+  --scroll-hover:rgba(0,0,0,0.20);
+  --placeholder: rgba(0,0,0,0.38);
+  --icon-brand:        rgb(109,40,217);
+  --bg-code:           #eeebe4;
   --code-inline-color: rgba(109,40,217,0.9);
+
+  /* Checker board tokens */
+  --checker-dark:  #b8a080;
+  --checker-light: #ece3d0;
 
   /* Template tokens — light mode flipped values */
   --morph-bg:  var(--bg-page);
-  --morph-92:  rgba(0,0,0,0.88);
-  --morph-88:  rgba(0,0,0,0.85);
-  --morph-85:  rgba(0,0,0,0.82);
-  --morph-80:  rgba(0,0,0,0.75);
-  --morph-70:  rgba(0,0,0,0.62);
-  --morph-60:  rgba(0,0,0,0.55);
-  --morph-55:  rgba(0,0,0,0.50);
-  --morph-50:  rgba(0,0,0,0.45);
+  --morph-92:  rgba(0,0,0,0.92);
+  --morph-88:  rgba(0,0,0,0.88);
+  --morph-85:  rgba(0,0,0,0.84);
+  --morph-80:  rgba(0,0,0,0.78);
+  --morph-70:  rgba(0,0,0,0.68);
+  --morph-60:  rgba(0,0,0,0.58);
+  --morph-55:  rgba(0,0,0,0.52);
+  --morph-50:  rgba(0,0,0,0.46);
   --morph-45:  rgba(0,0,0,0.40);
   --morph-40:  rgba(0,0,0,0.36);
   --morph-35:  rgba(0,0,0,0.30);
@@ -216,6 +222,66 @@ html.light ::selection {
   body { touch-action: pan-y; }
 }
 
+/* ─── Dark mode: boost under-contrast Tailwind white-alpha classes ────────────
+   Pages like Vault, Library use text-white/35, text-white/25 etc. which render
+   at 35%/25% white — far too dim on dark backgrounds. These rules lift them to
+   Claude/Gemini-level readability without touching light mode or interactive states.
+   Rule: opacity × ~1.5 for text; +0.02 for backgrounds/borders.
+──────────────────────────────────────────────────────────────────────────────── */
+
+/* ── Text (dark) ── */
+html:not(.light) .text-white\/55 { color: rgba(255,255,255,0.70) !important; }
+html:not(.light) .text-white\/50 { color: rgba(255,255,255,0.66) !important; }
+html:not(.light) .text-white\/45 { color: rgba(255,255,255,0.62) !important; }
+html:not(.light) .text-white\/40 { color: rgba(255,255,255,0.58) !important; }
+html:not(.light) .text-white\/35 { color: rgba(255,255,255,0.54) !important; }
+html:not(.light) .text-white\/32 { color: rgba(255,255,255,0.50) !important; }
+html:not(.light) .text-white\/30 { color: rgba(255,255,255,0.48) !important; }
+html:not(.light) .text-white\/28 { color: rgba(255,255,255,0.46) !important; }
+html:not(.light) .text-white\/25 { color: rgba(255,255,255,0.44) !important; }
+html:not(.light) .text-white\/22 { color: rgba(255,255,255,0.40) !important; }
+html:not(.light) .text-white\/20 { color: rgba(255,255,255,0.38) !important; }
+html:not(.light) .text-white\/18 { color: rgba(255,255,255,0.34) !important; }
+html:not(.light) .text-white\/15 { color: rgba(255,255,255,0.30) !important; }
+html:not(.light) .text-white\/12 { color: rgba(255,255,255,0.26) !important; }
+html:not(.light) .text-white\/10 { color: rgba(255,255,255,0.22) !important; }
+html:not(.light) .text-white\/8  { color: rgba(255,255,255,0.18) !important; }
+
+/* ── Hover text (dark) ── */
+html:not(.light) .hover\:text-white\/80:hover { color: rgba(255,255,255,0.88) !important; }
+html:not(.light) .hover\:text-white\/60:hover { color: rgba(255,255,255,0.74) !important; }
+html:not(.light) .hover\:text-white\/50:hover { color: rgba(255,255,255,0.66) !important; }
+
+/* ── Backgrounds (dark) ── */
+html:not(.light) .bg-white\/\[0\.02\]  { background-color: rgba(255,255,255,0.04) !important; }
+html:not(.light) .bg-white\/\[0\.03\]  { background-color: rgba(255,255,255,0.05) !important; }
+html:not(.light) .bg-white\/\[0\.04\]  { background-color: rgba(255,255,255,0.06) !important; }
+html:not(.light) .bg-white\/\[0\.05\]  { background-color: rgba(255,255,255,0.07) !important; }
+html:not(.light) .bg-white\/\[0\.06\]  { background-color: rgba(255,255,255,0.08) !important; }
+html:not(.light) .bg-white\/3   { background-color: rgba(255,255,255,0.05) !important; }
+html:not(.light) .bg-white\/4   { background-color: rgba(255,255,255,0.06) !important; }
+html:not(.light) .bg-white\/5   { background-color: rgba(255,255,255,0.07) !important; }
+html:not(.light) .bg-white\/6   { background-color: rgba(255,255,255,0.08) !important; }
+
+/* ── Hover backgrounds (dark) ── */
+html:not(.light) .hover\:bg-white\/\[0\.04\]:hover { background-color: rgba(255,255,255,0.07) !important; }
+html:not(.light) .hover\:bg-white\/\[0\.08\]:hover { background-color: rgba(255,255,255,0.11) !important; }
+html:not(.light) .hover\:bg-white\/5:hover  { background-color: rgba(255,255,255,0.08) !important; }
+
+/* ── Borders (dark) ── */
+html:not(.light) .border-white\/\[0\.05\] { border-color: rgba(255,255,255,0.09) !important; }
+html:not(.light) .border-white\/\[0\.06\] { border-color: rgba(255,255,255,0.10) !important; }
+html:not(.light) .border-white\/\[0\.07\] { border-color: rgba(255,255,255,0.11) !important; }
+html:not(.light) .border-white\/\[0\.08\] { border-color: rgba(255,255,255,0.12) !important; }
+html:not(.light) .border-white\/5  { border-color: rgba(255,255,255,0.09) !important; }
+html:not(.light) .border-white\/6  { border-color: rgba(255,255,255,0.10) !important; }
+html:not(.light) .border-white\/8  { border-color: rgba(255,255,255,0.12) !important; }
+
+/* ── Hover borders (dark) ── */
+html:not(.light) .hover\:border-white\/\[0\.13\]:hover { border-color: rgba(255,255,255,0.18) !important; }
+html:not(.light) .hover\:border-white\/\[0\.14\]:hover { border-color: rgba(255,255,255,0.20) !important; }
+html:not(.light) .hover\:border-white\/15:hover { border-color: rgba(255,255,255,0.22) !important; }
+
 /* ─── Light mode: invert hardcoded white-alpha Tailwind classes ────────────
    Many components use dark-only Tailwind utilities like text-white/85,
    bg-white/[0.03], border-white/[0.07] etc. These overrides convert them
@@ -224,33 +290,37 @@ html.light ::selection {
 ──────────────────────────────────────────────────────────────────────────── */
 
 /* ── Text ── */
-html.light .text-white        { color: rgba(0,0,0,0.88) !important; }
-html.light .text-white\/90    { color: rgba(0,0,0,0.88) !important; }
-html.light .text-white\/85    { color: rgba(0,0,0,0.82) !important; }
-html.light .text-white\/80    { color: rgba(0,0,0,0.75) !important; }
-html.light .text-white\/75    { color: rgba(0,0,0,0.68) !important; }
-html.light .text-white\/70    { color: rgba(0,0,0,0.62) !important; }
-html.light .text-white\/65    { color: rgba(0,0,0,0.55) !important; }
-html.light .text-white\/60    { color: rgba(0,0,0,0.52) !important; }
-html.light .text-white\/55    { color: rgba(0,0,0,0.48) !important; }
-html.light .text-white\/50    { color: rgba(0,0,0,0.45) !important; }
-html.light .text-white\/45    { color: rgba(0,0,0,0.40) !important; }
-html.light .text-white\/40    { color: rgba(0,0,0,0.35) !important; }
-html.light .text-white\/35    { color: rgba(0,0,0,0.30) !important; }
-html.light .text-white\/30    { color: rgba(0,0,0,0.26) !important; }
-html.light .text-white\/25    { color: rgba(0,0,0,0.22) !important; }
-html.light .text-white\/20    { color: rgba(0,0,0,0.18) !important; }
-html.light .text-white\/18    { color: rgba(0,0,0,0.16) !important; }
-html.light .text-white\/15    { color: rgba(0,0,0,0.13) !important; }
-html.light .text-white\/10    { color: rgba(0,0,0,0.10) !important; }
-html.light .text-white\/8     { color: rgba(0,0,0,0.07) !important; }
+html.light .text-white        { color: rgba(0,0,0,0.92) !important; }
+html.light .text-white\/90    { color: rgba(0,0,0,0.90) !important; }
+html.light .text-white\/85    { color: rgba(0,0,0,0.85) !important; }
+html.light .text-white\/80    { color: rgba(0,0,0,0.78) !important; }
+html.light .text-white\/75    { color: rgba(0,0,0,0.72) !important; }
+html.light .text-white\/70    { color: rgba(0,0,0,0.66) !important; }
+html.light .text-white\/65    { color: rgba(0,0,0,0.58) !important; }
+html.light .text-white\/60    { color: rgba(0,0,0,0.54) !important; }
+html.light .text-white\/55    { color: rgba(0,0,0,0.50) !important; }
+html.light .text-white\/50    { color: rgba(0,0,0,0.46) !important; }
+html.light .text-white\/45    { color: rgba(0,0,0,0.42) !important; }
+html.light .text-white\/40    { color: rgba(0,0,0,0.38) !important; }
+html.light .text-white\/35    { color: rgba(0,0,0,0.32) !important; }
+html.light .text-white\/32    { color: rgba(0,0,0,0.30) !important; }
+html.light .text-white\/30    { color: rgba(0,0,0,0.28) !important; }
+html.light .text-white\/28    { color: rgba(0,0,0,0.26) !important; }
+html.light .text-white\/25    { color: rgba(0,0,0,0.24) !important; }
+html.light .text-white\/22    { color: rgba(0,0,0,0.22) !important; }
+html.light .text-white\/20    { color: rgba(0,0,0,0.20) !important; }
+html.light .text-white\/18    { color: rgba(0,0,0,0.18) !important; }
+html.light .text-white\/15    { color: rgba(0,0,0,0.16) !important; }
+html.light .text-white\/12    { color: rgba(0,0,0,0.13) !important; }
+html.light .text-white\/10    { color: rgba(0,0,0,0.12) !important; }
+html.light .text-white\/8     { color: rgba(0,0,0,0.10) !important; }
 
 /* Hover text */
-html.light .hover\:text-white:hover     { color: rgba(0,0,0,0.88) !important; }
-html.light .hover\:text-white\/80:hover { color: rgba(0,0,0,0.75) !important; }
-html.light .hover\:text-white\/70:hover { color: rgba(0,0,0,0.62) !important; }
-html.light .hover\:text-white\/60:hover { color: rgba(0,0,0,0.52) !important; }
-html.light .hover\:text-white\/50:hover { color: rgba(0,0,0,0.45) !important; }
+html.light .hover\:text-white:hover     { color: rgba(0,0,0,0.92) !important; }
+html.light .hover\:text-white\/80:hover { color: rgba(0,0,0,0.78) !important; }
+html.light .hover\:text-white\/70:hover { color: rgba(0,0,0,0.66) !important; }
+html.light .hover\:text-white\/60:hover { color: rgba(0,0,0,0.54) !important; }
+html.light .hover\:text-white\/50:hover { color: rgba(0,0,0,0.46) !important; }
 
 /* ── Backgrounds ── */
 html.light .bg-white\/\[0\.02\]  { background-color: rgba(0,0,0,0.02) !important; }
@@ -308,7 +378,18 @@ html.light .hover\:border-white\/18:hover { border-color: rgba(0,0,0,0.16) !impo
 html.light .focus\:border-white\/15:focus { border-color: rgba(0,0,0,0.20) !important; }
 
 /* ── Placeholder text ── */
-html.light .placeholder-white\/20::placeholder { color: rgba(0,0,0,0.25) !important; }
+html.light .placeholder-white\/20::placeholder  { color: rgba(0,0,0,0.35) !important; }
+html.light .placeholder-white\/22::placeholder  { color: rgba(0,0,0,0.35) !important; }
+html.light .placeholder-white\/25::placeholder  { color: rgba(0,0,0,0.38) !important; }
+
+/* ── Black backgrounds (toolbar, overlays) ── */
+html.light .bg-black\/90  { background-color: var(--bg-panel)   !important; }
+html.light .bg-black\/80  { background-color: var(--bg-panel)   !important; }
+html.light .bg-black\/70  { background-color: var(--bg-card)    !important; }
+
+/* ── Extra fractional bg whites ── */
+html.light .bg-white\/\[0\.035\] { background-color: rgba(0,0,0,0.03) !important; }
+html.light .bg-white\/\[0\.055\] { background-color: rgba(0,0,0,0.04) !important; }
 
 /* ── Syntax highlight tokens (light code bg = #f0f0f4) ── */
 html.light .hljs-keyword, html.light .hljs-built_in  { color: #6d28d9 !important; }
@@ -329,14 +410,50 @@ html.light .hljs-addition                             { color: #15803d !importan
 /* ─── Light mode: template hardcoded hex backgrounds ────────────────────── */
 html.light .bg-\[\#050505\]  { background-color: var(--bg-page)  !important; }
 html.light .bg-\[\#0a0a0a\]  { background-color: var(--bg-page)  !important; }
+html.light .bg-\[\#0d0d0d\]  { background-color: var(--bg-page)  !important; }
 html.light .bg-\[\#111\]     { background-color: var(--bg-panel) !important; }
+html.light .bg-\[\#111111\]  { background-color: var(--bg-panel) !important; }
 html.light .bg-\[\#101010\]  { background-color: var(--bg-page)  !important; }
+html.light .bg-\[\#141414\]  { background-color: var(--bg-sidebar) !important; }
 html.light .bg-\[\#0d1626\]  { background-color: #eef4ff !important; }
 
 /* ─── Dark zone: intentionally dark components (ArtifactRenderer, TempModeBanner)
    These have hardcoded dark backgrounds and must stay white-on-dark even in light mode.
    Higher specificity (0-3-1) beats the overrides above (0-2-1), so these win.
 ────────────────────────────────────────────────────────────────────────────────────── */
+/* Reset all morph CSS tokens back to white-alpha inside always-dark zones */
+html.light .morph-static-dark {
+  --morph-bg:  #050505;
+  --morph-92:  rgba(255,255,255,0.92);
+  --morph-88:  rgba(255,255,255,0.88);
+  --morph-85:  rgba(255,255,255,0.85);
+  --morph-80:  rgba(255,255,255,0.80);
+  --morph-70:  rgba(255,255,255,0.70);
+  --morph-60:  rgba(255,255,255,0.60);
+  --morph-55:  rgba(255,255,255,0.55);
+  --morph-50:  rgba(255,255,255,0.50);
+  --morph-45:  rgba(255,255,255,0.45);
+  --morph-40:  rgba(255,255,255,0.40);
+  --morph-35:  rgba(255,255,255,0.35);
+  --morph-30:  rgba(255,255,255,0.30);
+  --morph-28:  rgba(255,255,255,0.28);
+  --morph-25:  rgba(255,255,255,0.25);
+  --morph-20:  rgba(255,255,255,0.20);
+  --morph-18:  rgba(255,255,255,0.18);
+  --morph-15:  rgba(255,255,255,0.15);
+  --morph-10:  rgba(255,255,255,0.10);
+  --morph-08:  rgba(255,255,255,0.08);
+  --morph-07:  rgba(255,255,255,0.07);
+  --morph-06:  rgba(255,255,255,0.06);
+  --morph-05:  rgba(255,255,255,0.05);
+  --morph-04:  rgba(255,255,255,0.04);
+  --morph-03:  rgba(255,255,255,0.03);
+  --morph-025: rgba(255,255,255,0.025);
+  --morph-018: rgba(255,255,255,0.018);
+  --checker-dark:  #1a1a1a;
+  --checker-light: #0e0e0e;
+}
+
 html.light .morph-static-dark .text-white      { color: rgba(255,255,255,0.88) !important; }
 html.light .morph-static-dark .text-white\/90  { color: rgba(255,255,255,0.90) !important; }
 html.light .morph-static-dark .text-white\/85  { color: rgba(255,255,255,0.85) !important; }

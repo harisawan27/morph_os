@@ -123,7 +123,7 @@ export default function Diary() {
   const moodObj = MOODS.find(m => m.label === mood);
 
   return (
-    <div className="flex flex-col h-full min-h-screen" style={{ background: 'linear-gradient(160deg,#080810 0%,#0c0c18 60%,#080f18 100%)', color: '#e2e8f0' }}>
+    <div className="morph-static-dark flex flex-col h-full min-h-screen" style={{ background: 'linear-gradient(160deg,#080810 0%,#0c0c18 60%,#080f18 100%)', color: '#e2e8f0' }}>
 
       {/* ── Header ── */}
       <div className="shrink-0 px-5 pt-5 pb-4" style={{ borderBottom: '1px solid var(--morph-06)' }}>
