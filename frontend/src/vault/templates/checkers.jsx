@@ -218,7 +218,7 @@ export default function Checkers() {
   const bCount = board.filter(p => p?.c === 'b').length;
 
   return (
-    <div className="morph-static-dark h-full bg-[#0a0a0a] text-white flex flex-col items-center justify-center gap-4 p-4 overflow-hidden select-none">
+    <div className="morph-static-dark h-full text-white flex flex-col items-center justify-center gap-4 p-4 overflow-hidden select-none" style={{ background: '#0a0a0a' }}>
 
       {/* Mode toggle */}
       <div className="flex bg-white/4 border border-white/[0.07] rounded-full p-0.5 gap-0.5">

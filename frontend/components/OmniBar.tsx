@@ -19,17 +19,18 @@ export default function OmniBar({ onGenerate, onStop, isLoading, autoFocus }: Om
   const textareaRef  = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 1.5rem line-height = 24px. 4 lines + top(10) + bottom(4) padding = 110px max.
-  const MAX_H = 4 * 24 + 14;
-
   const resize = useCallback(() => {
     const el = textareaRef.current;
     if (!el) return;
-    el.style.height = "auto";
+    // Set height to 0 first — forces scrollHeight to reflect real content,
+    // not the browser-imposed rows=1 floor that "auto" respects.
+    el.style.overflowY = "hidden";
+    el.style.height = "0";
+    const MAX_H = 4 * 24 + 14; // 4 lines × 24px + padding (10+4)
     const h = Math.min(el.scrollHeight, MAX_H);
     el.style.height = h + "px";
-    el.style.overflowY = el.scrollHeight > MAX_H ? "auto" : "hidden";
-  }, [MAX_H]);
+    el.style.overflowY = h >= MAX_H ? "auto" : "hidden";
+  }, []);
 
   useLayoutEffect(() => { resize(); }, [prompt, resize]);
 
@@ -141,7 +142,6 @@ export default function OmniBar({ onGenerate, onStop, isLoading, autoFocus }: Om
             lineHeight: "1.5rem",
             padding: "10px 16px 4px",
             margin: 0,
-            overflowY: "hidden",
             display: "block",
           }}
         />
