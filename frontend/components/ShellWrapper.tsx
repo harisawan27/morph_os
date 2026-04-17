@@ -3,9 +3,10 @@
 import { usePathname } from "next/navigation";
 import Sidebar from "./Sidebar";
 import TempModeBanner from "./TempModeBanner";
+import TutorialBanner from "./TutorialBanner";
 
 // Pages that need their own vertical scroll (not the chat layout)
-const SCROLL_PAGES = ["/settings", "/artifacts", "/library"];
+const SCROLL_PAGES = ["/settings", "/artifacts", "/library", "/tutorial"];
 
 export default function ShellWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -27,6 +28,7 @@ export default function ShellWrapper({ children }: { children: React.ReactNode }
         {children}
       </main>
       <TempModeBanner />
+      <TutorialBanner />
     </>
   );
 }
