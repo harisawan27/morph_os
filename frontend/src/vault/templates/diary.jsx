@@ -126,7 +126,7 @@ export default function Diary() {
     <div className="flex flex-col h-full min-h-screen" style={{ background: 'linear-gradient(160deg,#080810 0%,#0c0c18 60%,#080f18 100%)', color: '#e2e8f0' }}>
 
       {/* ── Header ── */}
-      <div className="shrink-0 px-5 pt-5 pb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+      <div className="shrink-0 px-5 pt-5 pb-4" style={{ borderBottom: '1px solid var(--morph-06)' }}>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl flex items-center justify-center text-base"
@@ -137,8 +137,8 @@ export default function Diary() {
               <div className="text-sm font-semibold tracking-tight" style={{ color: '#f1f5f9' }}>Daily Diary</div>
               {wc > 0 && (
                 <div className="flex items-center gap-1 mt-0.5">
-                  <Clock size={9} style={{ color: 'rgba(255,255,255,0.25)' }} />
-                  <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.25)', fontFamily: 'system-ui' }}>
+                  <Clock size={9} style={{ color: 'var(--morph-25)' }} />
+                  <span className="text-[10px]" style={{ color: 'var(--morph-25)', fontFamily: 'system-ui' }}>
                     {wc} words · {Math.max(1, Math.ceil(wc / 200))} min read
                   </span>
                 </div>
@@ -150,9 +150,9 @@ export default function Diary() {
             onClick={() => setShowHistory(h => !h)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] transition-all"
             style={{
-              background: showHistory ? 'rgba(139,92,246,0.15)' : 'rgba(255,255,255,0.04)',
-              border: `1px solid ${showHistory ? 'rgba(139,92,246,0.35)' : 'rgba(255,255,255,0.08)'}`,
-              color: showHistory ? '#a78bfa' : 'rgba(255,255,255,0.35)',
+              background: showHistory ? 'rgba(139,92,246,0.15)' : 'var(--morph-04)',
+              border: `1px solid ${showHistory ? 'rgba(139,92,246,0.35)' : 'var(--morph-08)'}`,
+              color: showHistory ? '#a78bfa' : 'var(--morph-35)',
               fontFamily: 'system-ui',
             }}
           >
@@ -165,16 +165,16 @@ export default function Diary() {
         <div className="flex items-center gap-3">
           <button onClick={() => navigate(-1)}
             className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors"
-            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.4)' }}>
+            style={{ background: 'var(--morph-04)', border: '1px solid var(--morph-07)', color: 'var(--morph-40)' }}>
             <ChevronLeft size={14} />
           </button>
 
           <div className="flex-1 text-center">
             <div className="text-[10px] uppercase tracking-widest font-semibold mb-0.5"
-              style={{ color: date === today ? '#a78bfa' : 'rgba(255,255,255,0.3)', fontFamily: 'system-ui' }}>
+              style={{ color: date === today ? '#a78bfa' : 'var(--morph-30)', fontFamily: 'system-ui' }}>
               {dateLabel(date)}
             </div>
-            <div className="text-[13px]" style={{ color: 'rgba(255,255,255,0.6)', fontFamily: 'system-ui' }}>
+            <div className="text-[13px]" style={{ color: 'var(--morph-60)', fontFamily: 'system-ui' }}>
               {formatFull(date)}
             </div>
           </div>
@@ -182,8 +182,8 @@ export default function Diary() {
           <button onClick={() => navigate(1)} disabled={date >= today}
             className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors"
             style={{
-              background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)',
-              color: date >= today ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.4)',
+              background: 'var(--morph-04)', border: '1px solid var(--morph-07)',
+              color: date >= today ? 'var(--morph-10)' : 'var(--morph-40)',
               cursor: date >= today ? 'default' : 'pointer',
             }}>
             <ChevronRight size={14} />
@@ -193,10 +193,10 @@ export default function Diary() {
 
       {/* ── History panel ── */}
       {showHistory && (
-        <div className="shrink-0 overflow-y-auto" style={{ maxHeight: 180, borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(0,0,0,0.25)' }}>
+        <div className="shrink-0 overflow-y-auto" style={{ maxHeight: 180, borderBottom: '1px solid var(--morph-06)', background: 'rgba(0,0,0,0.25)' }}>
           <div className="p-4">
             {allDates.length === 0 ? (
-              <p className="text-center text-[12px] py-4" style={{ color: 'rgba(255,255,255,0.2)', fontFamily: 'system-ui' }}>No entries yet. Start writing!</p>
+              <p className="text-center text-[12px] py-4" style={{ color: 'var(--morph-20)', fontFamily: 'system-ui' }}>No entries yet. Start writing!</p>
             ) : (
               <div className="space-y-2">
                 {allDates.map(d => {
@@ -207,17 +207,17 @@ export default function Diary() {
                     <button key={d} onClick={() => { setDate(d); setShowHistory(false); }}
                       className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all"
                       style={{
-                        background: isActive ? 'rgba(139,92,246,0.12)' : 'rgba(255,255,255,0.025)',
-                        border: `1px solid ${isActive ? 'rgba(139,92,246,0.3)' : 'rgba(255,255,255,0.06)'}`,
+                        background: isActive ? 'rgba(139,92,246,0.12)' : 'var(--morph-025)',
+                        border: `1px solid ${isActive ? 'rgba(139,92,246,0.3)' : 'var(--morph-06)'}`,
                       }}>
                       <span className="text-base">{m?.emoji ?? '📝'}</span>
                       <div className="flex-1 min-w-0">
-                        <div className="text-[11px] font-medium" style={{ color: 'rgba(255,255,255,0.6)', fontFamily: 'system-ui' }}>{dateLabel(d)}</div>
-                        <div className="text-[10px] truncate mt-0.5" style={{ color: 'rgba(255,255,255,0.25)', fontFamily: 'system-ui' }}>
+                        <div className="text-[11px] font-medium" style={{ color: 'var(--morph-60)', fontFamily: 'system-ui' }}>{dateLabel(d)}</div>
+                        <div className="text-[10px] truncate mt-0.5" style={{ color: 'var(--morph-25)', fontFamily: 'system-ui' }}>
                           {e.text.slice(0, 60)}{e.text.length > 60 ? '…' : ''}
                         </div>
                       </div>
-                      <span className="text-[10px] shrink-0" style={{ color: 'rgba(255,255,255,0.2)', fontFamily: 'system-ui' }}>{e.words}w</span>
+                      <span className="text-[10px] shrink-0" style={{ color: 'var(--morph-20)', fontFamily: 'system-ui' }}>{e.words}w</span>
                     </button>
                   );
                 })}
@@ -228,14 +228,14 @@ export default function Diary() {
       )}
 
       {/* ── Mood row ── */}
-      <div className="shrink-0 flex items-center gap-2 px-5 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-        <span className="text-[10px] uppercase tracking-widest mr-1" style={{ color: 'rgba(255,255,255,0.2)', fontFamily: 'system-ui' }}>Mood</span>
+      <div className="shrink-0 flex items-center gap-2 px-5 py-3" style={{ borderBottom: '1px solid var(--morph-04)' }}>
+        <span className="text-[10px] uppercase tracking-widest mr-1" style={{ color: 'var(--morph-20)', fontFamily: 'system-ui' }}>Mood</span>
         {MOODS.map(m => (
           <button key={m.label} title={m.label} onClick={() => setMood(mood === m.label ? null : m.label)}
             className="w-8 h-8 rounded-xl flex items-center justify-center text-base transition-all"
             style={{
-              background: mood === m.label ? `${m.color}22` : 'rgba(255,255,255,0.03)',
-              border: `1px solid ${mood === m.label ? m.color + '55' : 'rgba(255,255,255,0.06)'}`,
+              background: mood === m.label ? `${m.color}22` : 'var(--morph-03)',
+              border: `1px solid ${mood === m.label ? m.color + '55' : 'var(--morph-06)'}`,
               transform: mood === m.label ? 'scale(1.18)' : 'scale(1)',
             }}>
             {m.emoji}
@@ -252,11 +252,11 @@ export default function Diary() {
           <div className="flex items-start gap-2 px-4 py-3 rounded-xl"
             style={{ background: 'rgba(139,92,246,0.04)', border: '1px dashed rgba(139,92,246,0.14)' }}>
             <span className="text-base mt-0.5 shrink-0">✍️</span>
-            <p className="text-[12px] italic leading-relaxed flex-1" style={{ color: 'rgba(255,255,255,0.3)', fontFamily: 'Georgia, serif' }}>
+            <p className="text-[12px] italic leading-relaxed flex-1" style={{ color: 'var(--morph-30)', fontFamily: 'Georgia, serif' }}>
               "{prompt}"
             </p>
             <button onClick={() => setPrompt(PROMPTS[Math.floor(Math.random() * PROMPTS.length)])} title="New prompt"
-              className="shrink-0 mt-0.5 transition-opacity" style={{ color: 'rgba(255,255,255,0.2)', opacity: 0.7 }}>
+              className="shrink-0 mt-0.5 transition-opacity" style={{ color: 'var(--morph-20)', opacity: 0.7 }}>
               <RefreshCw size={12} />
             </button>
           </div>
@@ -273,23 +273,23 @@ export default function Diary() {
           placeholder={`Write freely — this is your space.\n\n${prompt}`}
           className="w-full h-full min-h-50 outline-none resize-none rounded-2xl px-5 py-4 text-[15px] leading-[1.9] transition-colors"
           style={{
-            background: 'rgba(255,255,255,0.025)',
-            border: '1px solid rgba(255,255,255,0.07)',
-            color: 'rgba(255,255,255,0.82)',
+            background: 'var(--morph-025)',
+            border: '1px solid var(--morph-07)',
+            color: 'var(--morph-85)',
             fontFamily: 'Georgia, Merriweather, serif',
             caretColor: '#a78bfa',
           }}
           onFocus={e => { e.target.style.borderColor = 'rgba(139,92,246,0.3)'; }}
-          onBlurCapture={e => { e.target.style.borderColor = 'rgba(255,255,255,0.07)'; }}
+          onBlurCapture={e => { e.target.style.borderColor = 'var(--morph-07)'; }}
         />
       </div>
 
       {/* ── Footer ── */}
-      <div className="shrink-0 flex items-center justify-between gap-3 px-5 pb-6 pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+      <div className="shrink-0 flex items-center justify-between gap-3 px-5 pb-6 pt-2" style={{ borderTop: '1px solid var(--morph-04)' }}>
         {text && (
           <button onClick={() => setPrompt(PROMPTS[Math.floor(Math.random() * PROMPTS.length)])}
             className="flex items-center gap-1.5 px-3 py-2 rounded-full text-[11px] transition-all"
-            style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.3)', fontFamily: 'system-ui' }}>
+            style={{ background: 'var(--morph-03)', border: '1px solid var(--morph-07)', color: 'var(--morph-30)', fontFamily: 'system-ui' }}>
             <RefreshCw size={10} />
             New prompt
           </button>
@@ -305,9 +305,9 @@ export default function Diary() {
             disabled={!text.trim() || (!isDirty && savedFlag)}
             className="flex items-center gap-2 px-4 py-2 rounded-full text-[12px] font-medium transition-all"
             style={{
-              background: isDirty || !savedFlag ? 'linear-gradient(135deg,rgba(139,92,246,0.3),rgba(59,130,246,0.2))' : 'rgba(255,255,255,0.04)',
-              border: `1px solid ${isDirty || !savedFlag ? 'rgba(139,92,246,0.4)' : 'rgba(255,255,255,0.06)'}`,
-              color: isDirty || !savedFlag ? '#c4b5fd' : 'rgba(255,255,255,0.2)',
+              background: isDirty || !savedFlag ? 'linear-gradient(135deg,rgba(139,92,246,0.3),rgba(59,130,246,0.2))' : 'var(--morph-04)',
+              border: `1px solid ${isDirty || !savedFlag ? 'rgba(139,92,246,0.4)' : 'var(--morph-06)'}`,
+              color: isDirty || !savedFlag ? '#c4b5fd' : 'var(--morph-20)',
               cursor: !text.trim() || (!isDirty && savedFlag) ? 'default' : 'pointer',
               fontFamily: 'system-ui',
             }}>

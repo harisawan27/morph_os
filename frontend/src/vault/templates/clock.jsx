@@ -180,12 +180,12 @@ function AnalogClock({ date, size = 168 }) {
 
   return (
     <svg width={size} height={size}>
-      <circle cx={cx} cy={cy} r={r} fill="rgba(255,255,255,0.018)" stroke="rgba(255,255,255,0.07)" strokeWidth={1} />
+      <circle cx={cx} cy={cy} r={r} fill="var(--morph-018)" stroke="var(--morph-07)" strokeWidth={1} />
       {ticks.map((t, i) => (
-        <line key={i} {...t} stroke={t.major ? 'rgba(255,255,255,0.28)' : 'rgba(255,255,255,0.06)'} strokeWidth={t.major ? 1.5 : 0.8} strokeLinecap="round" />
+        <line key={i} {...t} stroke={t.major ? 'var(--morph-28)' : 'var(--morph-06)'} strokeWidth={t.major ? 1.5 : 0.8} strokeLinecap="round" />
       ))}
-      <line x1={cx} y1={cy} {...hand(hr * 30,  r * 0.50, 3.5, 'rgba(255,255,255,0.9)')} />
-      <line x1={cx} y1={cy} {...hand(min * 6,  r * 0.70, 2.5, 'rgba(255,255,255,0.6)')} />
+      <line x1={cx} y1={cy} {...hand(hr * 30,  r * 0.50, 3.5, 'var(--morph-92)')} />
+      <line x1={cx} y1={cy} {...hand(min * 6,  r * 0.70, 2.5, 'var(--morph-60)')} />
       <line x1={cx} y1={cy} {...hand(sec * 6,  r * 0.82, 1.5, '#3b82f6')} />
       <circle cx={cx} cy={cy} r={4} fill="white" />
       <circle cx={cx} cy={cy} r={2} fill="#3b82f6" />

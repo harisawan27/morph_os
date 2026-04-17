@@ -41,6 +41,14 @@ export default function ArtifactRenderer({
     setSynced(false);
   }, [initialCode]);
 
+  // Strip ES6 import statements — all dependencies are already in scope.
+  // react-runner has no module system, so imports cause a SyntaxError.
+  const sanitizedCode = useMemo(() => {
+    return currentCode
+      .replace(/^import\b[^;]*;/gms, '')  // remove single & multi-line imports
+      .trim();
+  }, [currentCode]);
+
   const scope = useMemo(() => {
     if (!artifactId) return BASE_SCOPE;
 
@@ -74,10 +82,10 @@ export default function ArtifactRenderer({
   const isMobile = !!onBack; // mobile when onBack is provided
 
   return (
-    <div className="flex flex-col h-full bg-[#050505] text-white">
+    <div className="flex flex-col h-full" style={{ background: "var(--bg-page)", color: "var(--t1)" }}>
 
-      {/* ── Toolbar ────────────────────────────────────────────────────── */}
-      <div className={`flex items-center justify-between border-b border-white/[0.05] bg-black/40 backdrop-blur-2xl shrink-0 ${isMobile ? "px-3 py-3" : "px-5 py-3.5"}`}>
+      {/* ── Toolbar ── always dark, independent of app theme ───────────── */}
+      <div className={`morph-static-dark flex items-center justify-between border-b border-white/[0.05] bg-black/90 backdrop-blur-2xl shrink-0 ${isMobile ? "px-3 py-3" : "px-5 py-3.5"}`}>
 
         <div className="flex items-center gap-3">
           {/* Mobile back button */}
@@ -128,11 +136,11 @@ export default function ArtifactRenderer({
         </div>
       </div>
 
-      {/* ── Artifact content ────────────────────────────────────────────── */}
-      <div className="flex-1 overflow-hidden relative bg-[#0a0a0a]">
+      {/* ── Artifact content — theme-responsive ────────────────────────── */}
+      <div className="flex-1 overflow-hidden relative" style={{ background: "var(--bg-page)" }}>
         <div className="w-full h-full overflow-auto">
           <Runner
-            code={currentCode}
+            code={sanitizedCode}
             scope={scope}
             onRendered={(err) => setError(err ? err.toString() : null)}
           />
@@ -154,9 +162,9 @@ export default function ArtifactRenderer({
         )}
       </div>
 
-      {/* ── Status bar — desktop only ───────────────────────────────────── */}
+      {/* ── Status bar — desktop only, always dark ─────────────────────── */}
       {!isMobile && (
-        <div className="px-5 py-2 border-t border-white/[0.04] bg-black/50 text-[7px] text-white/15 uppercase tracking-[0.3em] flex justify-between shrink-0">
+        <div className="morph-static-dark px-5 py-2 border-t border-white/[0.04] bg-black/90 text-[7px] text-white/15 uppercase tracking-[0.3em] flex justify-between shrink-0">
           <div className="flex items-center gap-2">
             <span className="w-1 h-1 rounded-full bg-blue-500/60 animate-pulse" />
             MORPH OS · ZERO LAG ENGINE

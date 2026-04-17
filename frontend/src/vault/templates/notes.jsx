@@ -262,15 +262,15 @@ export default function NotesArtifact() {
       </div>
 
       <style>{`
-        [contenteditable] h1 { font-size: 1.55em; font-weight: 300; margin: 0.8em 0 0.3em; color: rgba(255,255,255,0.92); line-height: 1.25; }
-        [contenteditable] h2 { font-size: 1.25em; font-weight: 300; margin: 0.8em 0 0.25em; color: rgba(255,255,255,0.85); border-bottom: 1px solid rgba(255,255,255,0.04); padding-bottom: 4px; }
-        [contenteditable] h3 { font-size: 1.05em; font-weight: 500; margin: 0.7em 0 0.2em; color: rgba(255,255,255,0.8); }
+        [contenteditable] h1 { font-size: 1.55em; font-weight: 300; margin: 0.8em 0 0.3em; color: var(--morph-92); line-height: 1.25; }
+        [contenteditable] h2 { font-size: 1.25em; font-weight: 300; margin: 0.8em 0 0.25em; color: var(--morph-85); border-bottom: 1px solid var(--morph-04); padding-bottom: 4px; }
+        [contenteditable] h3 { font-size: 1.05em; font-weight: 500; margin: 0.7em 0 0.2em; color: var(--morph-80); }
         [contenteditable] p  { margin: 0.25em 0; }
         [contenteditable] ul { list-style: disc; padding-left: 1.5em; margin: 0.4em 0; }
         [contenteditable] ol { list-style: decimal; padding-left: 1.5em; margin: 0.4em 0; }
         [contenteditable] li { margin-bottom: 0.2em; }
-        [contenteditable] b, [contenteditable] strong { font-weight: 600; color: rgba(255,255,255,0.92); }
-        [contenteditable] i, [contenteditable] em     { color: rgba(255,255,255,0.62); }
+        [contenteditable] b, [contenteditable] strong { font-weight: 600; color: var(--morph-92); }
+        [contenteditable] i, [contenteditable] em     { color: var(--morph-60); }
         [contenteditable] u  { text-underline-offset: 3px; }
       `}</style>
     </div>

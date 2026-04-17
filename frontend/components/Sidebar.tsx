@@ -154,7 +154,7 @@ export default function Sidebar() {
                 border: "1px solid rgba(139,92,246,0.35)",
               }}
             >
-              <Ghost size={14} className="text-purple-300" />
+              <Ghost size={14} style={{ color: "var(--icon-brand)" }} />
             </div>
             {/* Name */}
             <motion.div
@@ -185,7 +185,7 @@ export default function Sidebar() {
                 border: "1px solid rgba(139,92,246,0.35)",
               }}
             >
-              <Ghost size={16} className="text-purple-300" />
+              <Ghost size={16} style={{ color: "var(--icon-brand)" }} />
             </div>
             {/* Hamburger */}
             <button

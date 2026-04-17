@@ -5,7 +5,7 @@ import Sidebar from "./Sidebar";
 import TempModeBanner from "./TempModeBanner";
 
 // Pages that need their own vertical scroll (not the chat layout)
-const SCROLL_PAGES = ["/settings", "/artifacts"];
+const SCROLL_PAGES = ["/settings", "/artifacts", "/library"];
 
 export default function ShellWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

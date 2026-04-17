@@ -82,7 +82,7 @@ export default function CoinToss() {
             : side === 'T'
             ? 'linear-gradient(135deg,#1d4ed8,#0891b2)'
             : 'linear-gradient(135deg,#1c1c1c,#2a2a2a)',
-          border: '3px solid rgba(255,255,255,0.08)',
+          border: '3px solid var(--morph-08)',
           boxShadow: '0 12px 48px rgba(0,0,0,0.6)',
         }}
       >
@@ -141,8 +141,8 @@ export default function CoinToss() {
               key={i}
               className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-semibold"
               style={{
-                background: h.won ? 'rgba(124,58,237,0.2)' : 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.06)',
+                background: h.won ? 'rgba(124,58,237,0.2)' : 'var(--morph-04)',
+                border: '1px solid var(--morph-06)',
                 color: h.won ? '#c4b5fd' : '#555',
               }}
             >

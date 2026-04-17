@@ -23,7 +23,7 @@ function Ring({ pct, size = 160, stroke = 10, mode }) {
   const color = mode === 'work' ? '#a855f7' : '#22d3ee';
   return (
     <svg width={size} height={size} className="-rotate-90">
-      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth={stroke} />
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="var(--morph-05)" strokeWidth={stroke} />
       <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={stroke}
         strokeDasharray={circ} strokeDashoffset={dash} strokeLinecap="round"
         style={{ transition: 'stroke-dashoffset 0.5s linear' }} />

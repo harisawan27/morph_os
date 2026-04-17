@@ -98,7 +98,7 @@ export default function TodoArtifact() {
           {/* Progress ring */}
           <div className="relative w-12 h-12">
             <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
-              <circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="3" />
+              <circle cx="18" cy="18" r="15" fill="none" stroke="var(--morph-05)" strokeWidth="3" />
               <circle
                 cx="18" cy="18" r="15" fill="none"
                 stroke="rgb(59,130,246)" strokeWidth="3"

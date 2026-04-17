@@ -10,7 +10,7 @@ function LoginContent() {
   const callbackUrl = searchParams.get("callbackUrl") || "/";
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center px-4">
+    <div className="morph-static-dark min-h-screen bg-black flex items-center justify-center px-4">
       {/* Background glow */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-purple-600/5 blur-[120px]" />

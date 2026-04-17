@@ -34,7 +34,7 @@ function Ring({ pct, size = 220, stroke = 10, color = '#3b82f6', children }) {
   return (
     <div className="relative" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="-rotate-90 absolute inset-0">
-        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth={stroke} />
+        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="var(--morph-05)" strokeWidth={stroke} />
         <circle
           cx={size/2} cy={size/2} r={r} fill="none"
           stroke={color} strokeWidth={stroke} strokeLinecap="round"
@@ -227,9 +227,9 @@ export default function TimerArtifact() {
             onClick={() => setRunning(r => !r)}
             className="px-10 py-4 rounded-2xl font-medium text-sm tracking-wide transition-all border"
             style={{
-              background: running ? 'rgba(255,255,255,0.08)' : ringColor + '22',
-              borderColor: running ? 'rgba(255,255,255,0.1)' : ringColor + '55',
-              color:       running ? 'rgba(255,255,255,0.7)' : ringColor,
+              background: running ? 'var(--morph-08)' : ringColor + '22',
+              borderColor: running ? 'var(--morph-10)' : ringColor + '55',
+              color:       running ? 'var(--morph-70)' : ringColor,
               boxShadow:   running ? 'none' : `0 0 30px ${ringColor}33`,
             }}
           >

@@ -145,7 +145,7 @@ export default function PixelArt() {
             display: 'grid',
             gridTemplateColumns: `repeat(${size}, ${cellPx}px)`,
             gap: showGrid ? '1px' : '0px',
-            background: showGrid ? 'rgba(255,255,255,0.05)' : 'transparent',
+            background: showGrid ? 'var(--morph-05)' : 'transparent',
             padding: showGrid ? '1px' : '0',
             borderRadius: '8px',
             userSelect: 'none',

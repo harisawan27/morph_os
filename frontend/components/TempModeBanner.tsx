@@ -20,7 +20,7 @@ export default function TempModeBanner() {
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 12 }}
         transition={{ delay: 1, duration: 0.3 }}
-        className="fixed left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-3 bg-[#111] border border-yellow-500/20 rounded-2xl shadow-2xl shadow-black/40 max-w-[92vw] sm:max-w-md"
+        className="morph-static-dark fixed left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-3 bg-[#111] border border-yellow-500/20 rounded-2xl shadow-2xl shadow-black/40 max-w-[92vw] sm:max-w-md"
         style={{ bottom: 'max(20px, env(safe-area-inset-bottom))' }}
       >
         <CloudOff size={15} className="text-yellow-500/70 shrink-0" />

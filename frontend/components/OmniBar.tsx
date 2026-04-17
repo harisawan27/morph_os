@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useCallback, useEffect } from "react";
+import { useRef, useState, useCallback, useEffect, useLayoutEffect } from "react";
 import { ArrowUp, Square, Paperclip, X, FileText } from "lucide-react";
 
 interface OmniBarProps {
@@ -26,7 +26,7 @@ export default function OmniBar({ onGenerate, onStop, isLoading, autoFocus }: Om
     el.style.height = Math.min(el.scrollHeight, 200) + "px";  // lock it in, cap at 200px
   }, []);
 
-  useEffect(() => { resize(); }, [prompt, resize]);
+  useLayoutEffect(() => { resize(); }, [prompt, resize]);
 
   useEffect(() => {
     if (autoFocus) textareaRef.current?.focus();
@@ -95,7 +95,7 @@ export default function OmniBar({ onGenerate, onStop, isLoading, autoFocus }: Om
               type="button"
               onClick={clearFile}
               className="shrink-0 w-4 h-4 rounded-full flex items-center justify-center transition-colors"
-              style={{ background: "rgba(255,255,255,0.06)", color: "var(--t4)" }}
+              style={{ background: "var(--bg-hover)", color: "var(--t4)" }}
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "var(--t2)"; }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--t4)"; }}
             >

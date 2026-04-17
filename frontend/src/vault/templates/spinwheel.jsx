@@ -115,7 +115,7 @@ export default function SpinWheel() {
             );
           })}
           {/* Center */}
-          <circle cx={cx} cy={cy} r={20} fill="#0a0a0a" stroke="rgba(255,255,255,0.1)" strokeWidth="2" />
+          <circle cx={cx} cy={cy} r={20} fill="#0a0a0a" stroke="var(--morph-10)" strokeWidth="2" />
         </motion.svg>
       </div>
 

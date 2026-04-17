@@ -137,7 +137,7 @@ function SunArc({ sunrise, sunset }) {
         {/* Track */}
         <path
           d={`M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`}
-          fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="1.5" strokeDasharray="4 3"
+          fill="none" stroke="var(--morph-07)" strokeWidth="1.5" strokeDasharray="4 3"
         />
         {/* Progress */}
         {isDaytime && (
@@ -148,7 +148,7 @@ function SunArc({ sunrise, sunset }) {
         )}
         {/* Horizon */}
         <line x1={cx - r - 12} y1={cy} x2={cx + r + 12} y2={cy}
-          stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
+          stroke="var(--morph-05)" strokeWidth="1" />
         {/* Sun */}
         {isDaytime ? (
           <>
@@ -497,7 +497,7 @@ export default function WeatherApp() {
                   <span className="text-xs font-light mb-1" style={{ color: uvInfo.color }}>{uvInfo.text}</span>
                 </div>
                 {/* Gradient bar */}
-                <div className="w-full h-2 rounded-full overflow-hidden mb-1.5" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                <div className="w-full h-2 rounded-full overflow-hidden mb-1.5" style={{ background: 'var(--morph-06)' }}>
                   <div
                     className="h-full rounded-full transition-all duration-1000"
                     style={{
@@ -518,7 +518,7 @@ export default function WeatherApp() {
                   <span className="text-3xl font-extralight tabular-nums">{cur.cloud_cover}%</span>
                 </div>
                 <p className="text-xs text-white/35 mb-2.5">{cloudText(cur.cloud_cover)}</p>
-                <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: 'var(--morph-06)' }}>
                   <div
                     className="h-full rounded-full bg-sky-400/40 transition-all duration-1000"
                     style={{ width: `${cur.cloud_cover}%` }}

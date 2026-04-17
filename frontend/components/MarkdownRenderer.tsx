@@ -27,12 +27,12 @@ function CodeBlock({ children, className }: { children?: React.ReactNode; classN
   return (
     <div
       className="relative my-3 rounded-xl overflow-hidden text-[13px]"
-      style={{ background: "var(--bg-code, #0d0d12)", border: "1px solid var(--border)" }}
+      style={{ background: "var(--bg-code)", border: "1px solid var(--border)" }}
     >
       {/* Header bar */}
       <div
         className="flex items-center justify-between px-4 py-2"
-        style={{ background: "rgba(255,255,255,0.03)", borderBottom: "1px solid var(--border)" }}
+        style={{ background: "var(--bg-card)", borderBottom: "1px solid var(--border)" }}
       >
         <span className="text-[11px] font-medium tracking-wide uppercase select-none" style={{ color: "var(--t4)" }}>
           {lang || "code"}
@@ -75,7 +75,7 @@ function InlineCode({ children }: { children?: React.ReactNode }) {
       style={{
         background: "rgba(147,51,234,0.12)",
         border: "1px solid rgba(147,51,234,0.2)",
-        color: "rgba(216,180,254,0.9)",
+        color: "var(--code-inline-color)",
         fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, monospace",
       }}
     >
@@ -212,7 +212,7 @@ export default function MarkdownRenderer({ content }: { content: string }) {
             </div>
           ),
           thead: ({ children }) => (
-            <thead style={{ background: "rgba(255,255,255,0.04)" }}>{children}</thead>
+            <thead style={{ background: "var(--bg-input)" }}>{children}</thead>
           ),
           tbody: ({ children }) => <tbody>{children}</tbody>,
           tr: ({ children }) => (

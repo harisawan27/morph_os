@@ -318,7 +318,7 @@ export default function Chess() {
       <div className="text-xs text-white/30 h-4">{capturedStr('w')}</div>
 
       {/* Board */}
-      <div className="relative rounded-lg overflow-hidden" style={{ border:'1px solid rgba(255,255,255,0.08)' }}>
+      <div className="relative rounded-lg overflow-hidden" style={{ border:'1px solid var(--morph-08)' }}>
         <div className="grid grid-cols-8" style={{ width:'min(312px,88vw)', height:'min(312px,88vw)' }}>
           {Array(64).fill(null).map((_,idx)=>{
             const row=Math.floor(idx/8), col=idx%8;
@@ -411,7 +411,7 @@ export default function Chess() {
 
       <button onClick={reset}
         className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs text-white/40 hover:text-white transition-all"
-        style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.07)'}}>
+        style={{background:'var(--morph-04)',border:'1px solid var(--morph-07)'}}>
         <RotateCcw size={11}/> New game
       </button>
     </div>

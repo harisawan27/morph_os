@@ -93,8 +93,8 @@ export default function MagicBall() {
                 <stop offset="100%" stopColor="#000008" />
               </radialGradient>
               <radialGradient id="shine" cx="30%" cy="25%" r="50%">
-                <stop offset="0%" stopColor="rgba(255,255,255,0.15)" />
-                <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+                <stop offset="0%" stopColor="var(--morph-15)" />
+                <stop offset="100%" stopColor="transparent" />
               </radialGradient>
               <radialGradient id="inner" cx="50%" cy="50%" r="50%">
                 <stop offset="0%" stopColor="rgba(124,58,237,0.5)" />
@@ -105,7 +105,7 @@ export default function MagicBall() {
             <circle cx="100" cy="100" r="95" fill="url(#shine)" />
             <circle cx="100" cy="100" r="40" fill="url(#inner)" opacity="0.8" />
             <text x="100" y="107" textAnchor="middle" dominantBaseline="middle"
-              fontSize="32" fontWeight="bold" fill="rgba(255,255,255,0.9)">8</text>
+              fontSize="32" fontWeight="bold" fill="var(--morph-92)">8</text>
           </svg>
 
           {/* Answer inside */}
