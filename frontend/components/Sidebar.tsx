@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -25,8 +25,20 @@ export default function Sidebar() {
   const [renameVal,      setRenameVal]      = useState("");
   const [searchQuery,    setSearchQuery]    = useState("");
 
-  const isOpen = expanded || mobileOpen;
+  const isOpen   = expanded || mobileOpen;
+  const asideRef = useRef<HTMLElement>(null);
   const { data: session } = useSession();
+
+  // Collapse desktop sidebar when clicking outside it
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (expanded && asideRef.current && !asideRef.current.contains(e.target as Node)) {
+        setExpanded(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [expanded]);
 
   const fetchSessions = useCallback(async () => {
     try {
@@ -86,7 +98,10 @@ export default function Sidebar() {
   };
 
   const navItem = (href: string, icon: React.ReactNode, label: string, exact = false) => {
-    const active = exact ? pathname === href : pathname.startsWith(href);
+    // "/new" and "/" both represent a fresh chat — treat both as active for New Chat
+    const active = exact
+      ? pathname === href || (href === "/new" && pathname === "/")
+      : pathname.startsWith(href);
     return (
       <Link href={href} onClick={() => setMobileOpen(false)}>
         <div
@@ -129,6 +144,7 @@ export default function Sidebar() {
 
       {/* Sidebar */}
       <motion.aside
+        ref={asideRef}
         initial={false}
         animate={{ width: isOpen ? 256 : 68 }}
         transition={{ type: "spring", stiffness: 340, damping: 34 }}
@@ -202,7 +218,7 @@ export default function Sidebar() {
 
         {/* New Chat */}
         <div className="px-2 mb-1 shrink-0">
-          {navItem("/", <Plus size={20} />, "New Chat", true)}
+          {navItem("/new", <Plus size={20} />, "New Chat", true)}
         </div>
 
         {/* The Vault */}

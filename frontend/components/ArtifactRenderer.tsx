@@ -45,10 +45,11 @@ export default function ArtifactRenderer({
   // react-runner has no module system, so imports cause a SyntaxError.
   const sanitizedCode = useMemo(() => {
     return currentCode
-      // Single-line imports with or without semicolon
-      .replace(/^import\b[^\n;]*(;)?$/gm, '')
-      // Multi-line imports: import { ... } from '...'
-      .replace(/^import\b[\s\S]*?from\s+['"][^'"]+['"]\s*;?\s*$/gm, '')
+      // [^;]* matches newlines too (char class), so this handles both single-line
+      // and multi-line imports that end with a semicolon.
+      .replace(/^import\b[^;]*;/gm, '')
+      // Catch single-line imports that have no trailing semicolon.
+      .replace(/^import\b[^\n]*$/gm, '')
       .trim();
   }, [currentCode]);
 

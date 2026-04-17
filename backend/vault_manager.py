@@ -28,8 +28,13 @@ def get_hydrated_template(template_id: str, data: dict) -> str:
     with open(template_path, "r", encoding="utf-8") as f:
         lines = f.readlines()
 
-    # Filter out import statements — the react-runner scope provides all deps
-    content = "".join([line for line in lines if not line.strip().startswith("import ")])
+    # Strip ES6 import statements — react-runner scope provides all deps.
+    # Use regex so multi-line imports like `import {\n  X,\n} from 'y'` are
+    # removed in one pass (line-by-line stripping would leave the continuation).
+    raw = "".join(lines)
+    raw = re.sub(r'^import\b[^;]*;', '', raw, flags=re.MULTILINE)   # with semicolons
+    raw = re.sub(r'^import\b[^\n]*$', '', raw, flags=re.MULTILINE)  # without semicolons
+    content = raw
 
     hydrated = content
 
