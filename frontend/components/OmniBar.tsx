@@ -19,13 +19,17 @@ export default function OmniBar({ onGenerate, onStop, isLoading, autoFocus }: Om
   const textareaRef  = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // 1.5rem line-height = 24px. 4 lines + top(10) + bottom(4) padding = 110px max.
+  const MAX_H = 4 * 24 + 14;
+
   const resize = useCallback(() => {
     const el = textareaRef.current;
     if (!el) return;
     el.style.height = "auto";
-    // scrollHeight includes the 40px bottom padding (text + padding). Cap the visual growth.
-    el.style.height = Math.min(el.scrollHeight, 200) + "px";
-  }, []);
+    const h = Math.min(el.scrollHeight, MAX_H);
+    el.style.height = h + "px";
+    el.style.overflowY = el.scrollHeight > MAX_H ? "auto" : "hidden";
+  }, [MAX_H]);
 
   useLayoutEffect(() => { resize(); }, [prompt, resize]);
 
@@ -106,9 +110,9 @@ export default function OmniBar({ onGenerate, onStop, isLoading, autoFocus }: Om
         </div>
       )}
 
-      {/* Bar — single unified container */}
+      {/* Bar */}
       <div
-        className="rounded-2xl relative"
+        className="rounded-2xl flex flex-col"
         style={{
           background: "var(--bg-input)",
           border: `1px solid ${borderColor}`,
@@ -121,7 +125,7 @@ export default function OmniBar({ onGenerate, onStop, isLoading, autoFocus }: Om
         onDragLeave={onDragLeave}
         onDrop={onDrop}
       >
-        {/* Textarea — bottom padding leaves room for the icon row */}
+        {/* Textarea — small padding, grows 1→4 lines then scrolls */}
         <textarea
           ref={textareaRef}
           rows={1}
@@ -135,17 +139,15 @@ export default function OmniBar({ onGenerate, onStop, isLoading, autoFocus }: Om
             color: "var(--t1)",
             caretColor: "var(--t1)",
             lineHeight: "1.5rem",
-            minHeight: "1.5rem",
-            maxHeight: "160px",
-            padding: "12px 16px 40px",
+            padding: "10px 16px 4px",
             margin: 0,
-            overflowY: "auto",
+            overflowY: "hidden",
             display: "block",
           }}
         />
 
-        {/* Icon row — sits at the bottom of the bar, overlaid */}
-        <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between px-3 pb-2.5">
+        {/* Icon row — always below the textarea */}
+        <div className="flex items-center justify-between px-3 pb-2.5 pt-1">
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}

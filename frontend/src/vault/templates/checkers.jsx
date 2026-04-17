@@ -310,7 +310,7 @@ export default function Checkers() {
           ) : (
             <motion.p key={turn} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
               className="text-xs text-white/30">
-              {turn === 'r' ? (vsAI ? 'Your turn (red)' : 'Red's turn') : vsAI ? 'AI thinking…' : 'Blue's turn'}
+              {turn === 'r' ? (vsAI ? 'Your turn (red)' : "Red's turn") : vsAI ? 'AI thinking…' : "Blue's turn"}
             </motion.p>
           )}
         </AnimatePresence>
