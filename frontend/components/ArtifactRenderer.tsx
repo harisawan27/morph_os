@@ -45,7 +45,7 @@ export default function ArtifactRenderer({
   // react-runner has no module system, so imports cause a SyntaxError.
   const sanitizedCode = useMemo(() => {
     return currentCode
-      .replace(/^import\b[^;]*;/gms, '')  // remove single & multi-line imports
+      .replace(/^import\b[^;]*;/gm, '')   // remove single & multi-line imports
       .trim();
   }, [currentCode]);
 
