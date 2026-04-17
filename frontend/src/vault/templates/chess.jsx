@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { RotateCcw, Trophy, Users, Bot } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -193,12 +193,27 @@ export default function Chess() {
   const [validMoves, setValidMoves] = useState([]);
   const [vsAI, setVsAI]         = useState(true);
   const [locked, setLocked]     = useState(false);
-  const [status, setStatus]     = useState(null); // null | 'check' | 'checkmate' | 'stalemate'
+  const [status, setStatus]     = useState(null);
   const [score, setScore]       = useState(()=>load()||{w:0,b:0,d:0});
   const [lastMove, setLastMove] = useState(null);
   const [captured, setCaptured] = useState({w:[],b:[]});
 
-  useEffect(()=>{ save(score); },[score]);
+  // Refs so AI timeout always reads latest state
+  const boardRef = useRef(board);
+  const gsRef    = useRef(gs);
+  useEffect(() => { boardRef.current = board; }, [board]);
+  useEffect(() => { gsRef.current = gs; }, [gs]);
+
+  // Cloud persistence
+  useEffect(() => {
+    if (typeof morphLoadState !== 'undefined') {
+      morphLoadState().then(s => { if (s?.score) setScore(s.score); }).catch(()=>{});
+    }
+  }, []);
+  useEffect(() => {
+    save(score);
+    if (typeof morphSaveState !== 'undefined') morphSaveState({ score });
+  }, [score]);
 
   const updateStatus = useCallback((b, color, g) => {
     const moves = allLegalMoves(b,color,g);
@@ -240,32 +255,8 @@ export default function Chess() {
 
     // Move to highlighted square
     if(selected!==null&&validMoves.includes(idx)) {
-      const nb = doMove(board,selected,idx,gs,gs.turn==='w'?'b':'w');
-
-      if(vsAI) {
-        setLocked(true);
-        setTimeout(()=>{
-          setBoard(prev=>{
-            setGs(prevGs=>{
-              const m = aiPick(prev,prevGs);
-              if(m) {
-                const cap = prev[m.to];
-                const {nb:after, newGs} = applyMove(prev,m.from,m.to,prevGs);
-                newGs.turn='w';
-                setLastMove({from:m.from,to:m.to});
-                if(cap) setCaptured(c=>({...c,[cap.c]:[...c[cap.c],cap.t]}));
-                updateStatus(after,'w',newGs);
-                setLocked(false);
-                setGs(newGs);
-                return after;
-              }
-              setLocked(false);
-              return prev;
-            });
-            return prev;
-          });
-        }, 350);
-      }
+      doMove(board,selected,idx,gs,gs.turn==='w'?'b':'w');
+      if(vsAI) setLocked(true);
       return;
     }
 
@@ -281,6 +272,30 @@ export default function Chess() {
     }
   },[board,gs,selected,validMoves,locked,status,vsAI,doMove,updateStatus]);
 
+  // AI move via useEffect — reads fresh state from refs, no stale closures
+  useEffect(() => {
+    if (!vsAI || gs.turn !== 'b' || status === 'checkmate' || status === 'stalemate') return;
+    const t = setTimeout(() => {
+      const b = boardRef.current;
+      const g = gsRef.current;
+      if (g.turn !== 'b') { setLocked(false); return; }
+      const m = aiPick(b, g);
+      if (m) {
+        const cap = b[m.to];
+        const { nb: after, newGs } = applyMove(b, m.from, m.to, g);
+        newGs.turn = 'w';
+        setBoard(after);
+        setGs(newGs);
+        setLastMove({ from: m.from, to: m.to });
+        if (cap) setCaptured(c => ({ ...c, [cap.c]: [...c[cap.c], cap.t] }));
+        updateStatus(after, 'w', newGs);
+      }
+      setLocked(false);
+    }, 350);
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vsAI, gs.turn, status]);
+
   const reset = () => {
     setBoard(initBoard());
     setGs(initState());
@@ -295,7 +310,7 @@ export default function Chess() {
   const capturedStr = (color) => captured[color].map(t=>PIECES[color[0]+t]||'').join('');
 
   return (
-    <div className="h-full bg-[#0a0a0a] text-white flex flex-col items-center justify-center gap-3 p-3 overflow-hidden select-none">
+    <div className="morph-static-dark h-full bg-[#0a0a0a] text-white flex flex-col items-center justify-center gap-3 p-3 overflow-hidden select-none">
 
       {/* Mode */}
       <div className="flex bg-white/4 border border-white/[0.07] rounded-full p-0.5 gap-0.5">

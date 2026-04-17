@@ -22,8 +22,9 @@ export default function OmniBar({ onGenerate, onStop, isLoading, autoFocus }: Om
   const resize = useCallback(() => {
     const el = textareaRef.current;
     if (!el) return;
-    el.style.height = "auto";                                  // let browser compute natural height
-    el.style.height = Math.min(el.scrollHeight, 200) + "px";  // lock it in, cap at 200px
+    el.style.height = "auto";
+    // scrollHeight includes the 40px bottom padding (text + padding). Cap the visual growth.
+    el.style.height = Math.min(el.scrollHeight, 200) + "px";
   }, []);
 
   useLayoutEffect(() => { resize(); }, [prompt, resize]);
@@ -105,9 +106,9 @@ export default function OmniBar({ onGenerate, onStop, isLoading, autoFocus }: Om
         </div>
       )}
 
-      {/* Bar */}
+      {/* Bar — single unified container */}
       <div
-        className="rounded-2xl"
+        className="rounded-2xl relative"
         style={{
           background: "var(--bg-input)",
           border: `1px solid ${borderColor}`,
@@ -120,64 +121,63 @@ export default function OmniBar({ onGenerate, onStop, isLoading, autoFocus }: Om
         onDragLeave={onDragLeave}
         onDrop={onDrop}
       >
-        {/* Full-width textarea */}
-        <div className="px-4 pt-3 pb-1">
-          <textarea
-            ref={textareaRef}
-            rows={1}
-            value={prompt}
-            onChange={e => setPrompt(e.target.value)}
-            onKeyDown={onKey}
-            disabled={isLoading}
-            placeholder={file ? "Ask about this file…" : "Ask Morph anything…"}
-            className="w-full bg-transparent text-[15px] resize-none outline-none disabled:opacity-40"
-            style={{
-              color: "var(--t1)",
-              caretColor: "var(--t1)",
-              lineHeight: "1.5rem",
-              minHeight: "1.5rem",
-              maxHeight: "200px",
-              padding: 0,
-              margin: 0,
-              overflowY: "hidden",
-            }}
-          />
-        </div>
+        {/* Textarea — bottom padding leaves room for the icon row */}
+        <textarea
+          ref={textareaRef}
+          rows={1}
+          value={prompt}
+          onChange={e => setPrompt(e.target.value)}
+          onKeyDown={onKey}
+          disabled={isLoading}
+          placeholder={file ? "Ask about this file…" : "Ask Morph anything…"}
+          className="w-full bg-transparent text-[15px] resize-none outline-none disabled:opacity-40"
+          style={{
+            color: "var(--t1)",
+            caretColor: "var(--t1)",
+            lineHeight: "1.5rem",
+            minHeight: "1.5rem",
+            maxHeight: "160px",
+            padding: "12px 16px 40px",
+            margin: 0,
+            overflowY: "auto",
+            display: "block",
+          }}
+        />
 
-        {/* Bottom action row — attach left, send right */}
-        <div className="flex items-center justify-between px-3 pb-2.5 pt-1">
+        {/* Icon row — sits at the bottom of the bar, overlaid */}
+        <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between px-3 pb-2.5">
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={isLoading}
-            className="w-8 h-8 flex items-center justify-center rounded-xl transition-all duration-150 disabled:opacity-30"
+            className="w-7 h-7 flex items-center justify-center rounded-xl transition-all duration-150 disabled:opacity-30"
             style={{ color: "var(--t4)" }}
             title="Attach file"
             onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = "var(--bg-hover)"; el.style.color = "var(--t2)"; }}
             onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = "transparent"; el.style.color = "var(--t4)"; }}
           >
-            <Paperclip size={16} />
+            <Paperclip size={15} />
           </button>
 
           {isLoading ? (
             <button
               type="button"
               onClick={onStop}
-              className="w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-150 active:scale-90"
+              className="w-7 h-7 rounded-xl flex items-center justify-center transition-all duration-150 active:scale-90"
               style={{ background: "var(--t1)", color: "var(--bg-page)" }}
             >
-              <Square size={11} fill="currentColor" strokeWidth={0} />
+              <Square size={10} fill="currentColor" strokeWidth={0} />
             </button>
           ) : (
             <button
               type="submit"
               disabled={!canSubmit}
-              className="w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-150 active:scale-90"
+              className="w-7 h-7 rounded-xl flex items-center justify-center transition-all duration-150 active:scale-90"
               style={canSubmit
                 ? { background: "var(--t1)", color: "var(--bg-page)" }
                 : { background: "var(--bg-card)", color: "var(--t5)", cursor: "default" }}
             >
-              <ArrowUp size={15} strokeWidth={2.5} />
+              <ArrowUp size={14} strokeWidth={2.5} />
             </button>
           )}
         </div>

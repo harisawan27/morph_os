@@ -273,7 +273,7 @@ export default function WeatherApp() {
   // ── Render ────────────────────────────────────────────────────────────────────
   return (
     <div
-      className="h-full flex flex-col overflow-hidden text-white relative"
+      className="morph-static-dark h-full flex flex-col overflow-hidden text-white relative"
       style={{ background: `radial-gradient(ellipse at 60% 0%, ${theme.accent} 0%, transparent 55%), linear-gradient(180deg, ${theme.from} 0%, ${theme.mid} 100%)` }}
     >
 

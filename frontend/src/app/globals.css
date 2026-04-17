@@ -68,9 +68,9 @@
 }
 
 html.light {
-  --bg-page:     #f3f3f3;
-  --bg-panel:    #ffffff;
-  --bg-sidebar:  #e8e8e8;
+  --bg-page:     #f7f7f5;
+  --bg-panel:    #fafaf8;
+  --bg-sidebar:  #eeecea;
   --bg-card:     rgba(0,0,0,0.025);
   --bg-input:    rgba(0,0,0,0.04);
   --bg-hover:    rgba(0,0,0,0.04);
@@ -78,10 +78,10 @@ html.light {
   --border:      rgba(0,0,0,0.08);
   --border-md:   rgba(0,0,0,0.12);
   --border-hi:   rgba(0,0,0,0.20);
-  --t1:          rgba(0,0,0,0.88);
-  --t2:          rgba(0,0,0,0.55);
-  --t3:          rgba(0,0,0,0.38);
-  --t4:          rgba(0,0,0,0.22);
+  --t1:          rgba(0,0,0,0.90);
+  --t2:          rgba(0,0,0,0.68);
+  --t3:          rgba(0,0,0,0.48);
+  --t4:          rgba(0,0,0,0.30);
   --t5:          rgba(0,0,0,0.08);
   --msg-bg:      rgba(0,0,0,0.05);
   --msg-border:  rgba(0,0,0,0.09);
@@ -89,7 +89,7 @@ html.light {
   --scroll-hover:rgba(0,0,0,0.18);
   --placeholder: rgba(0,0,0,0.28);
   --icon-brand:        rgb(109,40,217);    /* purple-700 */
-  --bg-code:           #f0f0f4;
+  --bg-code:           #f0ede8;
   --code-inline-color: rgba(109,40,217,0.9);
 
   /* Template tokens — light mode flipped values */

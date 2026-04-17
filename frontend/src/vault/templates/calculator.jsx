@@ -112,9 +112,9 @@ export default function CalculatorArtifact() {
   const Btn = ({ label, onPress, variant = 'num' }) => {
     const variants = {
       num:    'bg-white/7 hover:bg-white/12 text-white/90 border-white/7',
-      op:     'bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 border-blue-600/20',
+      op:     'bg-green-600/20 hover:bg-green-600/40 text-green-400 border-green-600/20',
       fn:     'bg-white/4 hover:bg-white/8 text-white/50 border-white/5',
-      equals: 'bg-blue-600 hover:bg-blue-500 text-white border-blue-500/50 shadow-[0_0_30px_rgba(59,130,246,0.35)]',
+      equals: 'bg-green-600 hover:bg-green-500 text-white border-green-500/50 shadow-[0_0_30px_rgba(22,163,74,0.35)]',
     };
     return (
       <motion.button

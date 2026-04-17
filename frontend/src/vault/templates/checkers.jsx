@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { RotateCcw, Trophy, Users, Bot } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -115,7 +115,21 @@ export default function Checkers() {
   const [winner, setWinner]   = useState(null);
   const [lastMove, setLastMove] = useState(null);
 
-  useEffect(() => { save(score); }, [score]);
+  const boardRef = useRef(board);
+  const turnRef  = useRef(turn);
+  useEffect(() => { boardRef.current = board; }, [board]);
+  useEffect(() => { turnRef.current = turn; }, [turn]);
+
+  // Cloud persistence
+  useEffect(() => {
+    if (typeof morphLoadState !== 'undefined') {
+      morphLoadState().then(s => { if (s?.score) setScore(s.score); }).catch(()=>{});
+    }
+  }, []);
+  useEffect(() => {
+    save(score);
+    if (typeof morphSaveState !== 'undefined') morphSaveState({ score });
+  }, [score]);
 
   const checkWinner = useCallback((b, nextTurn) => {
     const moves = getAllMoves(b, nextTurn);
@@ -149,26 +163,7 @@ export default function Checkers() {
     if (selected !== null && moveMap[idx]) {
       const move = moveMap[idx];
       doMove(board, move, turn === 'r' ? 'b' : 'r');
-
-      // AI turn
-      if (vsAI && !winner) {
-        setLocked(true);
-        setTimeout(() => {
-          setBoard(prev => {
-            const nb = applyMove(prev, move);
-            const m = aiMove(nb);
-            if (m) {
-              const after = applyMove(nb, m);
-              setLastMove({ from: m.from, to: m.to });
-              if (!checkWinner(after, 'r')) setTurn('r');
-              setLocked(false);
-              return after;
-            }
-            setLocked(false);
-            return nb;
-          });
-        }, 400);
-      }
+      if (vsAI && !winner) setLocked(true);
       return;
     }
 
@@ -189,6 +184,25 @@ export default function Checkers() {
     }
   }, [board, selected, turn, locked, winner, vsAI, moveMap, doMove, checkWinner]);
 
+  // AI move via useEffect — reads fresh state from refs
+  useEffect(() => {
+    if (!vsAI || turn !== 'b' || winner) return;
+    const t = setTimeout(() => {
+      const b = boardRef.current;
+      if (turnRef.current !== 'b') { setLocked(false); return; }
+      const m = aiMove(b);
+      if (m) {
+        const after = applyMove(b, m);
+        setBoard(after);
+        setLastMove({ from: m.from, to: m.to });
+        if (!checkWinner(after, 'r')) setTurn('r');
+      }
+      setLocked(false);
+    }, 400);
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vsAI, turn, winner]);
+
   const reset = () => {
     setBoard(initBoard());
     setTurn('r');
@@ -204,7 +218,7 @@ export default function Checkers() {
   const bCount = board.filter(p => p?.c === 'b').length;
 
   return (
-    <div className="h-full bg-[#0a0a0a] text-white flex flex-col items-center justify-center gap-4 p-4 overflow-hidden select-none">
+    <div className="morph-static-dark h-full bg-[#0a0a0a] text-white flex flex-col items-center justify-center gap-4 p-4 overflow-hidden select-none">
 
       {/* Mode toggle */}
       <div className="flex bg-white/4 border border-white/[0.07] rounded-full p-0.5 gap-0.5">
