@@ -209,6 +209,12 @@ export default function ChatCanvas({
             ));
           }
 
+          if (event.type === "reply_text" && botMsgId) {
+            setMessages(prev => prev.map(m =>
+              m.id === botMsgId ? { ...m, text: event.text as string, pending: false } : m
+            ));
+          }
+
           if (event.type === "artifact" && botMsgId) {
             // Phase 2 — artifact arrives: attach to existing message, open canvas
             const code = event.code as string;
@@ -628,7 +634,7 @@ function MessageRow({
                   style={{ background: "rgba(192,132,252,0.45)", animationDelay: `${i * 0.15}s` }} />
               ))}
             </span>
-            <span>{m.model === "think" && m.thinking ? "Building canvas…" : m.model === "think" ? "Thinking…" : "Building canvas…"}</span>
+            <span>{m.model === "think" && !m.code ? "Thinking…" : "Building canvas…"}</span>
           </div>
         ) : m.code ? (
           <button

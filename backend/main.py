@@ -14,7 +14,7 @@ from typing import Optional, Any
 
 from database import get_db, init_db, SessionLocal
 from models import Artifact
-from llm_pipeline import brain_plan_ui, execute_plan, embed_text, search_web, local_template_match, analyze_file
+from llm_pipeline import brain_plan_ui, execute_plan, embed_text, search_web, local_template_match, analyze_file, chat_respond
 from auth import get_current_user, get_optional_user
 
 logger = logging.getLogger(__name__)
@@ -179,15 +179,29 @@ async def _generate_stream(
         return
 
     # ── 6b. Yield reply immediately ───────────────────────────────────────────
-    needs_artifact = planned.get("type") in ("template", "build", "edit") or planned.get("requires_ui")
+    needs_artifact  = planned.get("type") in ("template", "build", "edit") or planned.get("requires_ui")
+    is_think_chat   = use_thinking and not needs_artifact and planned.get("type") == "chat"
     thinking_budget = 8000 if (use_thinking and needs_artifact) else 0
+
     yield _sse({
         "type": "reply", "text": reply, "id": artifact_id,
-        "pending": bool(needs_artifact),
+        "pending": bool(needs_artifact) or is_think_chat,
         "model": "think" if use_thinking else "swift",
     })
 
-    # ── 7. Execute plan ───────────────────────────────────────────────────────
+    # ── 6c. Think-mode chat — run thinking-enabled response ──────────────────
+    final_reply   = reply
+    think_reply   = None
+    think_thought = None
+    if is_think_chat:
+        try:
+            think_reply, think_thought = await asyncio.to_thread(
+                chat_respond, prompt, history, 8000
+            )
+        except Exception as e:
+            logger.error(f"Think chat failed: {e}")
+
+    # ── 7. Execute plan (artifact builds) ─────────────────────────────────────
     code     = None
     ui_spec  = None
     thinking = None
@@ -199,18 +213,26 @@ async def _generate_stream(
         except Exception as e:
             logger.error(f"Plan execution failed: {e}")
 
-    if thinking:
-        yield _sse({"type": "thinking", "text": thinking, "id": artifact_id})
+    # ── Stream thinking (artifact build thinking OR think-chat thinking) ──────
+    emit_thinking = thinking if needs_artifact else think_thought
+    if emit_thinking:
+        yield _sse({"type": "thinking", "text": emit_thinking, "id": artifact_id})
 
+    # ── Stream artifact ───────────────────────────────────────────────────────
     if code:
         yield _sse({"type": "artifact", "code": code, "id": artifact_id})
+
+    # ── Stream updated chat reply for think-chat ──────────────────────────────
+    if is_think_chat and think_reply:
+        final_reply = think_reply
+        yield _sse({"type": "reply_text", "text": think_reply, "id": artifact_id})
 
     # ── 8. Persist ────────────────────────────────────────────────────────────
     if user_id:
         db = SessionLocal()
         try:
             db.add(Artifact(id=artifact_id, user_id=user_id, session_id=session_id,
-                            prompt=prompt, reply=reply, ui_spec=ui_spec, code=code, embedding=embedding))
+                            prompt=prompt, reply=final_reply, ui_spec=ui_spec, code=code, embedding=embedding))
             db.commit()
             logger.info(f"Persisted artifact {artifact_id}")
         except Exception as e:

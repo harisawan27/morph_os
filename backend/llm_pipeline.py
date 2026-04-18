@@ -343,6 +343,7 @@ OUTPUT FORMAT — always valid JSON, one of:
                 system_instruction=system_instruction,
                 temperature=0.2,
                 response_mime_type="application/json",
+                thinking_config=types.ThinkingConfig(thinking_budget=0),
             ),
         )
 
@@ -420,6 +421,7 @@ def search_web(query: str) -> str:
             config=types.GenerateContentConfig(
                 tools=[types.Tool(google_search=types.GoogleSearch())],
                 temperature=0.2,
+                thinking_config=types.ThinkingConfig(thinking_budget=0),
             ),
         )
 
@@ -486,6 +488,62 @@ Include all necessary React imports."""
         lines = code.split("\n")
         code = "\n".join(lines[1:-1])
     return code, thinking_text
+
+
+def chat_respond(
+    prompt: str,
+    history: list[dict] = [],
+    thinking_budget: int = 0,
+) -> tuple[str, str]:
+    """Generates a thoughtful chat reply. Returns (reply_text, thinking_text)."""
+    system_instruction = """You are Morph OS — a smart, helpful AI assistant.
+Answer the user's question directly, accurately, and engagingly.
+Use markdown where it helps (code blocks, bullet lists, bold, etc.).
+Be thorough but concise."""
+
+    history_context = ""
+    if history:
+        history_context = "CONVERSATION HISTORY:\n" + "\n".join(
+            [f"{m['role'].capitalize()}: {m['text']}" for m in history[-12:]]
+        ) + "\n\n"
+
+    full_prompt = history_context + f"USER: {prompt}"
+
+    cfg_kwargs: dict = dict(system_instruction=system_instruction, temperature=0.7)
+    if thinking_budget > 0:
+        cfg_kwargs["thinking_config"] = types.ThinkingConfig(thinking_budget=thinking_budget)
+
+    @retry(
+        retry=retry_if_exception_type(errors.ServerError),
+        stop=stop_after_attempt(2),
+        wait=wait_exponential(multiplier=1, min=1, max=4),
+    )
+    def _call(model_name):
+        logger.info(f"Chat respond with {model_name} (thinking={thinking_budget})...")
+        return client.models.generate_content(
+            model=model_name,
+            contents=full_prompt,
+            config=types.GenerateContentConfig(**cfg_kwargs),
+        )
+
+    try:
+        response = _call(PRIMARY_MODEL)
+    except Exception as e:
+        logger.warning(f"Primary chat_respond failed, falling back: {e}")
+        response = _call(FALLBACK_MODEL)
+
+    thinking_text = ""
+    reply_text = ""
+    try:
+        for part in response.candidates[0].content.parts:
+            if getattr(part, "thought", False):
+                thinking_text += part.text
+            else:
+                reply_text += part.text
+    except Exception:
+        reply_text = response.text
+
+    return reply_text.strip(), thinking_text
 
 
 def analyze_file(file_bytes: bytes, mime_type: str, filename: str, user_prompt: str) -> dict:
