@@ -106,7 +106,7 @@ async def _generate_stream(
             distance_col = Artifact.embedding.cosine_distance(embedding).label("distance")
             closest = (
                 db.query(Artifact, distance_col)
-                .filter(Artifact.user_id == user_id)
+                .filter(Artifact.user_id == user_id, Artifact.code.isnot(None))
                 .order_by(distance_col)
                 .first()
             )
