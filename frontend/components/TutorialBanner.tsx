@@ -33,7 +33,7 @@ export default function TutorialBanner() {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 10, scale: 0.95 }}
           transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1], delay: 1.2 }}
-          className="fixed bottom-28 right-4 sm:bottom-10 sm:right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl shadow-2xl"
+          className="fixed bottom-[calc(env(safe-area-inset-bottom,0px)+96px)] right-4 sm:bottom-10 sm:right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl shadow-2xl"
           style={{
             background: "var(--bg-panel)",
             border: "1px solid var(--border-md)",

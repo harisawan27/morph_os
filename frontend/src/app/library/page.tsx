@@ -164,17 +164,22 @@ function ArtifactCard({
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2, delay: index * 0.025, ease: "easeOut" }}
-      className="flex flex-col bg-white/[0.03] border border-white/[0.07] rounded-3xl overflow-hidden hover:border-white/[0.13] hover:bg-white/[0.04] transition-all duration-200"
+      className="flex flex-col rounded-3xl overflow-hidden transition-all duration-200"
+      style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}
+      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border-md)"; }}
+      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; }}
     >
       {/* Icon area */}
       <div
-        className={`relative h-28 bg-gradient-to-br ${item.accent} border-b border-white/[0.05] flex items-center justify-center overflow-hidden`}
+        className={`relative h-28 bg-gradient-to-br ${item.accent} flex items-center justify-center overflow-hidden`}
+        style={{ borderBottom: "1px solid var(--border)" }}
       >
         <div className="p-4 bg-white/[0.06] rounded-2xl border border-white/[0.08]">
           <Icon size={26} className="text-white/60" />
         </div>
         {/* Time badge */}
-        <span className="absolute top-3 right-3 text-[9px] uppercase tracking-widest text-white/30 bg-black/20 backdrop-blur-sm px-2 py-0.5 rounded-full">
+        <span className="absolute top-3 right-3 text-[9px] uppercase tracking-widest backdrop-blur-sm px-2 py-0.5 rounded-full"
+          style={{ color: "var(--t3)", background: "var(--bg-card)", border: "1px solid var(--border)" }}>
           {timeAgo(item.created_at)}
         </span>
       </div>
@@ -183,19 +188,20 @@ function ArtifactCard({
       <div className="flex flex-col gap-2 p-4 flex-1">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <p className="text-sm text-white/85 font-medium leading-none truncate">
+            <p className="text-sm font-medium leading-none truncate" style={{ color: "var(--t1)" }}>
               {item.displayName}
             </p>
             {item.subtitle && (
-              <p className="text-[11px] text-white/35 mt-0.5 truncate">{item.subtitle}</p>
+              <p className="text-[11px] mt-0.5 truncate" style={{ color: "var(--t3)" }}>{item.subtitle}</p>
             )}
           </div>
-          <span className="text-[9px] uppercase tracking-widest text-white/20 bg-white/[0.04] border border-white/[0.06] px-2 py-0.5 rounded-full shrink-0">
+          <span className="text-[9px] uppercase tracking-widest px-2 py-0.5 rounded-full shrink-0"
+            style={{ color: "var(--t4)", background: "var(--bg-input)", border: "1px solid var(--border)" }}>
             {item.category}
           </span>
         </div>
 
-        <p className="text-[11px] text-white/30 leading-relaxed flex-1 line-clamp-2">
+        <p className="text-[11px] leading-relaxed flex-1 line-clamp-2" style={{ color: "var(--t4)" }}>
           {item.prompt}
         </p>
 
@@ -209,12 +215,12 @@ function ArtifactCard({
               exit={{ opacity: 0 }}
               className="space-y-1.5 mt-1"
             >
-              <p className="text-[10px] text-white/40 text-center">Delete this artifact?</p>
+              <p className="text-[10px] text-center" style={{ color: "var(--t3)" }}>Delete this artifact?</p>
               <div className="flex gap-1.5">
                 <button
                   onClick={() => setConfirmDelete(false)}
                   className="flex-1 py-1.5 text-[11px] rounded-xl transition-all"
-                  style={{ background: "var(--bg-card)", color: "var(--t3)", border: "1px solid var(--border)" }}
+                  style={{ background: "var(--bg-input)", color: "var(--t3)", border: "1px solid var(--border)" }}
                 >
                   Cancel
                 </button>
@@ -233,17 +239,20 @@ function ArtifactCard({
             <motion.div key="actions" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex gap-1.5 mt-1">
               <button
                 onClick={open}
-                className="flex-1 py-2 flex items-center justify-center gap-1.5 bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.07] hover:border-white/[0.14] rounded-xl text-xs text-white/45 hover:text-white/80 transition-all active:scale-[0.98]"
+                className="flex-1 py-2 flex items-center justify-center gap-1.5 rounded-xl text-xs transition-all active:scale-[0.98]"
+                style={{ background: "var(--bg-input)", border: "1px solid var(--border)", color: "var(--t2)" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-hover)"; (e.currentTarget as HTMLElement).style.borderColor = "var(--border-md)"; (e.currentTarget as HTMLElement).style.color = "var(--t1)"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-input)"; (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; (e.currentTarget as HTMLElement).style.color = "var(--t2)"; }}
               >
                 <ExternalLink size={11} />
                 Open
               </button>
               <button
                 onClick={() => setConfirmDelete(true)}
-                className="w-9 flex items-center justify-center bg-white/[0.03] hover:bg-red-500/10 border border-white/[0.06] hover:border-red-500/20 rounded-xl transition-all active:scale-[0.98]"
-                style={{ color: "var(--t5)" }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#f87171"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--t5)"; }}
+                className="w-9 flex items-center justify-center rounded-xl transition-all active:scale-[0.98]"
+                style={{ background: "var(--bg-input)", border: "1px solid var(--border)", color: "var(--t5)" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(239,68,68,0.10)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(239,68,68,0.22)"; (e.currentTarget as HTMLElement).style.color = "#f87171"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-input)"; (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; (e.currentTarget as HTMLElement).style.color = "var(--t5)"; }}
               >
                 <Trash2 size={12} />
               </button>
@@ -258,13 +267,14 @@ function ArtifactCard({
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 function SkeletonCard() {
   return (
-    <div className="flex flex-col bg-white/[0.02] border border-white/[0.05] rounded-3xl overflow-hidden animate-pulse">
-      <div className="h-28 bg-white/[0.03]" />
+    <div className="flex flex-col rounded-3xl overflow-hidden animate-pulse"
+      style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
+      <div className="h-28" style={{ background: "var(--bg-hover)" }} />
       <div className="p-4 space-y-2.5">
-        <div className="h-3 bg-white/[0.05] rounded-full w-2/3" />
-        <div className="h-2.5 bg-white/[0.04] rounded-full w-full" />
-        <div className="h-2.5 bg-white/[0.04] rounded-full w-4/5" />
-        <div className="h-8 bg-white/[0.03] rounded-xl mt-2" />
+        <div className="h-3 rounded-full w-2/3" style={{ background: "var(--bg-hover)" }} />
+        <div className="h-2.5 rounded-full w-full" style={{ background: "var(--bg-input)" }} />
+        <div className="h-2.5 rounded-full w-4/5" style={{ background: "var(--bg-input)" }} />
+        <div className="h-8 rounded-xl mt-2" style={{ background: "var(--bg-input)" }} />
       </div>
     </div>
   );
@@ -305,7 +315,7 @@ export default function LibraryPage() {
 
   return (
     <div className="min-h-full" style={{ background: "var(--bg-page)", color: "var(--t1)" }}>
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-14 sm:pt-10 pb-12">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-14 md:pt-10 pb-12">
 
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
@@ -323,8 +333,8 @@ export default function LibraryPage() {
 
         {/* Search + category filter */}
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
-          className="flex flex-col sm:flex-row gap-3 mb-6">
-          <div className="relative sm:w-64">
+          className="flex flex-col gap-3 mb-6">
+          <div className="relative w-full sm:w-64">
             <Search size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "var(--t4)" }} />
             <input
               type="text"
@@ -333,23 +343,24 @@ export default function LibraryPage() {
               placeholder="Search your library…"
               className="w-full rounded-2xl pl-9 pr-4 py-2.5 text-sm outline-none transition-colors"
               style={{
-                background:   "var(--bg-card)",
-                border:       "1px solid var(--border)",
-                color:        "var(--t2)",
+                background: "var(--bg-card)",
+                border:     "1px solid var(--border)",
+                color:      "var(--t2)",
               }}
             />
           </div>
 
-          <div className="flex gap-1.5 flex-wrap">
+          {/* Category pills — scrollable on mobile */}
+          <div className="flex gap-1.5 overflow-x-auto pb-0.5 sm:flex-wrap sm:overflow-visible" style={{ scrollbarWidth: "none" }}>
             {CATEGORIES.map(cat => (
               <button
                 key={cat}
                 onClick={() => setCategory(cat)}
-                className="px-3 py-1.5 rounded-full text-[11px] border transition-all"
+                className="shrink-0 px-3 py-1.5 rounded-full text-[11px] border transition-all"
                 style={{
-                  background:   category === cat ? "var(--bg-active)" : "var(--bg-card)",
-                  border:       `1px solid ${category === cat ? "var(--border-md)" : "var(--border)"}`,
-                  color:        category === cat ? "var(--t1)" : "var(--t4)",
+                  background: category === cat ? "var(--bg-active)" : "var(--bg-card)",
+                  border:     `1px solid ${category === cat ? "var(--border-md)" : "var(--border)"}`,
+                  color:      category === cat ? "var(--t1)" : "var(--t4)",
                 }}
               >
                 {cat}

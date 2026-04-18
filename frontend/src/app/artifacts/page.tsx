@@ -994,10 +994,14 @@ function TemplateCard({ t, index }: { t: Template; index: number }) {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2, delay: index * 0.03, ease: "easeOut" }}
-      className="group flex flex-col bg-white/[0.03] border border-white/[0.07] rounded-3xl overflow-hidden hover:border-white/[0.13] hover:bg-white/[0.04] transition-all duration-200"
+      className="group flex flex-col rounded-3xl overflow-hidden transition-all duration-200"
+      style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}
+      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border-md)"; }}
+      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; }}
     >
       {/* Preview area */}
-      <div className={`relative h-32 bg-gradient-to-br ${t.accent} border-b border-white/[0.05] flex items-center justify-center p-4 overflow-hidden`}>
+      <div className={`relative h-32 bg-gradient-to-br ${t.accent} flex items-center justify-center p-4 overflow-hidden`}
+        style={{ borderBottom: "1px solid var(--border)" }}>
         {t.preview}
       </div>
 
@@ -1005,21 +1009,25 @@ function TemplateCard({ t, index }: { t: Template; index: number }) {
       <div className="flex flex-col gap-2 p-4 flex-1">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-white/[0.05] rounded-xl border border-white/[0.07]">
-              <t.icon size={13} className="text-white/50" />
+            <div className="p-1.5 rounded-xl" style={{ background: "var(--bg-input)", border: "1px solid var(--border)" }}>
+              <t.icon size={13} style={{ color: "var(--t3)" }} />
             </div>
-            <h3 className="text-sm text-white/85 font-medium leading-none">{t.name}</h3>
+            <h3 className="text-sm font-medium leading-none" style={{ color: "var(--t1)" }}>{t.name}</h3>
           </div>
-          <span className="text-[9px] uppercase tracking-widest text-white/20 bg-white/[0.04] border border-white/[0.06] px-2 py-0.5 rounded-full shrink-0">
+          <span className="text-[9px] uppercase tracking-widest px-2 py-0.5 rounded-full shrink-0"
+            style={{ color: "var(--t4)", background: "var(--bg-input)", border: "1px solid var(--border)" }}>
             {t.category}
           </span>
         </div>
 
-        <p className="text-xs text-white/35 leading-relaxed flex-1">{t.description}</p>
+        <p className="text-xs leading-relaxed flex-1" style={{ color: "var(--t3)" }}>{t.description}</p>
 
         <button
           onClick={launch}
-          className="w-full py-2 bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.07] hover:border-white/[0.14] rounded-xl text-xs text-white/45 hover:text-white/80 transition-all active:scale-[0.98] mt-1"
+          className="w-full py-2 rounded-xl text-xs transition-all active:scale-[0.98] mt-1"
+          style={{ background: "var(--bg-input)", border: "1px solid var(--border)", color: "var(--t2)" }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-hover)"; (e.currentTarget as HTMLElement).style.borderColor = "var(--border-md)"; (e.currentTarget as HTMLElement).style.color = "var(--t1)"; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-input)"; (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; (e.currentTarget as HTMLElement).style.color = "var(--t2)"; }}
         >
           Launch →
         </button>
@@ -1044,7 +1052,7 @@ export default function VaultPage() {
 
   return (
     <div className="min-h-full bg-page text-t1">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-14 sm:pt-10 pb-12">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-14 md:pt-10 pb-12">
 
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
@@ -1060,27 +1068,29 @@ export default function VaultPage() {
 
         {/* Search + category row */}
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
-          className="flex flex-col sm:flex-row gap-3 mb-6">
+          className="flex flex-col gap-3 mb-6">
 
           {/* Search */}
-          <div className="relative sm:w-64">
-            <Search size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/25 pointer-events-none" />
+          <div className="relative w-full sm:w-64">
+            <Search size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "var(--t4)" }} />
             <input
               type="text" value={search} onChange={e => setSearch(e.target.value)}
               placeholder="Search templates…"
-              className="w-full bg-white/[0.03] border border-white/[0.07] focus:border-white/15 rounded-2xl pl-9 pr-4 py-2.5 text-sm text-white/70 placeholder-white/20 outline-none transition-colors"
+              className="w-full rounded-2xl pl-9 pr-4 py-2.5 text-sm outline-none transition-colors"
+              style={{ background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--t2)" }}
             />
           </div>
 
-          {/* Category pills */}
-          <div className="flex gap-1.5 flex-wrap">
+          {/* Category pills — scrollable on mobile */}
+          <div className="flex gap-1.5 overflow-x-auto pb-0.5 sm:flex-wrap sm:overflow-visible" style={{ scrollbarWidth: "none" }}>
             {CATEGORIES.map(cat => (
               <button key={cat} onClick={() => setCategory(cat)}
-                className={`px-3 py-1.5 rounded-full text-[11px] border transition-all ${
-                  category === cat
-                    ? "bg-white/10 border-white/20 text-white"
-                    : "bg-white/[0.03] border-white/[0.07] text-white/35 hover:text-white/60 hover:border-white/15"
-                }`}>
+                className="shrink-0 px-3 py-1.5 rounded-full text-[11px] transition-all"
+                style={{
+                  background: category === cat ? "var(--bg-active)" : "var(--bg-card)",
+                  border:     `1px solid ${category === cat ? "var(--border-md)" : "var(--border)"}`,
+                  color:      category === cat ? "var(--t1)" : "var(--t4)",
+                }}>
                 {cat}
               </button>
             ))}

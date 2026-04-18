@@ -307,7 +307,7 @@ export default function TutorialPage() {
 
         {/* Visual card */}
         <div className="rounded-3xl overflow-hidden mb-6"
-          style={{ background: "var(--bg-card)", border: "1px solid var(--border)", height: 210 }}>
+          style={{ background: "var(--bg-card)", border: "1px solid var(--border)", height: "clamp(160px, 28vw, 220px)" }}>
           <AnimatePresence mode="wait" custom={dir}>
             <motion.div key={slide.id} custom={dir} variants={variants}
               initial="enter" animate="center" exit="exit"

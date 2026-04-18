@@ -63,7 +63,7 @@ export default function ChatCanvas({
 
   // ── Responsive detection ────────────────────────────────────────────────
   useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768);
+    const check = () => setIsMobile(window.innerWidth < 1024);
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
@@ -285,17 +285,17 @@ export default function ChatCanvas({
           </div>
 
           {/* OmniBar */}
-          <div className="w-full max-w-170 mb-5">
+          <div className="w-full max-w-lg mb-5">
             <OmniBar onGenerate={handleGenerate} onStop={handleStop} isLoading={isGenerating} autoFocus />
           </div>
 
-          {/* Suggestion chips — 2 centered rows */}
-          <div className="w-full max-w-170 flex flex-wrap justify-center gap-2">
+          {/* Suggestion chips — scrollable on mobile, wrapping on desktop */}
+          <div className="w-full max-w-lg flex gap-2 overflow-x-auto sm:flex-wrap sm:justify-center sm:overflow-visible pb-0.5 sm:pb-0" style={{ scrollbarWidth: "none" }}>
             {HINTS.map(h => (
               <button
                 key={h.prompt}
                 onClick={() => handleGenerate(h.prompt)}
-                className="px-4 py-2 text-[13px] rounded-full transition-all duration-150 active:scale-95"
+                className="shrink-0 px-4 py-2 text-[13px] rounded-full transition-all duration-150 active:scale-95"
                 style={{
                   background: "var(--bg-card)",
                   border: "1px solid var(--border)",
@@ -438,7 +438,7 @@ export default function ChatCanvas({
 // ─── Hints ────────────────────────────────────────────────────────────────────
 const HINTS = [
   { label: "Build a habit tracker",       prompt: "build me a habit tracker"        },
-  { label: "Open Snake",                  prompt: "open snake"                      },
+  { label: "Open Snake Game",              prompt: "open snake game"                 },
   { label: "Weather in Tokyo",            prompt: "weather in Tokyo"                },
   { label: "Pomodoro timer",              prompt: "open pomodoro timer"             },
   { label: "Explain quantum computing",   prompt: "explain quantum computing simply"},
