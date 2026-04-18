@@ -29,10 +29,6 @@ export const metadata: Metadata = {
     statusBarStyle: "black-translucent",
     title: "Morph OS",
   },
-  icons: {
-    icon: "/icons/icon.svg",
-    apple: "/icons/icon.svg",
-  },
   other: {
     "mobile-web-app-capable": "yes",
   },

@@ -8,6 +8,7 @@ import { useSession, signIn } from "next-auth/react";
 import {
   Ghost, Plus, Settings, Menu, X, Trash2, User, LogIn, Grid3X3, Pencil, Library, Search, HelpCircle,
 } from "lucide-react";
+import InstallButton from "./InstallPrompt";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "";
 
@@ -371,6 +372,7 @@ export default function Sidebar() {
 
         {/* Footer */}
         <div className="px-2 pb-3 shrink-0 space-y-0.5 pt-2" style={{ borderTop: "1px solid var(--border)" }}>
+          <InstallButton isOpen={isOpen} />
           {navItem("/tutorial", <HelpCircle size={16} />, "Tutorial")}
           {navItem("/settings", <Settings size={16} />, "Settings")}
 
