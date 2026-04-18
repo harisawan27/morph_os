@@ -263,7 +263,7 @@ export default function ChatCanvas({
         ));
       }
     }
-  }, [messages, sessionId, activeArtifact, isMobile]);
+  }, [messages, sessionId, activeArtifact, isMobile, model]);
 
   const handleResubmit = useCallback((index: number, newText: string) => {
     setMessages(prev => prev.slice(0, index));
