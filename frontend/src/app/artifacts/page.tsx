@@ -417,7 +417,7 @@ function SnakePreview() {
   const snake = [12, 11, 10];
   const food = 7;
   return (
-    <div className="grid gap-0.5" style={{ gridTemplateColumns: "repeat(5,1fr)" }}>
+    <div className="grid gap-0.5 w-full" style={{ gridTemplateColumns: "repeat(5,1fr)" }}>
       {grid.map((_, i) => (
         <div key={i} className={`aspect-square rounded-sm ${snake.includes(i) ? "bg-green-400" : i === food ? "bg-red-400" : "bg-white/4"}`} />
       ))}
@@ -428,7 +428,7 @@ function SnakePreview() {
 function MemoryPreview() {
   const emojis = ["🎮","🎯","🎨","🎭","","","",""];
   return (
-    <div className="grid grid-cols-4 gap-1">
+    <div className="grid grid-cols-4 gap-1 w-full">
       {emojis.map((e, i) => (
         <div key={i} className={`aspect-square rounded-lg flex items-center justify-center text-sm ${e ? "bg-white/10 border border-white/15" : "bg-white/4 border border-white/6"}`}>
           {e}

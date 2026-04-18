@@ -80,14 +80,26 @@ def local_template_match(prompt: str) -> dict | None:
         return {"type": "template", "template_id": tid, "data": {}, "reply": _open_reply(tid)}
 
     # 2. Message starts with an explicit trigger phrase
+    _TRIVIAL_SUFFIXES = ("", " please", " for me", " now", " again", " up")
     for trigger in _OPEN_TRIGGERS:
         if p.startswith(trigger):
             remainder = p[len(trigger):].rstrip("!?.").strip()
-            # try exact match first, then prefix match
+            # Remove leading "the" or "a" article
+            for article in ("the ", "a "):
+                if remainder.startswith(article):
+                    remainder = remainder[len(article):]
+                    break
+            # try exact match first
             tid = _TEMPLATE_NAMES.get(remainder)
             if not tid:
                 for name, template_id in _TEMPLATE_NAMES.items():
-                    if remainder.startswith(name) or name.startswith(remainder):
+                    if remainder.startswith(name):
+                        extra = remainder[len(name):].strip()
+                        # Only match if nothing meaningful follows the name
+                        if extra in _TRIVIAL_SUFFIXES:
+                            tid = template_id
+                            break
+                    elif name.startswith(remainder) and len(remainder) >= 3:
                         tid = template_id
                         break
             if tid:
@@ -188,8 +200,9 @@ TYPE DECISION RULES
   Clear signals: "open X", "launch X", "I want to play X", "show me a X tool", "give me a X"
   NEVER use template just because a keyword appears — intent must be clear.
 
-"build" — Use ONLY for a truly custom interactive app with specific requirements not covered by any template.
-  Clear signals: "build me a...", "create a custom...", "make an app that..."
+"build" — Use for a truly custom interactive app, OR when the user requests a known template WITH specific customization (color, theme, style, layout, etc.).
+  Clear signals: "build me a...", "create a custom...", "make an app that...", "open X in green", "open X but with Y theme"
+  If customized: set style/goal to reflect the customization. NEVER load a plain template then claim you'll handle the customization later.
 
 "search" — Use when the user needs LIVE or CURRENT information that changes frequently.
   Signals: "trending", "latest", "today", "right now", "current", "news", "scores", "price"
@@ -202,6 +215,8 @@ TYPE DECISION RULES
   Pronouns referring to the current UI: "it", "this", "the app", "the widget"
 
 GOLDEN RULE: If a sentence can answer it — use "chat". Never spawn a UI where words will do.
+
+REPLY ACCURACY RULE: The "reply" field must describe what you ARE doing right now, not what you're not doing or plan to do later. If you're building a green calculator, say "Here's your green calculator!" — NEVER say "I'll keep your preference in mind for future updates" when you are already doing it.
 
 ════════════════════════════════════════
 FEW-SHOT EXAMPLES (calibrate your judgment here)
@@ -245,6 +260,8 @@ FEW-SHOT EXAMPLES (calibrate your judgment here)
 "build me a custom CRM dashboard with lead scoring" → build [genuinely custom]
 "make it dark mode" [active artifact] → edit
 "add a reset button to it" [active artifact] → edit
+"open calculator in green" → build: {"goal": "calculator with green color scheme", "features": ["standard arithmetic operations", "clear/backspace", "keyboard support"], "style": "green theme"}, reply: "Here's your green calculator!"
+"open snake but red" → build: {"goal": "snake game with red color scheme", "features": ["arrow key controls", "score tracking", "level progression"], "style": "red theme"}, reply: "Here's your red Snake game!"
 
 ════════════════════════════════════════
 TEMPLATE CATALOG

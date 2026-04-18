@@ -143,6 +143,7 @@ export default function OmniBar({ onGenerate, onStop, isLoading, autoFocus }: Om
             padding: "10px 16px 4px",
             margin: 0,
             display: "block",
+            height: "38px",
           }}
         />
 
