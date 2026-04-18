@@ -78,6 +78,8 @@ The user reads the response while the artifact is still generating. The "Buildin
 
 Every generation is embedded with `gemini-embedding-001` and stored in pgvector. On repeat or near-duplicate requests, the cached artifact is served instantly without touching the LLM.
 
+Critically, **only code artifacts are eligible for cache hits** — plain chat replies are stored for session history but are never replayed as cached responses. This ensures every conversational answer is generated fresh with full context, while deterministic UI tools (a calculator is always a calculator) benefit from instant replay.
+
 ---
 
 ## Feature surface
@@ -103,6 +105,8 @@ A personal archive of everything the user has generated. Organized by category, 
 
 ### Chat history & sessions
 Every conversation is persisted. The sidebar shows recent sessions with inline rename and delete. Clicking a session restores the full chat history and the last active artifact in the canvas.
+
+Multi-turn context is fully supported — the last 12 messages are included with every request to both the Brain and the Builder. Say half a thing in one message and finish it in the next; Morph knows what you're talking about.
 
 ### Message actions
 - **User messages**: Edit (re-sends with history truncated to that point) and Copy
@@ -138,7 +142,12 @@ Two generation modes selectable per-message from the OmniBar:
 | **Swift** | ⚡ | Standard generation — fast, no thinking overhead |
 | **Think** | 🧠 | Gemini 2.5 Flash with `thinking_budget: 8000` — reasons before building |
 
-In Think mode the response pipeline runs the Builder with thinking tokens enabled. The thinking text streams back as a separate SSE event and appears in the chat as a collapsible **"Thought about this"** block — collapsed by default, expandable to show the full reasoning. While thinking is in progress a pulsing brain animation replaces the standard "Building canvas…" dots.
+In Think mode the full reasoning chain appears **before** the answer — exactly as it does in Gemini and Claude's thinking UIs. The thinking block is always first, the answer follows after thinking completes.
+
+- **For artifact builds**: Builder runs with `thinking_budget=8000`. Thinking streams → artifact renders.
+- **For chat replies**: A second model call runs with thinking enabled. Thought process appears first, then the final answer replaces the initial placeholder.
+
+The thinking text appears as a collapsible **"Thought about this"** block — collapsed by default, expandable to read the full reasoning. A pulsing brain animation shows while thinking is in progress; the standard "Building canvas…" dots are suppressed in Think mode since the ThinkingBlock handles all pending state.
 
 ### Artifact fallback UI
 When the Builder generates code with a syntax or runtime error, the canvas replaces the blank screen with a friendly fallback:
