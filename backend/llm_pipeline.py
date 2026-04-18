@@ -496,12 +496,15 @@ Include all necessary React imports."""
     code_text = ""
     try:
         for part in response.candidates[0].content.parts:
+            part_text = (part.text or "")
             if getattr(part, "thought", False):
-                thinking_text += part.text
+                thinking_text += part_text
             else:
-                code_text += part.text
+                code_text += part_text
     except Exception:
-        code_text = response.text
+        pass
+
+    code_text = code_text or (response.text or "")
 
     code = code_text.strip()
     if code.startswith("```") and code.endswith("```"):
@@ -558,13 +561,16 @@ Be thorough but concise."""
     reply_text = ""
     try:
         for part in response.candidates[0].content.parts:
+            part_text = (part.text or "")
             if getattr(part, "thought", False):
-                thinking_text += part.text
+                thinking_text += part_text
             else:
-                reply_text += part.text
+                reply_text += part_text
     except Exception:
-        reply_text = response.text
+        pass
 
+    # response.text is the authoritative reply — SDK excludes thought parts from it
+    reply_text = reply_text or (response.text or "")
     return reply_text.strip(), thinking_text
 
 
@@ -689,12 +695,15 @@ Return the complete modified component."""
     code_text = ""
     try:
         for part in response.candidates[0].content.parts:
+            part_text = (part.text or "")
             if getattr(part, "thought", False):
-                thinking_text += part.text
+                thinking_text += part_text
             else:
-                code_text += part.text
+                code_text += part_text
     except Exception:
-        code_text = response.text
+        pass
+
+    code_text = code_text or (response.text or "")
 
     code = code_text.strip()
     if code.startswith("```") and code.endswith("```"):
