@@ -14,11 +14,15 @@ FALLBACK_MODEL = 'gemini-2.0-flash'
 # ThinkingConfig may not exist in older SDK versions — guard it
 def _thinking_cfg(budget: int):
     try:
-        tc = types.ThinkingConfig(thinking_budget=budget)
-        logger.info(f"ThinkingConfig created with budget={budget}")
+        # include_thoughts=True is required — without it the model thinks internally
+        # but never returns thought parts in the response
+        tc = types.ThinkingConfig(
+            thinking_budget=budget,
+            include_thoughts=budget > 0,
+        )
         return tc
     except Exception as e:
-        logger.warning(f"ThinkingConfig unavailable (SDK too old?): {e}")
+        logger.warning(f"ThinkingConfig unavailable: {e}")
         return None
 
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
