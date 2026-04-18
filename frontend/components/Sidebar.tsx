@@ -6,7 +6,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession, signIn } from "next-auth/react";
 import {
-  Ghost, Plus, Settings, Menu, X, Trash2, User, LogIn, Vault, Pencil, Library, Search, HelpCircle,
+  Ghost, Plus, Settings, Menu, X, Trash2, User, LogIn, Grid3X3, Pencil, Library, Search, HelpCircle,
 } from "lucide-react";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "";
@@ -223,7 +223,7 @@ export default function Sidebar() {
 
         {/* The Vault */}
         <div className="px-2 mb-1 shrink-0">
-          {navItem("/artifacts", <Vault size={20} />, "The Vault")}
+          {navItem("/artifacts", <Grid3X3 size={20} />, "The Vault")}
         </div>
 
         {/* My Library */}

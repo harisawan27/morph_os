@@ -74,6 +74,7 @@ class GenerateRequest(BaseModel):
     history: list[dict] = []
     user_context: Optional[dict] = None       # name, role, about, location, tone
     current_artifact: Optional[str] = None    # current rendered code for edit mode
+    model: str = "swift"                       # "swift" | "think"
 
 def _sse(event: dict) -> str:
     return f"data: {json.dumps(event)}\n\n"
@@ -87,6 +88,7 @@ async def _generate_stream(
     current_artifact: Optional[str],
     user_id: Optional[str],
     file_analysis: Optional[dict] = None,
+    use_thinking: bool = False,
 ):
     """Core SSE generator — shared by JSON and multipart endpoints."""
 
@@ -178,16 +180,27 @@ async def _generate_stream(
 
     # ── 6b. Yield reply immediately ───────────────────────────────────────────
     needs_artifact = planned.get("type") in ("template", "build", "edit") or planned.get("requires_ui")
-    yield _sse({"type": "reply", "text": reply, "id": artifact_id, "pending": bool(needs_artifact)})
+    thinking_budget = 8000 if (use_thinking and needs_artifact) else 0
+    yield _sse({
+        "type": "reply", "text": reply, "id": artifact_id,
+        "pending": bool(needs_artifact),
+        "model": "think" if use_thinking else "swift",
+    })
 
     # ── 7. Execute plan ───────────────────────────────────────────────────────
-    code    = None
-    ui_spec = None
+    code     = None
+    ui_spec  = None
+    thinking = None
     if needs_artifact:
         try:
-            code, ui_spec = await asyncio.to_thread(execute_plan, planned, current_artifact)
+            code, ui_spec, thinking = await asyncio.to_thread(
+                execute_plan, planned, current_artifact, thinking_budget
+            )
         except Exception as e:
             logger.error(f"Plan execution failed: {e}")
+
+    if thinking:
+        yield _sse({"type": "thinking", "text": thinking, "id": artifact_id})
 
     if code:
         yield _sse({"type": "artifact", "code": code, "id": artifact_id})
@@ -222,6 +235,7 @@ async def generate_artifact(
             user_context=request.user_context,
             current_artifact=request.current_artifact,
             user_id=user_id,
+            use_thinking=request.model == "think",
         ),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
@@ -235,6 +249,7 @@ async def generate_with_file(
     history: str = Form("[]"),
     user_context: str = Form("{}"),
     current_artifact: Optional[str] = Form(None),
+    model: str = Form("swift"),
     file: UploadFile = File(...),
     user: dict | None = Depends(get_optional_user),
 ):
@@ -262,6 +277,7 @@ async def generate_with_file(
             current_artifact=current_artifact,
             user_id=user_id,
             file_analysis=file_analysis,
+            use_thinking=model == "think",
         ),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},

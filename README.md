@@ -58,7 +58,7 @@ User input
 
 **The Vault** holds 34 battle-tested templates (games, productivity tools, finance tools, creative tools). When the Brain matches a template, it's hydrated and served in milliseconds — no generation cost. Parametric requests like "open calculator in green" are recognized as customized builds and routed to the Builder with a precise spec.
 
-**The Builder** takes over only for genuinely custom requests. It receives a structured spec from the Brain and generates a standalone React component with a consistent dark glassmorphism aesthetic.
+**The Builder** takes over only for genuinely custom requests. It receives a structured spec from the Brain and generates a standalone React component. In **Think mode**, the Builder runs with `ThinkingConfig(thinking_budget=8000)` — Gemini 2.5 Flash reasons through the design before writing code, and the thinking text is streamed back to the UI as a collapsible block.
 
 ### Streaming response architecture
 
@@ -67,6 +67,7 @@ Responses stream in two phases, eliminating perceived wait time:
 ```
 Phase 1 (~1-2s)   →  Reply text appears immediately
 Phase 2 (~2-8s)   →  Artifact builds in background, snaps into canvas
+Phase 2 (Think)   →  Thinking block streams → artifact arrives
 ```
 
 The user reads the response while the artifact is still generating. The "Building canvas…" indicator gives live feedback. No staring at a blank screen.
@@ -125,6 +126,31 @@ Slides cover: Welcome, Chatting with Morph, Building Apps, The Canvas, Editing A
 ### OmniBar
 The input bar is a minimal single-line textarea that grows up to 4 lines before scrolling. It supports file attachments (images, PDFs, text, CSV, JSON) with drag-and-drop, a file preview chip, and a stop button during generation. The bar renders at the correct single-line height immediately on page load — no layout shift on first keystroke.
 
+The bottom row has two visible controls: an **Attach** pill button (paperclip + label, clearly visible in both themes) and a **model selector** dropdown to the left of the send button.
+
+### Swift and Think modes
+Two generation modes selectable per-message from the OmniBar:
+
+| Mode | Icon | Behaviour |
+|---|---|---|
+| **Swift** | ⚡ | Standard generation — fast, no thinking overhead |
+| **Think** | 🧠 | Gemini 2.5 Flash with `thinking_budget: 8000` — reasons before building |
+
+In Think mode the response pipeline runs the Builder with thinking tokens enabled. The thinking text streams back as a separate SSE event and appears in the chat as a collapsible **"Thought about this"** block — collapsed by default, expandable to show the full reasoning. While thinking is in progress a pulsing brain animation replaces the standard "Building canvas…" dots.
+
+### Artifact fallback UI
+When the Builder generates code with a syntax or runtime error, the canvas replaces the blank screen with a friendly fallback:
+- Floating ghost icon with ambient glow
+- Human-readable message ("Artifact didn't quite click")
+- **Try Again** button — strips the failed response from history and re-fires the last prompt
+- **Back to Chat** button
+- Collapsible "Show error detail" for the raw error (hidden by default)
+
+Works in both light and dark themes, fully responsive.
+
+### Google Search grounding
+The Brain routes requests that need live data (trending, news, prices, scores) to `search_web()`, which calls Gemini with `GoogleSearch()` grounding enabled. Real-time answers without leaving the chat.
+
 ---
 
 ## Tech stack
@@ -153,8 +179,8 @@ morph_os/
 │   ├── components/
 │   │   ├── ChatCanvas.tsx        # Chat interface, streaming SSE handler
 │   │   ├── Sidebar.tsx           # Nav, session list, rename/delete
-│   │   ├── ArtifactRenderer.tsx  # Isolated React execution sandbox
-│   │   ├── OmniBar.tsx           # Input bar with file attach & drag-drop
+│   │   ├── ArtifactRenderer.tsx  # Isolated React sandbox + fallback error UI
+│   │   ├── OmniBar.tsx           # Input bar: attach pill, Swift/Think selector
 │   │   ├── TutorialBanner.tsx    # Dismissible new-user onboarding banner
 │   │   └── TempModeBanner.tsx    # Temporary session mode indicator
 │   └── src/

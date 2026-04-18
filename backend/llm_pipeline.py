@@ -358,9 +358,10 @@ OUTPUT FORMAT — always valid JSON, one of:
 def execute_plan(
     planned: dict,
     current_artifact: str | None = None,
-) -> tuple[str | None, str | None]:
+    thinking_budget: int = 0,
+) -> tuple[str | None, str | None, str | None]:
     """
-    Executes a brain plan and returns (code, ui_spec_json).
+    Executes a brain plan and returns (code, ui_spec_json, thinking_text).
     Runs entirely outside the async loop — safe to call via asyncio.to_thread.
     """
     from vault_manager import get_hydrated_template
@@ -372,8 +373,8 @@ def execute_plan(
         instruction = planned.get("edit_instruction", "")
         logger.info(f"EDIT MODE: {instruction[:80]}...")
         try:
-            code = builder_edit_react(current_artifact, instruction)
-            return code, None
+            code, thinking = builder_edit_react(current_artifact, instruction, thinking_budget)
+            return code, None, thinking or None
         except Exception as e:
             logger.error(f"Edit failed: {e} — falling back to fresh build")
             plan_type = "build"
@@ -386,7 +387,7 @@ def execute_plan(
         logger.info(f"VAULT: hydrating {template_id}...")
         try:
             code = get_hydrated_template(template_id, data)
-            return code, json.dumps(planned)
+            return code, json.dumps(planned), None
         except Exception as e:
             logger.error(f"Vault hydration failed: {e} — falling back to builder")
             plan_type = "build"
@@ -397,11 +398,11 @@ def execute_plan(
         ui_spec = planned.get("ui_spec")
         if ui_spec:
             logger.info(f"BUILDER: generating React component...")
-            code = builder_generate_react(json.dumps(ui_spec))
-            return code, json.dumps(ui_spec)
+            code, thinking = builder_generate_react(json.dumps(ui_spec), thinking_budget)
+            return code, json.dumps(ui_spec), thinking or None
 
     # ── Chat / no artifact ───────────────────────────────────────────────────
-    return None, None
+    return None, None, None
 
 
 def search_web(query: str) -> str:
@@ -431,8 +432,8 @@ def search_web(query: str) -> str:
     return response.text
 
 
-def builder_generate_react(ui_spec: str) -> str:
-    """Generates a standalone React component from a UI spec."""
+def builder_generate_react(ui_spec: str, thinking_budget: int = 0) -> tuple[str, str]:
+    """Generates a standalone React component. Returns (code, thinking_text)."""
     system_instruction = """You are a Full-Stack Creative Engineer (THE BUILDER).
 Generate a SINGLE, standalone React Component (default export) using Tailwind CSS.
 
@@ -443,20 +444,24 @@ MEDIA INSTRUCTION: If building a YouTube or Music player:
 DO NOT wrap in markdown code blocks. Just the raw JS/TS code.
 Include all necessary React imports."""
 
+    cfg_kwargs = dict(
+        system_instruction=system_instruction,
+        temperature=0.4,
+    )
+    if thinking_budget > 0:
+        cfg_kwargs["thinking_config"] = types.ThinkingConfig(thinking_budget=thinking_budget)
+
     @retry(
         retry=retry_if_exception_type(errors.ServerError),
         stop=stop_after_attempt(2),
         wait=wait_exponential(multiplier=1, min=1, max=4),
     )
     def _build(model_name):
-        logger.info(f"Builder generating with {model_name}...")
+        logger.info(f"Builder generating with {model_name} (thinking={thinking_budget})...")
         return client.models.generate_content(
             model=model_name,
             contents=f"UI Spec:\n{ui_spec}",
-            config=types.GenerateContentConfig(
-                system_instruction=system_instruction,
-                temperature=0.4,
-            ),
+            config=types.GenerateContentConfig(**cfg_kwargs),
         )
 
     try:
@@ -465,11 +470,22 @@ Include all necessary React imports."""
         logger.warning(f"Primary builder failed, falling back: {e}")
         response = _build(FALLBACK_MODEL)
 
-    code = response.text.strip()
+    thinking_text = ""
+    code_text = ""
+    try:
+        for part in response.candidates[0].content.parts:
+            if getattr(part, "thought", False):
+                thinking_text += part.text
+            else:
+                code_text += part.text
+    except Exception:
+        code_text = response.text
+
+    code = code_text.strip()
     if code.startswith("```") and code.endswith("```"):
         lines = code.split("\n")
         code = "\n".join(lines[1:-1])
-    return code
+    return code, thinking_text
 
 
 def analyze_file(file_bytes: bytes, mime_type: str, filename: str, user_prompt: str) -> dict:
@@ -539,8 +555,8 @@ def analyze_file(file_bytes: bytes, mime_type: str, filename: str, user_prompt: 
     }
 
 
-def builder_edit_react(current_code: str, instruction: str) -> str:
-    """Modifies an existing React component based on an edit instruction."""
+def builder_edit_react(current_code: str, instruction: str, thinking_budget: int = 0) -> tuple[str, str]:
+    """Modifies an existing React component. Returns (code, thinking_text)."""
     system_instruction = """You are a Full-Stack Creative Engineer (THE BUILDER) in EDIT MODE.
 You will receive an existing React component and an edit instruction.
 
@@ -561,20 +577,24 @@ EDIT INSTRUCTION:
 
 Return the complete modified component."""
 
+    cfg_kwargs = dict(
+        system_instruction=system_instruction,
+        temperature=0.3,
+    )
+    if thinking_budget > 0:
+        cfg_kwargs["thinking_config"] = types.ThinkingConfig(thinking_budget=thinking_budget)
+
     @retry(
         retry=retry_if_exception_type(errors.ServerError),
         stop=stop_after_attempt(2),
         wait=wait_exponential(multiplier=1, min=1, max=4),
     )
     def _edit(model_name):
-        logger.info(f"Editor running with {model_name}...")
+        logger.info(f"Editor running with {model_name} (thinking={thinking_budget})...")
         return client.models.generate_content(
             model=model_name,
             contents=edit_prompt,
-            config=types.GenerateContentConfig(
-                system_instruction=system_instruction,
-                temperature=0.3,
-            ),
+            config=types.GenerateContentConfig(**cfg_kwargs),
         )
 
     try:
@@ -583,8 +603,19 @@ Return the complete modified component."""
         logger.warning(f"Primary editor failed, falling back: {e}")
         response = _edit(FALLBACK_MODEL)
 
-    code = response.text.strip()
+    thinking_text = ""
+    code_text = ""
+    try:
+        for part in response.candidates[0].content.parts:
+            if getattr(part, "thought", False):
+                thinking_text += part.text
+            else:
+                code_text += part.text
+    except Exception:
+        code_text = response.text
+
+    code = code_text.strip()
     if code.startswith("```") and code.endswith("```"):
         lines = code.split("\n")
         code = "\n".join(lines[1:-1])
-    return code
+    return code, thinking_text

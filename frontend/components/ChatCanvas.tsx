@@ -3,11 +3,11 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Panel, Group, Separator } from "react-resizable-panels";
 import { AnimatePresence, motion } from "framer-motion";
-import OmniBar from "./OmniBar";
 import ArtifactRenderer from "./ArtifactRenderer";
-import { Ghost, Layers, ChevronRight, Sparkles, X, Copy, Check, Pencil, CornerDownLeft, FileText, Image } from "lucide-react";
+import { Ghost, Layers, ChevronRight, Sparkles, X, Copy, Check, Pencil, CornerDownLeft, FileText, Image, Brain, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import MarkdownRenderer from "./MarkdownRenderer";
+import OmniBar, { type ModelId } from "./OmniBar";
 
 type Message = {
   id: string;
@@ -16,6 +16,8 @@ type Message = {
   code?: string | null;
   pending?: boolean;
   attachment?: { name: string; isImage: boolean } | null;
+  thinking?: string | null;
+  model?: ModelId;
 };
 type ActiveArtifact = { code: string; id: string } | null;
 
@@ -42,6 +44,7 @@ export default function ChatCanvas({
   const [activeArtifact, setActiveArtifact] = useState<ActiveArtifact>(initialArtifact);
   const [mobileView,     setMobileView]     = useState<"chat" | "artifact">("chat");
   const [isMobile,       setIsMobile]       = useState(false);
+  const [model,          setModel]          = useState<ModelId>("swift");
   const bottomRef        = useRef<HTMLDivElement>(null);
   const autoFiredRef     = useRef(false);
   const historyLoadedRef = useRef(false);
@@ -144,6 +147,7 @@ export default function ChatCanvas({
         form.append("user_context", JSON.stringify(user_context ?? {}));
         if (activeArtifact?.code) form.append("current_artifact", activeArtifact.code);
         form.append("file", file);
+        form.append("model", model);
         res = await fetch(`${API}/api/generate-with-file`, {
           method: "POST",
           credentials: "include",
@@ -161,6 +165,7 @@ export default function ChatCanvas({
             history: messages.map(m => ({ role: m.role, text: m.text })),
             user_context,
             current_artifact: activeArtifact?.code ?? null,
+            model,
           }),
           signal: controller.signal,
         });
@@ -186,7 +191,6 @@ export default function ChatCanvas({
           try { event = JSON.parse(part.slice(6).trim()); } catch { continue; }
 
           if (event.type === "reply") {
-            // Phase 1 — reply text arrives: hide typing indicator, show message
             botMsgId = event.id as string;
             setIsGenerating(false);
             setMessages(prev => [...prev, {
@@ -195,7 +199,14 @@ export default function ChatCanvas({
               text:    event.text as string,
               code:    null,
               pending: !!(event.pending),
+              model:   (event.model as ModelId) ?? "swift",
             }]);
+          }
+
+          if (event.type === "thinking" && botMsgId) {
+            setMessages(prev => prev.map(m =>
+              m.id === botMsgId ? { ...m, thinking: event.text as string } : m
+            ));
           }
 
           if (event.type === "artifact" && botMsgId) {
@@ -254,6 +265,15 @@ export default function ChatCanvas({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [handleGenerate]);
 
+  const handleRegenerate = useCallback(() => {
+    const lastUserIdx = messages.map(m => m.role).lastIndexOf("user");
+    if (lastUserIdx === -1) return;
+    const prompt = messages[lastUserIdx].text;
+    setMessages(prev => prev.slice(0, lastUserIdx));
+    handleGenerate(prompt);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages, handleGenerate]);
+
   const isEmpty = messages.length === 0 && !isLoadingHistory && !isGenerating;
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -286,7 +306,7 @@ export default function ChatCanvas({
 
           {/* OmniBar */}
           <div className="w-full max-w-lg mb-5">
-            <OmniBar onGenerate={handleGenerate} onStop={handleStop} isLoading={isGenerating} autoFocus />
+            <OmniBar onGenerate={handleGenerate} onStop={handleStop} isLoading={isGenerating} autoFocus model={model} onModelChange={setModel} />
           </div>
 
           {/* Suggestion chips — scrollable on mobile, wrapping on desktop */}
@@ -350,7 +370,7 @@ export default function ChatCanvas({
           </div>
 
           <div className="shrink-0 px-3 sm:px-4 py-3 pb-safe" style={{ borderTop: "1px solid var(--border)" }}>
-            <OmniBar onGenerate={handleGenerate} onStop={handleStop} isLoading={isGenerating} />
+            <OmniBar onGenerate={handleGenerate} onStop={handleStop} isLoading={isGenerating} model={model} onModelChange={setModel} />
           </div>
         </>
       )}
@@ -393,7 +413,7 @@ export default function ChatCanvas({
               </motion.div>
             ) : (
               <motion.div key="artifact" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 20, opacity: 0 }} transition={{ duration: 0.16, ease: "easeOut" }} className="absolute inset-0">
-                <ArtifactRenderer code={activeArtifact.code} artifactId={activeArtifact.id} onBack={() => setMobileView("chat")} />
+                <ArtifactRenderer code={activeArtifact.code} artifactId={activeArtifact.id} onBack={() => setMobileView("chat")} onRegenerate={handleRegenerate} />
               </motion.div>
             )}
           </AnimatePresence>
@@ -424,7 +444,7 @@ export default function ChatCanvas({
                   transition={{ duration: 0.2, ease: "easeOut" }}
                   className="h-full"
                 >
-                  <ArtifactRenderer code={activeArtifact.code} artifactId={activeArtifact.id} onClose={() => setActiveArtifact(null)} />
+                  <ArtifactRenderer code={activeArtifact.code} artifactId={activeArtifact.id} onClose={() => setActiveArtifact(null)} onRegenerate={handleRegenerate} />
                 </motion.div>
               </Panel>
             </>
@@ -588,6 +608,11 @@ function MessageRow({
           <MarkdownRenderer content={m.text} />
         )}
 
+        {/* Thinking block — shows when think mode was used */}
+        {(m.thinking || (m.pending && m.model === "think")) && (
+          <ThinkingBlock thinking={m.thinking} isPending={!!(m.pending && !m.thinking)} />
+        )}
+
         {m.pending && !m.code ? (
           <div
             className="mt-2.5 flex items-center gap-2 px-3 py-2 rounded-xl text-[11px]"
@@ -603,7 +628,7 @@ function MessageRow({
                   style={{ background: "rgba(192,132,252,0.45)", animationDelay: `${i * 0.15}s` }} />
               ))}
             </span>
-            <span>Building canvas…</span>
+            <span>{m.model === "think" && m.thinking ? "Building canvas…" : m.model === "think" ? "Thinking…" : "Building canvas…"}</span>
           </div>
         ) : m.code ? (
           <button
@@ -634,6 +659,67 @@ function MessageRow({
           </button>
         )}
       </div>
+    </div>
+  );
+}
+
+// ─── Thinking block ───────────────────────────────────────────────────────────
+function ThinkingBlock({ thinking, isPending }: { thinking?: string | null; isPending?: boolean }) {
+  const [open, setOpen] = useState(false);
+
+  if (isPending && !thinking) {
+    return (
+      <div className="mt-2.5 flex items-center gap-2 px-3 py-2 rounded-xl text-[11px]"
+        style={{ background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.14)" }}>
+        <Brain size={12} className="shrink-0 animate-pulse" style={{ color: "rgba(196,181,253,0.6)" }} />
+        <span style={{ color: "rgba(196,181,253,0.6)" }}>Thinking…</span>
+        <span className="flex gap-0.5 items-center ml-0.5">
+          {[0,1,2].map(i => (
+            <span key={i} className="w-0.5 h-2 rounded-full animate-pulse"
+              style={{ background: "rgba(196,181,253,0.4)", animationDelay: `${i * 0.2}s`, animationDuration: "1s" }} />
+          ))}
+        </span>
+      </div>
+    );
+  }
+
+  if (!thinking) return null;
+
+  return (
+    <div className="mt-2.5">
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="flex items-center gap-2 px-3 py-2 rounded-xl text-[11px] w-full transition-all duration-150"
+        style={{
+          background: open ? "rgba(139,92,246,0.08)" : "rgba(139,92,246,0.04)",
+          border: "1px solid rgba(139,92,246,0.14)",
+          color: "rgba(196,181,253,0.7)",
+        }}
+        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(139,92,246,0.1)"; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = open ? "rgba(139,92,246,0.08)" : "rgba(139,92,246,0.04)"; }}
+      >
+        <Brain size={11} className="shrink-0" style={{ color: "rgba(196,181,253,0.7)" }} />
+        <span className="flex-1 text-left">Thought about this</span>
+        <ChevronDown
+          size={10}
+          style={{ transition: "transform 200ms", transform: open ? "rotate(180deg)" : "none", opacity: 0.6 }}
+        />
+      </button>
+      {open && (
+        <div
+          className="mt-1 px-3 py-3 rounded-xl text-[11px] leading-relaxed morph-scrollbar overflow-y-auto"
+          style={{
+            background: "rgba(139,92,246,0.04)",
+            border: "1px solid rgba(139,92,246,0.10)",
+            color: "var(--t4)",
+            maxHeight: "220px",
+            whiteSpace: "pre-wrap",
+            wordBreak: "break-word",
+          }}
+        >
+          {thinking}
+        </div>
+      )}
     </div>
   );
 }

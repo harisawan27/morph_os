@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Runner } from "react-runner";
 import * as lucideReact from "lucide-react";
 import * as framerMotion from "framer-motion";
-import { X, Sparkles, ChevronLeft, Activity, Cloud } from "lucide-react";
+import { X, Sparkles, ChevronLeft, Cloud, RefreshCw, Ghost, MessageSquare } from "lucide-react";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "";
 
@@ -21,8 +21,9 @@ const BASE_SCOPE = {
 interface ArtifactRendererProps {
   code: string;
   artifactId?: string | null;
-  onClose?: () => void;   // desktop — collapses the panel
-  onBack?:  () => void;   // mobile  — goes back to chat view
+  onClose?:      () => void;   // desktop — collapses the panel
+  onBack?:       () => void;   // mobile  — goes back to chat view
+  onRegenerate?: () => void;   // re-fires the last prompt
 }
 
 export default function ArtifactRenderer({
@@ -30,6 +31,7 @@ export default function ArtifactRenderer({
   artifactId,
   onClose,
   onBack,
+  onRegenerate,
 }: ArtifactRendererProps) {
   const [currentCode, setCurrentCode] = useState(initialCode);
   const [error,       setError]       = useState<string | null>(null);
@@ -145,7 +147,9 @@ export default function ArtifactRenderer({
 
       {/* ── Artifact content — theme-responsive ────────────────────────── */}
       <div className="flex-1 overflow-hidden relative" style={{ background: "var(--bg-page)" }}>
-        <div className="w-full h-full overflow-auto">
+
+        {/* Hidden runner always evaluates the code so onRendered fires */}
+        <div className={`w-full h-full overflow-auto ${error ? "hidden" : ""}`}>
           <Runner
             code={sanitizedCode}
             scope={scope}
@@ -153,21 +157,105 @@ export default function ArtifactRenderer({
           />
         </div>
 
-        {/* Error HUD */}
+        {/* Friendly fallback — replaces the canvas on error */}
         {error && (
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-32px)] max-w-md bg-red-950/90 border border-red-500/25 backdrop-blur-2xl p-4 rounded-2xl shadow-xl z-50 animate-in fade-in slide-in-from-bottom-4">
-            <div className="flex items-start gap-3 text-red-400">
-              <div className="p-1.5 bg-red-500/15 rounded-xl shrink-0">
-                <Activity size={14} />
-              </div>
-              <div>
-                <p className="text-[10px] uppercase tracking-widest font-bold mb-1">Runtime Error</p>
-                <p className="text-xs font-mono opacity-70 leading-relaxed">{error}</p>
+          <div className="absolute inset-0 flex flex-col items-center justify-center px-6 py-8"
+            style={{ background: "var(--bg-page)" }}>
+
+            {/* Animated ghost icon */}
+            <div className="relative mb-6">
+              <div
+                className="absolute inset-0 rounded-full blur-2xl opacity-30 pointer-events-none"
+                style={{ background: "rgba(239,68,68,0.5)", transform: "scale(2)" }}
+              />
+              <div
+                className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center"
+                style={{
+                  background: "linear-gradient(135deg, rgba(239,68,68,0.15), rgba(239,68,68,0.08))",
+                  border: "1px solid rgba(239,68,68,0.25)",
+                  animation: "artifact-float 3s ease-in-out infinite",
+                }}
+              >
+                <Ghost size={28} style={{ color: "rgba(248,113,113,0.8)" }} />
               </div>
             </div>
+
+            {/* Message */}
+            <h3 className="text-base sm:text-lg font-semibold text-center mb-2 leading-snug"
+              style={{ color: "var(--t1)" }}>
+              Artifact didn&apos;t quite click
+            </h3>
+            <p className="text-[12px] sm:text-[13px] text-center leading-relaxed mb-6 max-w-xs"
+              style={{ color: "var(--t3)" }}>
+              The generated code hit a snag during render. Try asking again — Morph will take another shot.
+            </p>
+
+            {/* Actions */}
+            <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full max-w-xs">
+              {onRegenerate && (
+                <button
+                  onClick={onRegenerate}
+                  className="w-full sm:flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[12px] font-medium transition-all duration-150 active:scale-95"
+                  style={{
+                    background: "rgba(139,92,246,0.15)",
+                    border: "1px solid rgba(139,92,246,0.28)",
+                    color: "#c4b5fd",
+                  }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(139,92,246,0.22)"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(139,92,246,0.15)"; }}
+                >
+                  <RefreshCw size={13} />
+                  Try Again
+                </button>
+              )}
+              {(onBack || onClose) && (
+                <button
+                  onClick={onBack ?? onClose}
+                  className="w-full sm:flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[12px] font-medium transition-all duration-150 active:scale-95"
+                  style={{
+                    background: "var(--bg-card)",
+                    border: "1px solid var(--border)",
+                    color: "var(--t3)",
+                  }}
+                  onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "var(--border-md)"; el.style.color = "var(--t1)"; }}
+                  onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "var(--border)"; el.style.color = "var(--t3)"; }}
+                >
+                  <MessageSquare size={13} />
+                  Back to Chat
+                </button>
+              )}
+            </div>
+
+            {/* Collapsible technical detail for devs */}
+            <details className="mt-6 w-full max-w-sm">
+              <summary
+                className="text-[10px] uppercase tracking-widest cursor-pointer select-none text-center"
+                style={{ color: "var(--t5)" }}
+              >
+                Show error detail
+              </summary>
+              <div
+                className="mt-2 px-3 py-2.5 rounded-xl text-[10px] font-mono leading-relaxed overflow-x-auto"
+                style={{
+                  background: "var(--bg-card)",
+                  border: "1px solid var(--border)",
+                  color: "var(--t4)",
+                  wordBreak: "break-all",
+                }}
+              >
+                {error}
+              </div>
+            </details>
           </div>
         )}
       </div>
+
+      <style>{`
+        @keyframes artifact-float {
+          0%, 100% { transform: translateY(0px); }
+          50%       { transform: translateY(-6px); }
+        }
+      `}</style>
 
       {/* ── Status bar — desktop only ──────────────────────────────────── */}
       {!isMobile && (

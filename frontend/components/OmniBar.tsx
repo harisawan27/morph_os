@@ -1,23 +1,36 @@
 "use client";
 
 import { useRef, useState, useCallback, useEffect, useLayoutEffect } from "react";
-import { ArrowUp, Square, Paperclip, X, FileText } from "lucide-react";
+import { ArrowUp, Square, Paperclip, X, FileText, Zap, Brain, ChevronDown, Check } from "lucide-react";
+
+export type ModelId = "swift" | "think";
 
 interface OmniBarProps {
   onGenerate: (prompt: string, file?: File | null) => void;
   onStop?: () => void;
   isLoading: boolean;
   autoFocus?: boolean;
+  model: ModelId;
+  onModelChange: (m: ModelId) => void;
 }
 
-export default function OmniBar({ onGenerate, onStop, isLoading, autoFocus }: OmniBarProps) {
+const MODELS: { id: ModelId; icon: React.ReactNode; label: string; desc: string }[] = [
+  { id: "swift", icon: <Zap size={13} />,   label: "Swift", desc: "Fast responses"           },
+  { id: "think", icon: <Brain size={13} />, label: "Think", desc: "Reasons before answering" },
+];
+
+export default function OmniBar({
+  onGenerate, onStop, isLoading, autoFocus, model, onModelChange,
+}: OmniBarProps) {
   const [prompt,     setPrompt]     = useState("");
   const [file,       setFile]       = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [focused,    setFocused]    = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [modelOpen,  setModelOpen]  = useState(false);
   const textareaRef  = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const modelBtnRef  = useRef<HTMLDivElement>(null);
 
   const resize = useCallback(() => {
     const el = textareaRef.current;
@@ -33,10 +46,17 @@ export default function OmniBar({ onGenerate, onStop, isLoading, autoFocus }: Om
   }, []);
 
   useLayoutEffect(() => { resize(); }, [prompt, resize]);
+  useEffect(() => { if (autoFocus) textareaRef.current?.focus(); }, [autoFocus]);
 
   useEffect(() => {
-    if (autoFocus) textareaRef.current?.focus();
-  }, [autoFocus]);
+    if (!modelOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (modelBtnRef.current && !modelBtnRef.current.contains(e.target as Node))
+        setModelOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [modelOpen]);
 
   const handleFile = useCallback((f: File) => {
     setFile(f);
@@ -66,22 +86,9 @@ export default function OmniBar({ onGenerate, onStop, isLoading, autoFocus }: Om
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); }
   };
 
-  const canSubmit = (!!(prompt.trim() || file)) && !isLoading;
-
-  const onDragOver  = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(true); };
-  const onDragLeave = () => setIsDragging(false);
-  const onDrop      = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const f = e.dataTransfer.files[0];
-    if (f) handleFile(f);
-  };
-
-  const borderColor = isDragging
-    ? "var(--border-hi)"
-    : focused
-    ? "var(--border-md)"
-    : "var(--border)";
+  const canSubmit   = (!!(prompt.trim() || file)) && !isLoading;
+  const borderColor = isDragging ? "var(--border-hi)" : focused ? "var(--border-md)" : "var(--border)";
+  const activeModel = MODELS.find(m => m.id === model)!;
 
   return (
     <form onSubmit={e => { e.preventDefault(); submit(); }} className="w-full max-w-2xl mx-auto">
@@ -122,11 +129,14 @@ export default function OmniBar({ onGenerate, onStop, isLoading, autoFocus }: Om
         }}
         onFocusCapture={() => setFocused(true)}
         onBlurCapture={() => setFocused(false)}
-        onDragOver={onDragOver}
-        onDragLeave={onDragLeave}
-        onDrop={onDrop}
+        onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
+        onDragLeave={() => setIsDragging(false)}
+        onDrop={e => {
+          e.preventDefault(); setIsDragging(false);
+          const f = e.dataTransfer.files[0]; if (f) handleFile(f);
+        }}
       >
-        {/* Textarea — small padding, grows 1→4 lines then scrolls */}
+        {/* Textarea */}
         <textarea
           ref={textareaRef}
           rows={1}
@@ -134,55 +144,134 @@ export default function OmniBar({ onGenerate, onStop, isLoading, autoFocus }: Om
           onChange={e => setPrompt(e.target.value)}
           onKeyDown={onKey}
           disabled={isLoading}
-          placeholder={file ? "Ask about this file…" : "Ask Morph anything…"}
+          placeholder={file ? "Ask about this file..." : "Ask Morph anything..."}
           className="w-full bg-transparent text-[15px] resize-none outline-none disabled:opacity-40"
           style={{
-            color: "var(--t1)",
-            caretColor: "var(--t1)",
-            lineHeight: "1.5rem",
-            padding: "10px 16px 4px",
-            margin: 0,
-            display: "block",
-            height: "38px",
+            color: "var(--t1)", caretColor: "var(--t1)",
+            lineHeight: "1.5rem", padding: "10px 16px 4px",
+            margin: 0, display: "block", height: "38px",
           }}
         />
 
-        {/* Icon row — always below the textarea */}
-        <div className="flex items-center justify-between px-3 pb-2.5 pt-1">
+        {/* Bottom row */}
+        <div className="flex items-center justify-between px-2.5 pb-2.5 pt-1 gap-2">
+
+          {/* Attach pill — clearly visible */}
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={isLoading}
-            className="w-7 h-7 flex items-center justify-center rounded-xl transition-all duration-150 disabled:opacity-30"
-            style={{ color: "var(--t4)" }}
-            title="Attach file"
-            onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = "var(--bg-hover)"; el.style.color = "var(--t2)"; }}
-            onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = "transparent"; el.style.color = "var(--t4)"; }}
+            className="flex items-center gap-1.5 h-7 px-2.5 rounded-xl text-[11px] font-medium transition-all duration-150 disabled:opacity-30 shrink-0"
+            style={{ background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--t3)" }}
+            title="Attach file - images, PDFs, text, CSV, JSON"
+            onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "var(--border-md)"; el.style.color = "var(--t1)"; }}
+            onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "var(--border)"; el.style.color = "var(--t3)"; }}
           >
-            <Paperclip size={15} />
+            <Paperclip size={13} />
+            <span className="hidden sm:inline">Attach</span>
           </button>
 
-          {isLoading ? (
-            <button
-              type="button"
-              onClick={onStop}
-              className="w-7 h-7 rounded-xl flex items-center justify-center transition-all duration-150 active:scale-90"
-              style={{ background: "var(--t1)", color: "var(--bg-page)" }}
-            >
-              <Square size={10} fill="currentColor" strokeWidth={0} />
-            </button>
-          ) : (
-            <button
-              type="submit"
-              disabled={!canSubmit}
-              className="w-7 h-7 rounded-xl flex items-center justify-center transition-all duration-150 active:scale-90"
-              style={canSubmit
-                ? { background: "var(--t1)", color: "var(--bg-page)" }
-                : { background: "var(--bg-card)", color: "var(--t5)", cursor: "default" }}
-            >
-              <ArrowUp size={14} strokeWidth={2.5} />
-            </button>
-          )}
+          {/* Right: model selector + send/stop */}
+          <div className="flex items-center gap-1.5 shrink-0">
+
+            {/* Model selector */}
+            <div className="relative" ref={modelBtnRef}>
+              <button
+                type="button"
+                onClick={() => setModelOpen(v => !v)}
+                disabled={isLoading}
+                className="flex items-center gap-1.5 h-7 px-2.5 rounded-xl text-[11px] font-medium transition-all duration-150 disabled:opacity-40"
+                style={{
+                  background: model === "think" ? "rgba(139,92,246,0.10)" : "var(--bg-card)",
+                  border:     model === "think" ? "1px solid rgba(139,92,246,0.28)" : "1px solid var(--border)",
+                  color:      model === "think" ? "#c4b5fd" : "var(--t3)",
+                }}
+                onMouseEnter={e => {
+                  if (model !== "think") {
+                    const el = e.currentTarget as HTMLElement;
+                    el.style.borderColor = "var(--border-md)"; el.style.color = "var(--t1)";
+                  }
+                }}
+                onMouseLeave={e => {
+                  if (model !== "think") {
+                    const el = e.currentTarget as HTMLElement;
+                    el.style.borderColor = "var(--border)"; el.style.color = "var(--t3)";
+                  }
+                }}
+              >
+                <span className="flex">{activeModel.icon}</span>
+                <span className="hidden sm:inline">{activeModel.label}</span>
+                <ChevronDown
+                  size={10}
+                  style={{
+                    opacity: 0.6,
+                    transition: "transform 150ms",
+                    transform: modelOpen ? "rotate(180deg)" : "none",
+                  }}
+                />
+              </button>
+
+              {modelOpen && (
+                <div
+                  className="absolute bottom-full mb-2 right-0 w-48 rounded-2xl overflow-hidden z-50"
+                  style={{
+                    background: "var(--bg-panel)",
+                    border: "1px solid var(--border-md)",
+                    boxShadow: "0 8px 32px rgba(0,0,0,0.2)",
+                  }}
+                >
+                  {MODELS.map(m => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => { onModelChange(m.id); setModelOpen(false); }}
+                      className="w-full flex items-center gap-3 px-3.5 py-3 text-left transition-colors"
+                      style={{
+                        background: model === m.id ? "var(--bg-hover)" : "transparent",
+                        color: "var(--t2)",
+                      }}
+                      onMouseEnter={e => {
+                        if (model !== m.id) (e.currentTarget as HTMLElement).style.background = "var(--bg-card)";
+                      }}
+                      onMouseLeave={e => {
+                        if (model !== m.id) (e.currentTarget as HTMLElement).style.background = "transparent";
+                      }}
+                    >
+                      <span className="shrink-0" style={{ color: m.id === "think" ? "#c4b5fd" : "var(--t3)" }}>
+                        {m.icon}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[12px] font-medium leading-none mb-0.5">{m.label}</p>
+                        <p className="text-[10px]" style={{ color: "var(--t4)" }}>{m.desc}</p>
+                      </div>
+                      {model === m.id && <Check size={11} style={{ color: "#a78bfa" }} />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Send / Stop */}
+            {isLoading ? (
+              <button
+                type="button" onClick={onStop}
+                className="w-7 h-7 rounded-xl flex items-center justify-center transition-all duration-150 active:scale-90"
+                style={{ background: "var(--t1)", color: "var(--bg-page)" }}
+              >
+                <Square size={10} fill="currentColor" strokeWidth={0} />
+              </button>
+            ) : (
+              <button
+                type="submit" disabled={!canSubmit}
+                className="w-7 h-7 rounded-xl flex items-center justify-center transition-all duration-150 active:scale-90"
+                style={canSubmit
+                  ? { background: "var(--t1)", color: "var(--bg-page)" }
+                  : { background: "var(--bg-card)", color: "var(--t5)", cursor: "default" }}
+              >
+                <ArrowUp size={14} strokeWidth={2.5} />
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -194,10 +283,10 @@ export default function OmniBar({ onGenerate, onStop, isLoading, autoFocus }: Om
         onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
       />
 
-      <style>{`textarea::placeholder { color: var(--placeholder); }`}</style>
+      <style>{"textarea::placeholder { color: var(--placeholder); }"}</style>
 
       <p className="hidden sm:block text-center text-[10px] mt-2 select-none" style={{ color: "var(--t5)" }}>
-        {isLoading ? "■ to stop  ·  Shift+Enter new line" : "Enter to send  ·  Shift+Enter new line"}
+        {isLoading ? "stop to cancel  |  Shift+Enter new line" : "Enter to send  |  Shift+Enter new line"}
       </p>
     </form>
   );
