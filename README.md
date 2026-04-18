@@ -15,11 +15,12 @@ Most AI tools give you text. Morph OS gives you a running application.
 Ask for a budget tracker — you get one, with real inputs, live calculations, and persistent state. Ask for the weather — a live widget loads. Ask who invented the internet — it just answers. The system knows the difference.
 
 ```
-"build me a habit tracker"   →  launches in 2 seconds
-"what's 20% of 350?"         →  answers: "70"
-"play some lofi music"       →  YouTube player opens
-"who is Alan Turing?"        →  responds conversationally
-"make it dark mode"          →  edits the live artifact
+"build me a habit tracker"        →  launches in 2 seconds
+"open calculator but in green"    →  green calculator, no extra steps
+"what's 20% of 350?"              →  answers: "70"
+"play some lofi music"            →  YouTube player opens
+"who is Alan Turing?"             →  responds conversationally
+"make it dark mode"               →  edits the live artifact
 ```
 
 No mismatched artifacts. No unnecessary UIs. The right response for every input.
@@ -46,7 +47,7 @@ User input
        ▼                 ▼
 ┌────────────┐    ┌─────────────────┐
 │   VAULT    │    │    BUILDER      │
-│ 31 pre-    │    │ AI generates    │
+│ 34 pre-    │    │ AI generates    │
 │ built      │    │ custom React    │
 │ templates  │    │ component       │
 │ (instant)  │    │ (bespoke)       │
@@ -55,7 +56,7 @@ User input
 
 **The Brain** is the intelligence layer. It reads the full conversation, understands intent, and routes accordingly — never spawning a UI when a sentence suffices, never answering with text when a live tool is what's needed.
 
-**The Vault** holds 31 battle-tested templates (games, productivity tools, finance tools, creative tools). When the Brain matches a template, it's hydrated and served in milliseconds — no generation cost.
+**The Vault** holds 34 battle-tested templates (games, productivity tools, finance tools, creative tools). When the Brain matches a template, it's hydrated and served in milliseconds — no generation cost. Parametric requests like "open calculator in green" are recognized as customized builds and routed to the Builder with a precise spec.
 
 **The Builder** takes over only for genuinely custom requests. It receives a structured spec from the Brain and generates a standalone React component with a consistent dark glassmorphism aesthetic.
 
@@ -81,17 +82,16 @@ Every generation is embedded with `gemini-embedding-001` and stored in pgvector.
 ### Chat-first intelligence
 The system defaults to conversation. It answers questions, writes content, explains concepts, does math, and handles follow-ups — exactly like a capable AI assistant. It only generates artifacts when the request genuinely calls for one.
 
-### The Vault — 31 templates
-Organized across six categories, instantly available:
+### The Vault — 34 templates
+Organized across five categories, instantly available:
 
 | Category | Templates |
 |---|---|
-| **Games** | Snake, Memory, Tic Tac Toe, Typing Speed Test, Magic 8 Ball |
-| **Productivity** | Todo List, Kanban Board, Habit Tracker, Pomodoro+, Timer, Calendar, Rich Notes |
+| **Games** | Snake, Memory, Tic Tac Toe, Typing Speed Test, Magic 8-Ball, Chess, Checkers, Coin Toss |
+| **Productivity** | Todo List, Kanban Board, Habit Tracker, Pomodoro+, Timer, Calendar, Rich Notes, Diary |
 | **Finance** | Budget Tracker, Bill Splitter, Calculator |
 | **Creative** | Drawing Canvas, Pixel Art Editor, Gradient Generator, Color Palette, Matrix Rain |
 | **Tools** | Weather, Music Player, Chart Builder, Flashcards, Quiz, Spin the Wheel, Password Generator, QR Code, Clock, Unit Converter |
-| **Data** | Chart (bar/line/pie), Flashcards (AI-populated), Quiz (AI-generated) |
 
 Parametric templates like Weather, Music, Flashcards, and Quiz are populated with real data from the Brain — no placeholders, no dummy values.
 
@@ -113,6 +113,17 @@ Mobile: a toggle between Chat and Canvas tabs, with smooth transitions. The syst
 
 ### Edit mode
 With an artifact active, the user can ask to modify it in plain English. "Make it dark mode", "add a reset button", "change the font to mono" — the Builder receives the current source and an edit instruction, and returns the modified component in place.
+
+### Light & Dark theme
+A full dual-theme system controlled by a toggle in the sidebar. Both themes are built on CSS custom properties (`--bg-card`, `--t1`–`--t5`, `--border`, etc.), ensuring every page — Chat, Vault, Library, Tutorial, Settings — renders correctly in both modes.
+
+### Tutorial
+An interactive 10-slide onboarding experience at `/tutorial`, accessible from the sidebar and surfaced via a dismissible banner for new users. Each slide has an animated visual, detailed body text, and 3 tip bullets. Navigation includes step pills showing completion state, directional slide transitions, and a direct-access click on any step.
+
+Slides cover: Welcome, Chatting with Morph, Building Apps, The Canvas, Editing Artifacts, The Vault, Files & Attachments, My Library, Settings, and Pro Tips.
+
+### OmniBar
+The input bar is a minimal single-line textarea that grows up to 4 lines before scrolling. It supports file attachments (images, PDFs, text, CSV, JSON) with drag-and-drop, a file preview chip, and a stop button during generation. The bar renders at the correct single-line height immediately on page load — no layout shift on first keystroke.
 
 ---
 
@@ -143,17 +154,21 @@ morph_os/
 │   │   ├── ChatCanvas.tsx        # Chat interface, streaming SSE handler
 │   │   ├── Sidebar.tsx           # Nav, session list, rename/delete
 │   │   ├── ArtifactRenderer.tsx  # Isolated React execution sandbox
-│   │   └── OmniBar.tsx           # Input bar
+│   │   ├── OmniBar.tsx           # Input bar with file attach & drag-drop
+│   │   ├── TutorialBanner.tsx    # Dismissible new-user onboarding banner
+│   │   └── TempModeBanner.tsx    # Temporary session mode indicator
 │   └── src/
 │       ├── app/
 │       │   ├── page.tsx          # Home / new chat
 │       │   ├── session/[id]/     # Persistent session view
 │       │   ├── artifacts/        # The Vault (template catalog)
-│       │   └── library/          # My Library (user's generated artifacts)
-│       └── vault/templates/      # 31 pre-built React templates
+│       │   ├── library/          # My Library (user's generated artifacts)
+│       │   ├── tutorial/         # Interactive 10-slide onboarding
+│       │   └── globals.css       # CSS vars, light/dark theme system
+│       └── vault/templates/      # 34 pre-built React templates
 │
 └── backend/
-    ├── llm_pipeline.py           # Brain, Builder, Editor, execute_plan
+    ├── llm_pipeline.py           # Brain, Builder, Editor, local fast-path
     ├── vault_manager.py          # Template hydration engine
     ├── main.py                   # FastAPI routes, streaming SSE endpoint
     ├── models.py                 # Artifact schema (pgvector)
