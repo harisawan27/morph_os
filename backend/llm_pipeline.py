@@ -11,6 +11,13 @@ logger = logging.getLogger(__name__)
 PRIMARY_MODEL  = 'gemini-2.5-flash'
 FALLBACK_MODEL = 'gemini-2.0-flash'
 
+# ThinkingConfig may not exist in older SDK versions — guard it
+def _thinking_cfg(budget: int):
+    try:
+        return types.ThinkingConfig(thinking_budget=budget)
+    except AttributeError:
+        return None
+
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 
@@ -329,22 +336,27 @@ OUTPUT FORMAT — always valid JSON, one of:
 
     full_prompt = history_context + artifact_context + f"USER: {prompt}"
 
+    # Disable thinking for brain: classification needs clean JSON, not reasoning tokens
+    _brain_cfg_kwargs: dict = dict(
+        system_instruction=system_instruction,
+        temperature=0.2,
+        response_mime_type="application/json",
+    )
+    tc = _thinking_cfg(0)
+    if tc:
+        _brain_cfg_kwargs["thinking_config"] = tc
+
     @retry(
         retry=retry_if_exception_type(errors.ServerError),
         stop=stop_after_attempt(2),
         wait=wait_exponential(multiplier=1, min=1, max=4),
     )
     def _call(model_name):
-        logger.info(f"Brain thinking with {model_name}...")
+        logger.info(f"Brain classifying with {model_name}...")
         return client.models.generate_content(
             model=model_name,
             contents=full_prompt,
-            config=types.GenerateContentConfig(
-                system_instruction=system_instruction,
-                temperature=0.2,
-                response_mime_type="application/json",
-                thinking_config=types.ThinkingConfig(thinking_budget=0),
-            ),
+            config=types.GenerateContentConfig(**_brain_cfg_kwargs),
         )
 
     try:
@@ -421,7 +433,6 @@ def search_web(query: str) -> str:
             config=types.GenerateContentConfig(
                 tools=[types.Tool(google_search=types.GoogleSearch())],
                 temperature=0.2,
-                thinking_config=types.ThinkingConfig(thinking_budget=0),
             ),
         )
 
@@ -451,7 +462,9 @@ Include all necessary React imports."""
         temperature=0.4,
     )
     if thinking_budget > 0:
-        cfg_kwargs["thinking_config"] = types.ThinkingConfig(thinking_budget=thinking_budget)
+        tc = _thinking_cfg(thinking_budget)
+        if tc:
+            cfg_kwargs["thinking_config"] = tc
 
     @retry(
         retry=retry_if_exception_type(errors.ServerError),
@@ -511,7 +524,9 @@ Be thorough but concise."""
 
     cfg_kwargs: dict = dict(system_instruction=system_instruction, temperature=0.7)
     if thinking_budget > 0:
-        cfg_kwargs["thinking_config"] = types.ThinkingConfig(thinking_budget=thinking_budget)
+        tc = _thinking_cfg(thinking_budget)
+        if tc:
+            cfg_kwargs["thinking_config"] = tc
 
     @retry(
         retry=retry_if_exception_type(errors.ServerError),
@@ -640,7 +655,9 @@ Return the complete modified component."""
         temperature=0.3,
     )
     if thinking_budget > 0:
-        cfg_kwargs["thinking_config"] = types.ThinkingConfig(thinking_budget=thinking_budget)
+        tc = _thinking_cfg(thinking_budget)
+        if tc:
+            cfg_kwargs["thinking_config"] = tc
 
     @retry(
         retry=retry_if_exception_type(errors.ServerError),
