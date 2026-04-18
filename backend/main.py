@@ -184,7 +184,7 @@ async def _generate_stream(
     thinking_budget = 8000 if (use_thinking and needs_artifact) else 0
 
     yield _sse({
-        "type": "reply", "text": reply, "id": artifact_id,
+        "type": "reply", "text": "" if is_think_chat else reply, "id": artifact_id,
         "pending": bool(needs_artifact) or is_think_chat,
         "model": "think" if use_thinking else "swift",
     })
@@ -223,9 +223,10 @@ async def _generate_stream(
         yield _sse({"type": "artifact", "code": code, "id": artifact_id})
 
     # ── Stream updated chat reply for think-chat ──────────────────────────────
-    if is_think_chat and think_reply:
-        final_reply = think_reply
-        yield _sse({"type": "reply_text", "text": think_reply, "id": artifact_id})
+    if is_think_chat:
+        fallback = think_reply or reply
+        final_reply = fallback
+        yield _sse({"type": "reply_text", "text": fallback, "id": artifact_id})
 
     # ── 8. Persist ────────────────────────────────────────────────────────────
     if user_id:

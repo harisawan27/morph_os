@@ -608,18 +608,19 @@ function MessageRow({
         <Ghost size={12} className="text-purple-300/70" />
       </div>
       <div className="flex-1 min-w-0">
-        {isError ? (
-          <p className="text-sm leading-relaxed" style={{ color: "#f87171" }}>{m.text}</p>
-        ) : (
-          <MarkdownRenderer content={m.text} />
-        )}
-
-        {/* Thinking block — shows when think mode was used */}
+        {/* Thinking block — shows before answer when think mode is used */}
         {(m.thinking || (m.pending && m.model === "think")) && (
           <ThinkingBlock thinking={m.thinking} isPending={!!(m.pending && !m.thinking)} />
         )}
 
-        {m.pending && !m.code ? (
+        {isError ? (
+          <p className="text-sm leading-relaxed" style={{ color: "#f87171" }}>{m.text}</p>
+        ) : m.text ? (
+          <MarkdownRenderer content={m.text} />
+        ) : null}
+
+        {/* Bouncing dots — only for swift-mode artifact builds; think mode uses ThinkingBlock */}
+        {m.pending && !m.code && m.model !== "think" ? (
           <div
             className="mt-2.5 flex items-center gap-2 px-3 py-2 rounded-xl text-[11px]"
             style={{
@@ -634,7 +635,7 @@ function MessageRow({
                   style={{ background: "rgba(192,132,252,0.45)", animationDelay: `${i * 0.15}s` }} />
               ))}
             </span>
-            <span>{m.model === "think" && !m.code ? "Thinking…" : "Building canvas…"}</span>
+            <span>Building canvas…</span>
           </div>
         ) : m.code ? (
           <button
