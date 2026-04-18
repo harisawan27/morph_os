@@ -89,10 +89,11 @@ export default function Sidebar() {
   const handleDelete = async (id: string) => {
     setConfirmDeleteId(null);
     setDeleting(id);
+    const isCurrentSession = pathname === `/session/${id}`;
+    if (isCurrentSession) router.push("/new");
     try {
       await fetch(`${API}/api/sessions/${id}`, { method: "DELETE", credentials: "include" });
       setSessions(prev => prev.filter(s => s.id !== id));
-      if (pathname === `/session/${id}`) router.push("/");
     } catch {}
     setDeleting(null);
   };

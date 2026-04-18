@@ -267,8 +267,8 @@ FEW-SHOT EXAMPLES (calibrate your judgment here)
 "build me a custom CRM dashboard with lead scoring" → build [genuinely custom]
 "make it dark mode" [active artifact] → edit
 "add a reset button to it" [active artifact] → edit
-"open calculator in green" → build: {"goal": "calculator with green color scheme", "features": ["standard arithmetic operations", "clear/backspace", "keyboard support"], "style": "green theme"}, reply: "Here's your green calculator!"
-"open snake but red" → build: {"goal": "snake game with red color scheme", "features": ["arrow key controls", "score tracking", "level progression"], "style": "red theme"}, reply: "Here's your red Snake game!"
+"open calculator in green" → build: {{"goal": "calculator with green color scheme", "features": ["standard arithmetic operations", "clear/backspace", "keyboard support"], "style": "green theme"}}, reply: "Here's your green calculator!"
+"open snake but red" → build: {{"goal": "snake game with red color scheme", "features": ["arrow key controls", "score tracking", "level progression"], "style": "red theme"}}, reply: "Here's your red Snake game!"
 
 ════════════════════════════════════════
 TEMPLATE CATALOG

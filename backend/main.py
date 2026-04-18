@@ -151,7 +151,7 @@ async def _generate_stream(
             planned = json.loads(brain_json)
         except Exception as e:
             logger.error(f"Brain failed: {e}", exc_info=True)
-            planned = {"type": "chat", "reply": f"[DEBUG] Brain error: {type(e).__name__}: {e}"}
+            planned = {"type": "chat", "reply": "Something went wrong on my end. Try again?"}
 
     reply       = planned.get("reply", "On it...")
     artifact_id = str(uuid.uuid4())
