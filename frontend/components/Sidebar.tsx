@@ -132,14 +132,16 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* Mobile hamburger — outside sidebar */}
-      <button
-        className="md:hidden fixed top-0 left-0 z-50 w-14 h-14 flex items-center justify-center transition-colors active:scale-95"
-        style={{ color: "var(--t3)" }}
-        onClick={() => setMobileOpen(v => !v)}
-      >
-        {mobileOpen ? <X size={18} /> : <Menu size={18} />}
-      </button>
+      {/* Mobile hamburger — only visible when sidebar is closed */}
+      {!mobileOpen && (
+        <button
+          className="md:hidden fixed top-0 left-0 z-50 w-14 h-14 flex items-center justify-center transition-colors active:scale-95"
+          style={{ color: "var(--t3)" }}
+          onClick={() => setMobileOpen(true)}
+        >
+          <Menu size={18} />
+        </button>
+      )}
 
       {/* Mobile dim overlay */}
       <AnimatePresence>
@@ -190,15 +192,15 @@ export default function Sidebar() {
             >
               <p className="text-sm font-semibold tracking-tight whitespace-nowrap" style={{ color: "var(--t1)" }}>Morph OS</p>
             </motion.div>
-            {/* Hamburger */}
+            {/* Hamburger (desktop) / Close (mobile) */}
             <button
-              onClick={toggle}
+              onClick={mobileOpen ? () => setMobileOpen(false) : toggle}
               className="w-7 h-7 flex items-center justify-center rounded-xl shrink-0 transition-all"
               style={{ color: "var(--t4)" }}
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-hover)"; (e.currentTarget as HTMLElement).style.color = "var(--t2)"; }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--t4)"; }}
             >
-              <Menu size={15} />
+              {mobileOpen ? <X size={15} /> : <Menu size={15} />}
             </button>
           </div>
         ) : (
