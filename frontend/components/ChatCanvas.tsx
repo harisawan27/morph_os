@@ -46,6 +46,8 @@ export default function ChatCanvas({
   const [isMobile,       setIsMobile]       = useState(false);
   const [model,          setModel]          = useState<ModelId>("swift");
   const bottomRef        = useRef<HTMLDivElement>(null);
+  const chatScrollRef    = useRef<HTMLDivElement>(null);
+  const newMsgRef        = useRef<HTMLDivElement>(null);
   const autoFiredRef     = useRef(false);
   const historyLoadedRef = useRef(false);
   const abortRef         = useRef<AbortController | null>(null);
@@ -72,24 +74,24 @@ export default function ChatCanvas({
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  // ── Scroll to bottom: smooth for new messages, instant for history ──────
+  // ── Scroll: new message → top of that message; streaming → follow if near bottom ─
   useEffect(() => {
     if (messages.length === 0) return;
-    const behavior: ScrollBehavior = historyLoadedRef.current ? "instant" : "smooth";
-    historyLoadedRef.current = false;
-    const raf = requestAnimationFrame(() => {
-      bottomRef.current?.scrollIntoView({ behavior });
-    });
+    if (historyLoadedRef.current) {
+      historyLoadedRef.current = false;
+      chatScrollRef.current && (chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight);
+      return;
+    }
+    const raf = requestAnimationFrame(() =>
+      newMsgRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+    );
     return () => cancelAnimationFrame(raf);
   }, [messages.length]);
 
+  // Follow streaming text without forcing scroll if user has scrolled up
   useEffect(() => {
-    if (!isGenerating) return;
-    const raf = requestAnimationFrame(() => {
-      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-    });
-    return () => cancelAnimationFrame(raf);
-  }, [isGenerating]);
+    if (isGenerating) scrollIfNearBottom();
+  }, [messages, isGenerating, scrollIfNearBottom]);
 
   // ── Auto-switch to artifact on mobile ───────────────────────────────────
   useEffect(() => {
@@ -116,6 +118,15 @@ export default function ChatCanvas({
 
   const handleStop = useCallback(() => {
     abortRef.current?.abort();
+  }, []);
+
+  // Scroll to bottom only if already near it — lets user scroll up to read without interruption
+  const scrollIfNearBottom = useCallback(() => {
+    const el = chatScrollRef.current;
+    if (!el) return;
+    if (el.scrollHeight - el.scrollTop - el.clientHeight < 180) {
+      el.scrollTop = el.scrollHeight;
+    }
   }, []);
 
   // ── Core generate (streaming SSE) ───────────────────────────────────────
@@ -197,29 +208,61 @@ export default function ChatCanvas({
           let event: Record<string, unknown>;
           try { event = JSON.parse(part.slice(6).trim()); } catch { continue; }
 
-          if (event.type === "reply") {
+          // thinking_start — fires before brain runs (~300ms after send)
+          // Creates the bot message immediately so ThinkingBlock + funny lines appear at once
+          if (event.type === "thinking_start") {
             botMsgId = event.id as string;
             setIsGenerating(false);
             setMessages(prev => [...prev, {
               id:      event.id as string,
               role:    "assistant",
-              text:    event.text as string,
+              text:    "",
               code:    null,
-              pending: !!(event.pending),
-              model:   (event.model as ModelId) ?? "swift",
+              pending: true,
+              model:   "think" as ModelId,
             }]);
           }
 
-          if (event.type === "thinking" && botMsgId) {
-            setMessages(prev => prev.map(m =>
-              m.id === botMsgId ? { ...m, thinking: event.text as string } : m
-            ));
+          if (event.type === "reply") {
+            const serverId = event.id as string;
+            setIsGenerating(false);
+            if (botMsgId === serverId) {
+              // Already created via thinking_start — update fields in place, same ID = no remount
+              setMessages(prev => prev.map(m =>
+                m.id === serverId ? {
+                  ...m,
+                  text:    (event.text as string) || m.text,
+                  pending: !!(event.pending),
+                  model:   (event.model as ModelId) ?? m.model ?? "swift",
+                } : m
+              ));
+            } else {
+              // Swift mode or first reply — create message fresh
+              botMsgId = serverId;
+              setMessages(prev => [...prev, {
+                id:      serverId,
+                role:    "assistant",
+                text:    event.text as string,
+                code:    null,
+                pending: !!(event.pending),
+                model:   (event.model as ModelId) ?? "swift",
+              }]);
+            }
           }
 
           if (event.type === "thinking_delta" && botMsgId) {
             setMessages(prev => prev.map(m =>
               m.id === botMsgId
                 ? { ...m, thinking: ((m.thinking ?? "") + (event.text as string)) }
+                : m
+            ));
+          }
+
+          // text_delta — streams reply text word-by-word as model generates it
+          if (event.type === "text_delta" && botMsgId) {
+            setMessages(prev => prev.map(m =>
+              m.id === botMsgId
+                ? { ...m, text: (m.text ?? "") + (event.text as string) }
                 : m
             ));
           }
@@ -231,7 +274,6 @@ export default function ChatCanvas({
           }
 
           if (event.type === "artifact" && botMsgId) {
-            // Phase 2 — artifact arrives: attach to existing message, open canvas
             const code = event.code as string;
             const id   = event.id as string;
             setMessages(prev => prev.map(m =>
@@ -367,31 +409,38 @@ export default function ChatCanvas({
       ) : (
         /* ── CHAT STATE: messages + bottom OmniBar ── */
         <>
-          <div className="flex-1 overflow-y-auto morph-scrollbar overscroll-contain">
+          <div ref={chatScrollRef} className="flex-1 overflow-y-auto morph-scrollbar overscroll-contain">
             <div className="max-w-2xl mx-auto px-4 py-6 space-y-1">
 
               {isLoadingHistory ? (
                 <SkeletonMessages />
               ) : (
-                messages.map((m, i) => (
-                  <MessageRow
-                    key={m.id}
-                    message={m}
-                    messageIndex={i}
-                    isLast={i === messages.length - 1}
-                    isMobile={isMobile}
-                    onShowArtifact={() => {
-                      if (m.code) {
-                        setActiveArtifact({ code: m.code!, id: m.id });
-                        if (isMobile) setMobileView("artifact");
-                      }
-                    }}
-                    onResubmit={handleResubmit}
-                  />
-                ))
+                messages.map((m, i) => {
+                  const isLast = i === messages.length - 1;
+                  const row = (
+                    <MessageRow
+                      key={m.id}
+                      message={m}
+                      messageIndex={i}
+                      isLast={isLast}
+                      isMobile={isMobile}
+                      onShowArtifact={() => {
+                        if (m.code) {
+                          setActiveArtifact({ code: m.code!, id: m.id });
+                          if (isMobile) setMobileView("artifact");
+                        }
+                      }}
+                      onResubmit={handleResubmit}
+                    />
+                  );
+                  return isLast
+                    ? <div key={m.id} ref={newMsgRef}>{row}</div>
+                    : row;
+                })
               )}
 
-              {isGenerating && <TypingIndicator />}
+              {/* Only show TypingIndicator when no bot message exists yet (brain still planning) */}
+              {isGenerating && !messages.some(m => m.role === "assistant" && m.pending) && <TypingIndicator />}
 
               <div ref={bottomRef} className="h-1" />
             </div>
@@ -641,8 +690,8 @@ function MessageRow({
           <MarkdownRenderer content={m.text} />
         ) : null}
 
-        {/* Bouncing dots — only while no thinking has arrived yet */}
-        {m.pending && !m.code && m.model !== "think" && !m.thinking ? (
+        {/* Bouncing dots — only while no text or thinking has arrived yet */}
+        {m.pending && !m.code && m.model !== "think" && !m.thinking && !m.text ? (
           <div
             className="mt-2.5 flex items-center gap-2 px-3 py-2 rounded-xl text-[11px]"
             style={{

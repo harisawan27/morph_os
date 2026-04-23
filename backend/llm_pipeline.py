@@ -836,6 +836,7 @@ def chat_respond(
     history: list[dict] = [],
     thinking_budget: int = 0,
     thought_queue=None,
+    text_queue=None,
 ) -> tuple[str, str]:
     """Generates a thoughtful chat reply. Returns (reply_text, thinking_text)."""
     system_instruction = """You are Morph OS — a smart, helpful AI assistant.
@@ -875,6 +876,8 @@ Be thorough but concise."""
                             thought_queue.put(pt)
                     else:
                         r += pt
+                        if text_queue is not None and pt:
+                            text_queue.put(pt)
             except Exception:
                 pass
         return r, t
