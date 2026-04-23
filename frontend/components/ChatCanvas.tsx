@@ -249,11 +249,18 @@ export default function ChatCanvas({
       }
     } catch (e) {
       if (e instanceof Error && e.name === "AbortError") {
-        // User cancelled — clear pending state on partial reply, no error message
         if (botMsgId) {
           setMessages(prev => prev.map(m =>
-            m.id === botMsgId ? { ...m, pending: false } : m
+            m.id === botMsgId
+              ? { ...m, text: "You canceled this request.", pending: false, thinking: null }
+              : m
           ));
+        } else {
+          setMessages(prev => [...prev, {
+            id:   Date.now().toString(),
+            role: "assistant",
+            text: "You canceled this request.",
+          }]);
         }
       } else {
         setMessages(prev => [...prev, {

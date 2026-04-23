@@ -233,9 +233,15 @@ TYPE DECISION RULES
   today's releases, weather as a question (not "show me weather widget").
   Provide a clean search query that will return useful results.
 
-"edit" — Use ONLY when an active artifact is on screen AND user wants to modify it.
-  Signals: "make it...", "add X to it", "change the color", "update it", "fix the..."
-  Pronouns referring to the current UI: "it", "this", "the app", "the widget"
+"edit" — Use when an active artifact is on screen AND the user wants to modify OR fix it.
+  Modification signals: "make it...", "add X to it", "change the color", "update it", "fix the..."
+  Pronouns referring to the current UI: "it", "this", "the app", "the widget", "the game"
+  Bug/complaint signals (ACTIVE ARTIFACT = EDIT, not chat): "not working", "broken", "doesn't work",
+  "isn't working", "can't click", "keys don't work", "arrows don't work", "button doesn't work",
+  "no response", "glitched", "stuck", "wrong behavior", "can you fix", "please fix", "why isn't"
+  RULE: If there is an active artifact and the user reports something is wrong with it → type "edit".
+  NEVER respond to a bug report about an active artifact with "chat" — that just explains the problem
+  without fixing it. The user wants it FIXED, not explained.
 
 GOLDEN RULE: If a sentence can answer it — use "chat". Never spawn a UI where words will do.
 
@@ -283,6 +289,11 @@ FEW-SHOT EXAMPLES (calibrate your judgment here)
 "build me a custom CRM dashboard with lead scoring" → build [genuinely custom]
 "make it dark mode" [active artifact] → edit
 "add a reset button to it" [active artifact] → edit
+"the arrows aren't working" [active artifact] → edit: "Fix arrow key controls — attach keyboard listeners to window, not canvas"
+"it's not saving my data" [active artifact] → edit: "Fix data persistence using localStorage"
+"the button doesn't do anything" [active artifact] → edit: "Fix the button's onClick handler to perform the correct action"
+"can you fix the collision detection?" [active artifact] → edit: "Fix collision detection logic"
+"why isn't it working?" [active artifact] → edit: "Debug and fix the broken functionality"
 "open calculator in green" → build: {{"goal": "calculator with green color scheme", "features": ["standard arithmetic operations", "clear/backspace", "keyboard support"], "style": "green theme"}}, reply: "Here's your green calculator!"
 "open snake but red" → build: {{"goal": "snake game with red color scheme", "features": ["arrow key controls", "score tracking", "level progression"], "style": "red theme"}}, reply: "Here's your red Snake game!"
 
@@ -348,7 +359,13 @@ OUTPUT FORMAT — always valid JSON, one of:
 
     artifact_context = ""
     if has_active_artifact:
-        artifact_context = "ACTIVE ARTIFACT: There is a live interactive artifact on the user's canvas right now. If the user refers to it with 'it', 'this', 'the app', or asks to change/fix/update it — use type 'edit'.\n\n"
+        artifact_context = (
+        "ACTIVE ARTIFACT: There is a live interactive artifact (app/game/tool) on the user's canvas right now.\n"
+        "- If the user asks to change, update, modify, or improve it → type 'edit'\n"
+        "- If the user reports a bug, something not working, broken behavior, missing feature, or wrong output → type 'edit' (FIX IT, don't explain it)\n"
+        "- The edit_instruction must describe exactly what to fix or change so the builder can act on it.\n"
+        "- Only use 'chat' if the user is clearly asking a general knowledge question unrelated to the artifact.\n\n"
+    )
 
     full_prompt = history_context + artifact_context + f"USER: {prompt}"
 
@@ -537,6 +554,17 @@ EVERY GAME MUST HAVE:
 - Start screen, running state, and game-over screen
 - Score displayed on canvas with ctx.fillText
 - Keyboard AND touch/click input so it works on mobile too
+
+KEYBOARD INPUT — CRITICAL: Always attach keyboard listeners to `window`, NEVER to the canvas element.
+The artifact runs inside a sandboxed iframe — canvas.addEventListener('keydown') will NEVER fire because
+the canvas cannot receive focus in this environment. window.addEventListener always fires.
+Required pattern inside useEffect:
+```
+const handleKey = (e) => { /* handle e.key */ };
+window.addEventListener('keydown', handleKey);
+return () => window.removeEventListener('keydown', handleKey);
+```
+Also call `e.preventDefault()` for arrow keys and Space to stop page scrolling.
 
 FLAPPY BIRD SPECIFICALLY:
 - Bird: circle or rect with gravity (vy += gravity each frame) and jump on Space/click (vy = -jumpForce)
@@ -791,68 +819,37 @@ Be thorough but concise."""
         if tc:
             cfg_kwargs["thinking_config"] = tc
 
+    @retry(
+        retry=retry_if_exception_type(errors.ServerError),
+        stop=stop_after_attempt(2),
+        wait=wait_exponential(multiplier=1, min=1, max=4),
+    )
+    def _call(model_name):
+        logger.info(f"Chat respond with {model_name} (thinking={thinking_budget})...")
+        return client.models.generate_content(
+            model=model_name,
+            contents=full_prompt,
+            config=types.GenerateContentConfig(**cfg_kwargs),
+        )
+
+    try:
+        response = _call(CHAT_MODEL)
+    except Exception as e:
+        logger.warning(f"Primary chat_respond failed, falling back: {e}")
+        response = _call(FALLBACK_MODEL)
+
     thinking_text = ""
     reply_text = ""
-
-    if on_thought and thinking_budget > 0:
-        # ── Streaming path: pipe thought tokens to caller live ────────────────
-        try:
-            stream = client.models.generate_content_stream(
-                model=CHAT_MODEL,
-                contents=full_prompt,
-                config=types.GenerateContentConfig(**cfg_kwargs),
-            )
-            for chunk in stream:
-                try:
-                    for part in chunk.candidates[0].content.parts:
-                        part_text = part.text or ""
-                        if getattr(part, "thought", False):
-                            thinking_text += part_text
-                            if part_text:
-                                on_thought(part_text)
-                        else:
-                            reply_text += part_text
-                except Exception:
-                    pass
-        except Exception as e:
-            logger.error(f"Streaming chat_respond failed: {e} — falling back to non-streaming")
-            on_thought = None  # fall through to non-streaming below
-            reply_text = ""
-            thinking_text = ""
-
-    if not on_thought or not reply_text:
-        # ── Non-streaming path ────────────────────────────────────────────────
-        @retry(
-            retry=retry_if_exception_type(errors.ServerError),
-            stop=stop_after_attempt(2),
-            wait=wait_exponential(multiplier=1, min=1, max=4),
-        )
-        def _call(model_name):
-            logger.info(f"Chat respond with {model_name} (thinking={thinking_budget})...")
-            return client.models.generate_content(
-                model=model_name,
-                contents=full_prompt,
-                config=types.GenerateContentConfig(**cfg_kwargs),
-            )
-
-        try:
-            response = _call(CHAT_MODEL)
-        except Exception as e:
-            logger.warning(f"Primary chat_respond failed, falling back: {e}")
-            response = _call(FALLBACK_MODEL)
-
-        thinking_text = ""
-        reply_text = ""
-        try:
-            for part in response.candidates[0].content.parts:
-                part_text = (part.text or "")
-                if getattr(part, "thought", False):
-                    thinking_text += part_text
-                else:
-                    reply_text += part_text
-        except Exception:
-            pass
-        reply_text = reply_text or (response.text or "")
+    try:
+        for part in response.candidates[0].content.parts:
+            part_text = (part.text or "")
+            if getattr(part, "thought", False):
+                thinking_text += part_text
+            else:
+                reply_text += part_text
+    except Exception:
+        pass
+    reply_text = reply_text or (response.text or "")
 
     return reply_text.strip(), thinking_text
 
@@ -937,12 +934,19 @@ YOUR TASK:
 - Return the COMPLETE modified component — not a diff, not partial code.
 - Raw JS/JSX only. No markdown fences. All imports at the top.
 
+KEYBOARD INPUT — CRITICAL: Keyboard listeners MUST be attached to `window`, never to the canvas element.
+The artifact runs in a sandboxed iframe — canvas.addEventListener('keydown') NEVER fires.
+window.addEventListener('keydown', handler) always fires. If the existing code uses canvas.addEventListener
+for keyboard events, replace every instance with window.addEventListener and clean up in the return.
+Also call e.preventDefault() for Arrow keys and Space to prevent page scroll.
+
 CRITICAL — WHEN TO FULLY REWRITE:
 If the existing component is fundamentally broken or uses the wrong approach for what is being fixed, do NOT try to patch it. REWRITE IT COMPLETELY using the correct approach.
 Examples that require a full rewrite:
 - Instruction asks to "add pipes" or "fix collision" but the game uses div/CSS instead of Canvas — rewrite with Canvas + requestAnimationFrame game loop.
 - Instruction asks to "fix the game loop" but there is no requestAnimationFrame — rewrite with a proper game loop.
 - Any game fix where the existing code has no canvas element — always rewrite with Canvas API.
+- Instruction is to fix keyboard/arrow key controls and the code uses canvas.addEventListener — replace with window.addEventListener.
 A correct full rewrite is infinitely better than a patched broken component."""
 
     edit_prompt = f"""EXISTING COMPONENT:
