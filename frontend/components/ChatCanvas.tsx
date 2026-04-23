@@ -679,7 +679,7 @@ function MessageRow({
           <button
             onClick={() => copy(m.text)}
             className="mt-1.5 flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] transition-all duration-150"
-            style={{ color: "var(--t4)", opacity: hovered || copied ? 1 : 0 }}
+            style={{ color: "var(--t4)" }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-hover)"; (e.currentTarget as HTMLElement).style.color = "var(--t2)"; }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--t4)"; }}
           >

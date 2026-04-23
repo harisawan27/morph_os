@@ -166,12 +166,18 @@ async def _generate_stream(
     # ── 6a. Web search ────────────────────────────────────────────────────────
     if planned.get("type") == "search":
         query = planned.get("query", prompt)
+        # Think mode: emit pending reply immediately so ThinkingBlock + funny lines appear
+        if use_thinking:
+            yield _sse({"type": "reply", "text": "", "id": artifact_id, "pending": True, "model": "think"})
         try:
             reply = await asyncio.to_thread(search_web, query)
         except Exception as e:
             logger.error(f"Web search failed: {e}")
             reply = "I tried to search the web but hit an error. Please try again."
-        yield _sse({"type": "reply", "text": reply, "id": artifact_id, "pending": False})
+        if use_thinking:
+            yield _sse({"type": "reply_text", "text": reply, "id": artifact_id})
+        else:
+            yield _sse({"type": "reply", "text": reply, "id": artifact_id, "pending": False})
         if user_id:
             db = SessionLocal()
             try:
@@ -217,20 +223,29 @@ async def _generate_stream(
                         return
                     await asyncio.sleep(0.025)
 
-    # ── 6c. Think-mode CHAT — stream phases then reply ────────────────────────
+    # ── 6c. Think-mode CHAT — real thought token streaming ───────────────────
     final_reply = reply
     if is_think_chat:
-        chat_phases = [
-            f"Reading your question carefully...\n",
-            f"Thinking through the best answer...\n",
-            f"Considering context from the conversation...\n",
-            f"Composing a complete response...\n",
-        ]
+        thought_q = stdlib_queue.Queue()
         chat_task = asyncio.create_task(
-            asyncio.to_thread(chat_respond, prompt, history, 8000)
+            asyncio.to_thread(chat_respond, prompt, history, 8000, thought_q)
         )
-        async for event in _stream_phases(chat_task, chat_phases):
-            yield event
+
+        while not chat_task.done():
+            try:
+                chunk = thought_q.get_nowait()
+                if chunk:
+                    yield _sse({"type": "thinking_delta", "text": chunk, "id": artifact_id})
+            except stdlib_queue.Empty:
+                await asyncio.sleep(0.015)
+
+        while True:
+            try:
+                chunk = thought_q.get_nowait()
+                if chunk:
+                    yield _sse({"type": "thinking_delta", "text": chunk, "id": artifact_id})
+            except stdlib_queue.Empty:
+                break
 
         try:
             think_reply, _ = await chat_task

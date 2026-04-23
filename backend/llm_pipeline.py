@@ -835,6 +835,7 @@ def chat_respond(
     prompt: str,
     history: list[dict] = [],
     thinking_budget: int = 0,
+    thought_queue=None,
 ) -> tuple[str, str]:
     """Generates a thoughtful chat reply. Returns (reply_text, thinking_text)."""
     system_instruction = """You are Morph OS — a smart, helpful AI assistant.
@@ -856,37 +857,69 @@ Be thorough but concise."""
         if tc:
             cfg_kwargs["thinking_config"] = tc
 
+    def _run_stream(model_name) -> tuple[str, str]:
+        logger.info(f"Chat streaming with {model_name}...")
+        r, t = "", ""
+        stream = client.models.generate_content_stream(
+            model=model_name,
+            contents=full_prompt,
+            config=types.GenerateContentConfig(**cfg_kwargs),
+        )
+        for chunk in stream:
+            try:
+                for part in chunk.candidates[0].content.parts:
+                    pt = part.text or ""
+                    if getattr(part, "thought", False):
+                        t += pt
+                        if thought_queue is not None and pt:
+                            thought_queue.put(pt)
+                    else:
+                        r += pt
+            except Exception:
+                pass
+        return r, t
+
     @retry(
         retry=retry_if_exception_type(errors.ServerError),
         stop=stop_after_attempt(2),
         wait=wait_exponential(multiplier=1, min=1, max=4),
     )
-    def _call(model_name):
-        logger.info(f"Chat respond with {model_name} (thinking={thinking_budget})...")
-        return client.models.generate_content(
+    def _run_non_stream(model_name) -> tuple[str, str]:
+        logger.info(f"Chat generating with {model_name} (thinking={thinking_budget})...")
+        resp = client.models.generate_content(
             model=model_name,
             contents=full_prompt,
             config=types.GenerateContentConfig(**cfg_kwargs),
         )
+        r, t = "", ""
+        try:
+            for part in resp.candidates[0].content.parts:
+                pt = part.text or ""
+                if getattr(part, "thought", False):
+                    t += pt
+                else:
+                    r += pt
+        except Exception:
+            pass
+        return r or (resp.text or ""), t
 
-    try:
-        response = _call(CHAT_MODEL)
-    except Exception as e:
-        logger.warning(f"Primary chat_respond failed, falling back: {e}")
-        response = _call(FALLBACK_MODEL)
-
-    thinking_text = ""
-    reply_text = ""
-    try:
-        for part in response.candidates[0].content.parts:
-            part_text = (part.text or "")
-            if getattr(part, "thought", False):
-                thinking_text += part_text
-            else:
-                reply_text += part_text
-    except Exception:
-        pass
-    reply_text = reply_text or (response.text or "")
+    reply_text, thinking_text = "", ""
+    if thought_queue is not None and thinking_budget > 0:
+        try:
+            reply_text, thinking_text = _run_stream(CHAT_MODEL)
+        except Exception as e:
+            logger.warning(f"Chat stream failed: {e} — non-stream fallback")
+            try:
+                reply_text, thinking_text = _run_non_stream(CHAT_MODEL)
+            except Exception as e2:
+                logger.warning(f"Chat non-stream also failed: {e2} — last resort")
+                reply_text, thinking_text = _run_non_stream(FALLBACK_MODEL)
+    else:
+        try:
+            reply_text, thinking_text = _run_non_stream(CHAT_MODEL)
+        except Exception as e:
+            logger.warning(f"Chat non-stream failed: {e} — falling back")
+            reply_text, thinking_text = _run_non_stream(FALLBACK_MODEL)
 
     return reply_text.strip(), thinking_text
 
