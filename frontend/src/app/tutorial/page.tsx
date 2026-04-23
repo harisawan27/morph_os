@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Ghost, ChevronLeft, ChevronRight, Check,
-  ArrowUp, FileText, Paperclip, Sun, Moon,
+  ArrowUp, FileText, Paperclip, Sun, Moon, Zap, Brain,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -417,32 +417,144 @@ function VisualSettings() {
   );
 }
 
+function VisualModels() {
+  const [mode, setMode] = useState<"swift" | "think">("swift");
+  const [thinkText, setThinkText] = useState("");
+  const THINK_FULL = "Analyzing your request...\nPlanning component architecture...\nConsidering edge cases and state...\nBuilding with full reasoning...";
+
+  // Auto-cycle modes
+  useEffect(() => {
+    const t = setInterval(() => {
+      setMode(m => {
+        if (m === "swift") { setThinkText(""); return "think"; }
+        return "swift";
+      });
+    }, 3600);
+    return () => clearInterval(t);
+  }, []);
+
+  // Stream think text char by char when think mode is active
+  useEffect(() => {
+    if (mode !== "think") { setThinkText(""); return; }
+    let i = 0;
+    const t = setInterval(() => {
+      i++;
+      if (i <= THINK_FULL.length) setThinkText(THINK_FULL.slice(0, i));
+      else clearInterval(t);
+    }, 22);
+    return () => clearInterval(t);
+  }, [mode, THINK_FULL]);
+
+  return (
+    <div className="flex flex-col gap-3 h-full justify-center px-1">
+
+      {/* Model toggle — mimics the real chatbar selector */}
+      <div className="flex gap-1 p-1 rounded-xl" style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
+        {(["swift", "think"] as const).map(m => (
+          <button key={m} onClick={() => { setMode(m); setThinkText(""); }}
+            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-medium transition-all duration-200"
+            style={mode === m
+              ? m === "swift"
+                ? { background: "rgba(245,158,11,0.14)", color: "#fbbf24", border: "1px solid rgba(245,158,11,0.28)" }
+                : { background: "rgba(139,92,246,0.15)", color: "#c4b5fd", border: "1px solid rgba(139,92,246,0.32)" }
+              : { color: "var(--t5)", border: "1px solid transparent" }
+            }>
+            {m === "swift"
+              ? <Zap size={11} />
+              : <Brain size={11} />}
+            {m === "swift" ? "Swift" : "Think"}
+          </button>
+        ))}
+      </div>
+
+      {/* Mode preview panel */}
+      <AnimatePresence mode="wait">
+        {mode === "swift" ? (
+          <motion.div key="swift-panel"
+            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.25 }}
+            className="rounded-2xl px-4 py-3.5 flex flex-col gap-2.5"
+            style={{ background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.18)" }}>
+            <div className="flex items-center gap-2">
+              <Zap size={12} style={{ color: "#fbbf24" }} />
+              <span className="text-[10px] uppercase tracking-widest font-semibold" style={{ color: "#fbbf24" }}>Swift Mode</span>
+            </div>
+            {["Instant responses — no wait time", "Vault apps open in under 1 second", "Best for everyday tasks and quick builds"].map(t => (
+              <div key={t} className="flex items-center gap-2 text-[11px]" style={{ color: "var(--t3)" }}>
+                <span style={{ color: "#fbbf24", fontSize: 9 }}>⚡</span>{t}
+              </div>
+            ))}
+          </motion.div>
+        ) : (
+          <motion.div key="think-panel"
+            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.25 }}
+            className="rounded-2xl overflow-hidden"
+            style={{ background: "rgba(139,92,246,0.05)", border: "1px solid rgba(139,92,246,0.22)" }}>
+            {/* Header row */}
+            <div className="flex items-center gap-2 px-3 py-2 border-b" style={{ borderColor: "rgba(139,92,246,0.14)" }}>
+              <Brain size={11} className="animate-pulse" style={{ color: "rgba(196,181,253,0.85)" }} />
+              <span className="text-[10px] uppercase tracking-widest" style={{ color: "rgba(196,181,253,0.6)" }}>Thinking</span>
+              <span className="flex gap-0.5 items-center ml-auto">
+                {[0, 1, 2].map(i => (
+                  <span key={i} className="w-0.5 h-1.5 rounded-full animate-pulse"
+                    style={{ background: "rgba(196,181,253,0.45)", animationDelay: `${i * 0.15}s`, animationDuration: "0.9s" }} />
+                ))}
+              </span>
+            </div>
+            {/* Streaming thought text */}
+            <div className="px-3 py-2.5 text-[10px] leading-relaxed min-h-[70px]"
+              style={{ color: "rgba(196,181,253,0.55)", whiteSpace: "pre-wrap" }}>
+              {thinkText}
+              <span className="inline-block w-[2px] h-[10px] ml-0.5 align-middle animate-pulse rounded-sm"
+                style={{ background: "rgba(196,181,253,0.7)", animationDuration: "0.8s" }} />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 function VisualTips() {
   return (
-    <div className="flex flex-col gap-2.5 justify-center h-full px-1">
-      <div className="px-4 py-3 rounded-2xl"
+    <div className="flex flex-col gap-2 justify-center h-full px-1">
+      {/* Vague vs specific */}
+      <div className="px-3.5 py-2.5 rounded-2xl"
         style={{ background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.2)" }}>
-        <div className="flex items-center gap-2 mb-2">
-          <div className="w-4 h-4 rounded-full flex items-center justify-center"
+        <div className="flex items-center gap-2 mb-1.5">
+          <div className="w-4 h-4 rounded-full flex items-center justify-center shrink-0"
             style={{ background: "rgba(239,68,68,0.2)" }}>
             <span className="text-[9px] font-bold" style={{ color: "#f87171" }}>✕</span>
           </div>
           <span className="text-[9px] uppercase tracking-widest" style={{ color: "rgba(248,113,113,0.7)" }}>Too vague</span>
         </div>
-        <p className="text-[12px]" style={{ color: "var(--t3)" }}>"make a habit app"</p>
+        <p className="text-[11px]" style={{ color: "var(--t3)" }}>"make a habit app"</p>
       </div>
-      <div className="px-4 py-3 rounded-2xl"
+      <div className="px-3.5 py-2.5 rounded-2xl"
         style={{ background: "rgba(16,185,129,0.07)", border: "1px solid rgba(16,185,129,0.22)" }}>
-        <div className="flex items-center gap-2 mb-2">
-          <div className="w-4 h-4 rounded-full flex items-center justify-center"
+        <div className="flex items-center gap-2 mb-1.5">
+          <div className="w-4 h-4 rounded-full flex items-center justify-center shrink-0"
             style={{ background: "rgba(16,185,129,0.2)" }}>
             <Check size={9} style={{ color: "#34d399" }} />
           </div>
           <span className="text-[9px] uppercase tracking-widest" style={{ color: "rgba(52,211,153,0.7)" }}>Specific</span>
         </div>
-        <p className="text-[12px] leading-relaxed" style={{ color: "var(--t2)" }}>
-          "Build a habit tracker with daily streaks, a weekly heatmap, and a completion sound"
+        <p className="text-[11px] leading-relaxed" style={{ color: "var(--t2)" }}>
+          "Habit tracker with daily streaks, weekly heatmap, and completion sound"
         </p>
+      </div>
+
+      {/* Think model pro tip */}
+      <div className="px-3.5 py-2.5 rounded-2xl flex items-start gap-2.5"
+        style={{ background: "rgba(139,92,246,0.09)", border: "1px solid rgba(139,92,246,0.28)" }}>
+        <Brain size={13} className="shrink-0 mt-0.5" style={{ color: "#c4b5fd" }} />
+        <div>
+          <p className="text-[9px] uppercase tracking-widest mb-1" style={{ color: "rgba(196,181,253,0.65)" }}>Pro Tip</p>
+          <p className="text-[11px] leading-relaxed" style={{ color: "rgba(196,181,253,0.85)" }}>
+            Switch to <span className="font-semibold">Think</span> model in the chat bar for complex apps, games, and dashboards — it reasons deeper and builds more complete results.
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -479,52 +591,67 @@ const SLIDES: Slide[] = [
     Visual: VisualBuild,
   },
   {
-    id: "canvas", tag: "Step 3", dot: "#818cf8", title: "The Canvas",
+    id: "models", tag: "Step 3", dot: "#c4b5fd", title: "AI Models",
+    headline: "Swift or Think — You Choose.",
+    body: "Morph OS has two AI modes. Swift is instant — no wait, no reasoning shown, great for everyday use. Think is deeper — it reasons through your request live, streaming its thought process as it works, and builds significantly more accurate and feature-complete custom apps.",
+    tips: [
+      "Swift: best for chat, quick questions, and vault apps",
+      "Think: live reasoning stream — you see exactly what the AI is working through",
+      "Think builds more complete apps — complex games, dashboards, and multi-feature tools",
+    ],
+    Visual: VisualModels,
+  },
+  {
+    id: "canvas", tag: "Step 4", dot: "#818cf8", title: "The Canvas",
     headline: "Your Live Workspace",
     body: "The Canvas is where all apps live. Chat sits on the left, your app runs live on the right. Drag the divider to resize both panels. On mobile and tablet, switch between Chat and Canvas tabs.",
     tips: ["Drag the divider to give more space to either panel", "Apps stay open while you keep chatting", `Tap "Open in Canvas" on any message to show it`],
     Visual: VisualCanvas,
   },
   {
-    id: "edit", tag: "Step 4", dot: "#f472b6", title: "Editing",
+    id: "edit", tag: "Step 5", dot: "#f472b6", title: "Editing",
     headline: "Change It. Instantly.",
     body: "With any app open in the Canvas, just describe what you want changed. Morph OS edits the live artifact directly — no full rebuild, no waiting. Add features, fix bugs, or restyle it in plain English.",
     tips: ['"Make it dark mode"', '"Add a reset button to the timer"', '"Change the color theme to green"'],
     Visual: VisualEdit,
   },
   {
-    id: "vault", tag: "Step 5", dot: "#fbbf24", title: "The Vault",
+    id: "vault", tag: "Step 6", dot: "#fbbf24", title: "The Vault",
     headline: "34+ Apps, One Click",
     body: "The Vault is your library of pre-built apps — games, productivity tools, finance, creative tools, and more. Type the name in chat or browse the Vault page from the sidebar. Everything opens instantly.",
     tips: ["Games: Chess, Checkers, Snake, Memory, Tic-Tac-Toe", "Tools: Weather, Pomodoro, Kanban, Habits, Calendar", "Creative: Drawing, Pixel Art, Gradient, Color Palette"],
     Visual: VisualVault,
   },
   {
-    id: "files", tag: "Step 6", dot: "#fb923c", title: "Files",
+    id: "files", tag: "Step 7", dot: "#fb923c", title: "Files",
     headline: "Bring Your Files",
     body: "Attach images, PDFs, text files, or CSVs to any message using the paperclip icon or drag-and-drop. Morph OS reads the content and uses it — summarize, analyze, or build something from it.",
     tips: ["Images: describe, analyze, extract colors, or make pixel art", "PDFs & text: summarize, extract data, or add to notes/diary", "Drag-and-drop directly onto the chat bar"],
     Visual: VisualFiles,
   },
   {
-    id: "library", tag: "Step 7", dot: "#38bdf8", title: "My Library",
+    id: "library", tag: "Step 8", dot: "#38bdf8", title: "My Library",
     headline: "Everything is Saved",
     body: "Every conversation and app you create is automatically saved to My Library. Sign in with Google and it syncs across all your devices. Search, filter by category, and reopen any session right where you left off.",
     tips: ["Sign in with Google to sync across devices", "Filter by Games, Tools, Creative, Finance, and more", "Reopen any artifact to continue the exact conversation"],
     Visual: VisualLibrary,
   },
   {
-    id: "settings", tag: "Step 8", dot: "#4ade80", title: "Settings",
+    id: "settings", tag: "Step 9", dot: "#4ade80", title: "Settings",
     headline: "Make It Yours",
     body: "Open Settings from the sidebar to personalize Morph OS. Set your name, role, and preferred tone — the AI adapts its responses to match. Switch between dark and light mode anytime.",
     tips: ["Light and dark theme — toggle anytime", "Set your name and role for personalized responses", "Choose tone: casual, professional, or technical"],
     Visual: VisualSettings,
   },
   {
-    id: "tips", tag: "Pro Tip", dot: "#f87171", title: "Pro Tips",
+    id: "tips", tag: "Pro Tips", dot: "#f87171", title: "Pro Tips",
     headline: "The More You Give",
     body: "The secret to great results: be specific. Describe the features you want, mention the style, list the requirements. Morph OS delivers exactly what you describe — so describe it well.",
-    tips: ['"Open calculator in green color"', '"Build a habit tracker with streaks, heatmap, and sound"', '"Explain async/await like I\'m a beginner"'],
+    tips: [
+      '"Open calculator in neon green" — always name the color and style',
+      '"Build a habit tracker with streaks, heatmap, and completion sound"',
+      'Select Think model from the chat bar for best results on any custom app or game',
+    ],
     Visual: VisualTips,
   },
 ];

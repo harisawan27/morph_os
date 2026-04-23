@@ -112,12 +112,18 @@ async def _generate_stream(
             )
             if closest:
                 hit, distance = closest
-                if distance is not None and distance < 0.1:
-                    yield _sse({"type": "reply", "text": hit.reply or "Found in memory.", "id": hit.id})
-                    if hit.code:
-                        yield _sse({"type": "artifact", "code": hit.code, "id": hit.id})
-                    yield _sse({"type": "done"})
-                    return
+                # Double gate:
+                # 1. Cosine distance < 0.06 (tighter than before — stops "Upwork" vs "Freelancer" type false hits)
+                # 2. Character similarity > 0.75 (different words = different intent, always regenerate)
+                if distance is not None and distance < 0.06:
+                    from difflib import SequenceMatcher
+                    text_ratio = SequenceMatcher(None, prompt.lower(), (hit.prompt or "").lower()).ratio()
+                    if text_ratio > 0.75:
+                        yield _sse({"type": "reply", "text": hit.reply or "Found in memory.", "id": hit.id})
+                        if hit.code:
+                            yield _sse({"type": "artifact", "code": hit.code, "id": hit.id})
+                        yield _sse({"type": "done"})
+                        return
         finally:
             db.close()
 
@@ -178,86 +184,80 @@ async def _generate_stream(
         yield _sse({"type": "done"})
         return
 
-    # ── 6b. Yield reply immediately ───────────────────────────────────────────
-    needs_artifact  = planned.get("type") in ("template", "build", "edit") or planned.get("requires_ui")
-    is_think_chat   = use_thinking and not needs_artifact and planned.get("type") == "chat"
+    # ── 6b. Classify & yield reply shell immediately ──────────────────────────
+    needs_artifact = planned.get("type") in ("template", "build", "edit") or planned.get("requires_ui")
+    is_think_chat  = use_thinking and not needs_artifact and planned.get("type") == "chat"
+    # thinking_budget only for think-mode builds — swift builds get 0 (faster + no thought stream)
     thinking_budget = 8000 if (use_thinking and needs_artifact) else 0
 
     yield _sse({
-        "type": "reply", "text": "" if is_think_chat else reply, "id": artifact_id,
+        "type":    "reply",
+        "text":    "" if is_think_chat else reply,
+        "id":      artifact_id,
         "pending": bool(needs_artifact) or is_think_chat,
-        "model": "think" if use_thinking else "swift",
+        "model":   "think" if use_thinking else "swift",
     })
 
-    # ── 6c. Think-mode chat — run thinking-enabled response ──────────────────
-    final_reply   = reply
-    think_reply   = None
-    think_thought = None
+    # ── Shared helper: drain a Queue into thinking_delta SSE events ───────────
+    async def _drain_thought_queue(q: asyncio.Queue, task: asyncio.Task):
+        while not task.done():
+            try:
+                yield _sse({"type": "thinking_delta", "text": q.get_nowait(), "id": artifact_id})
+            except asyncio.QueueEmpty:
+                await asyncio.sleep(0.04)
+        while not q.empty():
+            yield _sse({"type": "thinking_delta", "text": q.get_nowait(), "id": artifact_id})
+
+    # ── 6c. Think-mode CHAT — stream thought tokens live then reply ───────────
+    final_reply = reply
     if is_think_chat:
+        loop = asyncio.get_running_loop()
+        thought_q: asyncio.Queue = asyncio.Queue()
+
+        def _chat_on_thought(text: str):
+            loop.call_soon_threadsafe(thought_q.put_nowait, text)
+
+        chat_task = asyncio.create_task(
+            asyncio.to_thread(chat_respond, prompt, history, 8000, _chat_on_thought)
+        )
+        async for event in _drain_thought_queue(thought_q, chat_task):
+            yield event
+
         try:
-            think_reply, think_thought = await asyncio.to_thread(
-                chat_respond, prompt, history, 8000
-            )
+            think_reply, _ = chat_task.result()
+            final_reply = think_reply or reply
         except Exception as e:
             logger.error(f"Think chat failed: {e}")
 
-    # ── 7. Execute plan — stream thinking tokens live ─────────────────────────
-    code     = None
-    ui_spec  = None
-    thinking = None
+    # ── 7. Execute plan (artifact builds) — stream thinking only in think mode ─
+    code    = None
+    ui_spec = None
     if needs_artifact:
         plan_type = planned.get("type")
 
-        # Phase label: what the brain decided
-        goal = ""
-        if plan_type == "build":
-            spec = planned.get("ui_spec", {})
-            goal = spec.get("goal", "") if isinstance(spec, dict) else ""
-        elif plan_type == "edit":
-            goal = planned.get("edit_instruction", "")[:80]
-        elif plan_type == "template":
-            goal = f"Loading {planned.get('template_id', '')} template"
+        if use_thinking and plan_type in ("build", "edit"):
+            # Think mode: stream live thought tokens while builder runs
+            loop = asyncio.get_running_loop()
+            thought_q: asyncio.Queue = asyncio.Queue()
 
-        if goal:
-            yield _sse({"type": "thinking_delta", "text": f"Planning: {goal}\n", "id": artifact_id})
+            def _build_on_thought(text: str):
+                loop.call_soon_threadsafe(thought_q.put_nowait, text)
 
-        # Only custom builds stream real thought tokens — templates are instant
-        if plan_type in ("build", "edit"):
-            thought_queue: asyncio.Queue = asyncio.Queue()
-            loop = asyncio.get_event_loop()
-
-            def _on_thought(text: str):
-                loop.call_soon_threadsafe(thought_queue.put_nowait, text)
-
-            async def _run_plan():
-                return await asyncio.to_thread(
-                    execute_plan, planned, current_artifact, thinking_budget, _on_thought
-                )
-
-            execute_task = asyncio.ensure_future(_run_plan())
-
-            # Drain thought tokens while builder runs
-            while not execute_task.done():
-                try:
-                    token = thought_queue.get_nowait()
-                    yield _sse({"type": "thinking_delta", "text": token, "id": artifact_id})
-                except asyncio.QueueEmpty:
-                    await asyncio.sleep(0.04)
-
-            # Drain any remaining tokens after task completes
-            while not thought_queue.empty():
-                token = thought_queue.get_nowait()
-                yield _sse({"type": "thinking_delta", "text": token, "id": artifact_id})
+            build_task = asyncio.create_task(
+                asyncio.to_thread(execute_plan, planned, current_artifact, thinking_budget, _build_on_thought)
+            )
+            async for event in _drain_thought_queue(thought_q, build_task):
+                yield event
 
             try:
-                code, ui_spec, thinking = execute_task.result()
+                code, ui_spec, _ = build_task.result()
             except Exception as e:
                 logger.error(f"Plan execution failed: {e}")
         else:
-            # Template / vault: instant, no streaming needed
+            # Swift mode or templates: no streaming, no thinking budget
             try:
-                code, ui_spec, thinking = await asyncio.to_thread(
-                    execute_plan, planned, current_artifact, thinking_budget
+                code, ui_spec, _ = await asyncio.to_thread(
+                    execute_plan, planned, current_artifact, 0
                 )
             except Exception as e:
                 logger.error(f"Plan execution failed: {e}")
@@ -266,16 +266,9 @@ async def _generate_stream(
     if code:
         yield _sse({"type": "artifact", "code": code, "id": artifact_id})
 
-    # ── Emit final thinking blob for collapsible block (if any leftover) ──────
-    emit_thinking = None if needs_artifact else think_thought
-    if emit_thinking:
-        yield _sse({"type": "thinking", "text": emit_thinking, "id": artifact_id})
-
-    # ── Stream updated chat reply for think-chat ──────────────────────────────
+    # ── Stream updated reply for think-chat ───────────────────────────────────
     if is_think_chat:
-        fallback = think_reply or reply
-        final_reply = fallback
-        yield _sse({"type": "reply_text", "text": fallback, "id": artifact_id})
+        yield _sse({"type": "reply_text", "text": final_reply, "id": artifact_id})
 
     # ── 8. Persist ────────────────────────────────────────────────────────────
     if user_id:

@@ -508,6 +508,47 @@ DESIGN QUALITY — MORPH OS STANDARD
 - No external images. Use Lucide-React icons only.
 
 ════════════════════════════════════════
+GAMES & SIMULATIONS — MANDATORY RULES
+════════════════════════════════════════
+Any request involving a game (flappy bird, snake, pong, tetris, platformer, breakout, asteroids, space invader, chess, checkers, etc.) MUST follow these rules — no exceptions:
+
+RENDERING: Use HTML Canvas API + useRef + useEffect game loop. NEVER use div/CSS animations for game objects. CSS cannot do collision detection. Divs are not game objects.
+
+GAME LOOP PATTERN (required):
+```
+const canvasRef = useRef(null);
+useEffect(() => {
+  const canvas = canvasRef.current;
+  const ctx = canvas.getContext('2d');
+  let animId;
+  // initialise game state
+  const loop = () => {
+    update();   // physics, input, collision
+    render(ctx); // clear + draw everything
+    animId = requestAnimationFrame(loop);
+  };
+  animId = requestAnimationFrame(loop);
+  return () => cancelAnimationFrame(animId);
+}, []);
+```
+
+EVERY GAME MUST HAVE:
+- A state object holding all game data (positions, velocities, score, lives, phase)
+- An `update()` function: physics step, input handling, collision detection, score increment
+- A `render(ctx)` function: ctx.clearRect → draw background → draw all game objects
+- Proper collision detection (AABB rect overlap or circle distance — not CSS)
+- Start screen, running state, and game-over screen
+- Score displayed on canvas with ctx.fillText
+- Keyboard AND touch/click input so it works on mobile too
+
+FLAPPY BIRD SPECIFICALLY:
+- Bird: circle or rect with gravity (vy += gravity each frame) and jump on Space/click (vy = -jumpForce)
+- Pipes: array of {x, topHeight, gap} objects. Each frame: x -= pipeSpeed. Remove when x < -pipeWidth. Add new pipe when last pipe reaches spawn threshold.
+- Collision: bird rect overlaps top pipe rect OR bottom pipe rect OR hits floor/ceiling → game over
+- Gap must be ~150px tall so the bird can pass through
+- Pipes must be visually solid (ctx.fillRect in green or chosen color, with a wider cap rect at the opening edge)
+
+════════════════════════════════════════
 MEDIA INSTRUCTION
 ════════════════════════════════════════
 - YouTube / Music player: embed via `https://www.youtube.com/embed/[VIDEO_ID]` in an iframe. Style with glassmorphism overlays and Lucide icons.
@@ -520,6 +561,8 @@ Before outputting, verify:
 ✓ The requested color scheme is applied across the whole UI
 ✓ Every button has an onClick handler with real logic
 ✓ No "Future updates", "Coming soon", or "Learn more" text anywhere
+✓ If this is a game: canvas + requestAnimationFrame game loop is used, NOT divs
+✓ If this is a game: pipes / obstacles / enemies are actually rendered and collidable
 ✓ Component is a valid default export with all imports at the top
 ✓ No markdown fences — raw code only"""
 
@@ -527,10 +570,10 @@ Before outputting, verify:
         system_instruction=system_instruction,
         temperature=0.4,
     )
-    # Always enable thinking for the builder — it produces better code
-    tc = _thinking_cfg(max(thinking_budget, 8000))
-    if tc:
-        cfg_kwargs["thinking_config"] = tc
+    if thinking_budget > 0:
+        tc = _thinking_cfg(thinking_budget)
+        if tc:
+            cfg_kwargs["thinking_config"] = tc
 
     thinking_text = ""
     code_text = ""
@@ -663,6 +706,23 @@ def _critic_check(code: str, ui_spec: str) -> list[str]:
     if "export default" not in code:
         failures.append("Missing default export — component will not render")
 
+    # 5. Games must use Canvas API — div/CSS cannot do collision detection
+    game_keywords = [
+        "flappy", "snake game", "pong", "tetris", "breakout", "asteroids",
+        "space invader", "platformer", "pacman", "pac-man", "endless runner",
+        "doodle jump", "2048", "minesweeper",
+    ]
+    if any(kw in spec_lower for kw in game_keywords):
+        has_canvas = "canvas" in code_lower and (
+            "requestanimationframe" in code_lower or "getcontext" in code_lower
+        )
+        if not has_canvas:
+            failures.append(
+                "Game detected but no Canvas API found. "
+                "Games MUST use useRef+canvas+requestAnimationFrame game loop. "
+                "Rewrite completely using Canvas — do NOT use div/CSS for game objects."
+            )
+
     return failures
 
 
@@ -747,8 +807,10 @@ def chat_respond(
     prompt: str,
     history: list[dict] = [],
     thinking_budget: int = 0,
+    on_thought: callable = None,
 ) -> tuple[str, str]:
-    """Generates a thoughtful chat reply. Returns (reply_text, thinking_text)."""
+    """Generates a thoughtful chat reply. Returns (reply_text, thinking_text).
+    If on_thought is provided and thinking_budget > 0, streams thought tokens via callback."""
     system_instruction = """You are Morph OS — a smart, helpful AI assistant.
 Answer the user's question directly, accurately, and engagingly.
 Use markdown where it helps (code blocks, bullet lists, bold, etc.).
@@ -768,39 +830,69 @@ Be thorough but concise."""
         if tc:
             cfg_kwargs["thinking_config"] = tc
 
-    @retry(
-        retry=retry_if_exception_type(errors.ServerError),
-        stop=stop_after_attempt(2),
-        wait=wait_exponential(multiplier=1, min=1, max=4),
-    )
-    def _call(model_name):
-        logger.info(f"Chat respond with {model_name} (thinking={thinking_budget})...")
-        return client.models.generate_content(
-            model=model_name,
-            contents=full_prompt,
-            config=types.GenerateContentConfig(**cfg_kwargs),
-        )
-
-    try:
-        response = _call(CHAT_MODEL)
-    except Exception as e:
-        logger.warning(f"Primary chat_respond failed, falling back: {e}")
-        response = _call(FALLBACK_MODEL)
-
     thinking_text = ""
     reply_text = ""
-    try:
-        for part in response.candidates[0].content.parts:
-            part_text = (part.text or "")
-            if getattr(part, "thought", False):
-                thinking_text += part_text
-            else:
-                reply_text += part_text
-    except Exception:
-        pass
 
-    # response.text is the authoritative reply — SDK excludes thought parts from it
-    reply_text = reply_text or (response.text or "")
+    if on_thought and thinking_budget > 0:
+        # ── Streaming path: pipe thought tokens to caller live ────────────────
+        try:
+            stream = client.models.generate_content_stream(
+                model=CHAT_MODEL,
+                contents=full_prompt,
+                config=types.GenerateContentConfig(**cfg_kwargs),
+            )
+            for chunk in stream:
+                try:
+                    for part in chunk.candidates[0].content.parts:
+                        part_text = part.text or ""
+                        if getattr(part, "thought", False):
+                            thinking_text += part_text
+                            if part_text:
+                                on_thought(part_text)
+                        else:
+                            reply_text += part_text
+                except Exception:
+                    pass
+        except Exception as e:
+            logger.error(f"Streaming chat_respond failed: {e} — falling back to non-streaming")
+            on_thought = None  # fall through to non-streaming below
+            reply_text = ""
+            thinking_text = ""
+
+    if not on_thought or not reply_text:
+        # ── Non-streaming path ────────────────────────────────────────────────
+        @retry(
+            retry=retry_if_exception_type(errors.ServerError),
+            stop=stop_after_attempt(2),
+            wait=wait_exponential(multiplier=1, min=1, max=4),
+        )
+        def _call(model_name):
+            logger.info(f"Chat respond with {model_name} (thinking={thinking_budget})...")
+            return client.models.generate_content(
+                model=model_name,
+                contents=full_prompt,
+                config=types.GenerateContentConfig(**cfg_kwargs),
+            )
+
+        try:
+            response = _call(CHAT_MODEL)
+        except Exception as e:
+            logger.warning(f"Primary chat_respond failed, falling back: {e}")
+            response = _call(FALLBACK_MODEL)
+
+        thinking_text = ""
+        reply_text = ""
+        try:
+            for part in response.candidates[0].content.parts:
+                part_text = (part.text or "")
+                if getattr(part, "thought", False):
+                    thinking_text += part_text
+                else:
+                    reply_text += part_text
+        except Exception:
+            pass
+        reply_text = reply_text or (response.text or "")
+
     return reply_text.strip(), thinking_text
 
 
@@ -873,16 +965,24 @@ def analyze_file(file_bytes: bytes, mime_type: str, filename: str, user_prompt: 
 
 def builder_edit_react(current_code: str, instruction: str, thinking_budget: int = 0) -> tuple[str, str]:
     """Modifies an existing React component. Returns (code, thinking_text)."""
-    system_instruction = """You are THE BUILDER in EDIT MODE — the code engine of Morph OS. You will receive a live React component and a precise edit instruction. Your job is surgical precision.
+    system_instruction = """You are THE BUILDER in EDIT MODE — the code engine of Morph OS. You will receive a live React component and a precise edit instruction.
 
 YOUR TASK:
-- Apply the edit instruction exactly. Touch only what was asked.
-- Preserve ALL existing functionality, state, logic, and structure that isn't mentioned.
-- If the instruction changes the color/theme — update it everywhere it appears (buttons, accents, borders, stat values, icons, highlights). A color change is never just one element.
-- NEVER introduce placeholder text ("Future updates…", "Coming soon", "Learn more"). If new features are requested, implement them fully or skip them — never stub.
-- Every new button or control you add must have real working logic. No dead UI.
+- Apply the edit instruction exactly.
+- Preserve all existing functionality, state, logic, and style that isn't affected by the instruction.
+- If the instruction changes the color/theme — update it everywhere it appears. A color change is never just one element.
+- NEVER introduce placeholder text ("Future updates…", "Coming soon", "Learn more"). Implement fully or skip — never stub.
+- Every new button or control must have real working logic. No dead UI.
 - Return the COMPLETE modified component — not a diff, not partial code.
-- Raw JS/JSX only. No markdown fences. All imports at the top."""
+- Raw JS/JSX only. No markdown fences. All imports at the top.
+
+CRITICAL — WHEN TO FULLY REWRITE:
+If the existing component is fundamentally broken or uses the wrong approach for what is being fixed, do NOT try to patch it. REWRITE IT COMPLETELY using the correct approach.
+Examples that require a full rewrite:
+- Instruction asks to "add pipes" or "fix collision" but the game uses div/CSS instead of Canvas — rewrite with Canvas + requestAnimationFrame game loop.
+- Instruction asks to "fix the game loop" but there is no requestAnimationFrame — rewrite with a proper game loop.
+- Any game fix where the existing code has no canvas element — always rewrite with Canvas API.
+A correct full rewrite is infinitely better than a patched broken component."""
 
     edit_prompt = f"""EXISTING COMPONENT:
 {current_code}

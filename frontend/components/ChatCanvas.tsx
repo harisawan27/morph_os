@@ -616,8 +616,8 @@ function MessageRow({
         <Ghost size={12} className="text-purple-300/70" />
       </div>
       <div className="flex-1 min-w-0">
-        {/* Thinking block — live stream for builds, collapsible when done */}
-        {(m.thinking || (m.pending && m.model === "think")) && (
+        {/* Thinking block — think model only, never swift */}
+        {m.model === "think" && (m.thinking || m.pending) && (
           <ThinkingBlock thinking={m.thinking} isPending={!!(m.pending && !m.thinking)} />
         )}
 
