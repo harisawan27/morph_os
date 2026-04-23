@@ -388,11 +388,9 @@ def execute_plan(
     planned: dict,
     current_artifact: str | None = None,
     thinking_budget: int = 0,
-    on_thought: callable = None,
 ) -> tuple[str | None, str | None, str | None]:
     """
     Executes a brain plan and returns (code, ui_spec_json, thinking_text).
-    on_thought(str) is called with each thought token chunk when streaming.
     Runs entirely outside the async loop — safe to call via asyncio.to_thread.
     """
     from vault_manager import get_hydrated_template
@@ -429,7 +427,7 @@ def execute_plan(
         ui_spec = planned.get("ui_spec")
         if ui_spec:
             logger.info(f"BUILDER: generating React component...")
-            code, thinking = builder_generate_react(json.dumps(ui_spec), thinking_budget, on_thought=on_thought)
+            code, thinking = builder_generate_react(json.dumps(ui_spec), thinking_budget)
             return code, json.dumps(ui_spec), thinking or None
 
     # ── Chat / no artifact ───────────────────────────────────────────────────
@@ -463,9 +461,8 @@ def search_web(query: str) -> str:
     return response.text
 
 
-def builder_generate_react(ui_spec: str, thinking_budget: int = 0, on_thought: callable = None) -> tuple[str, str]:
-    """Generates a standalone React component. Returns (code, thinking_text).
-    If on_thought is provided, uses streaming and calls on_thought(str) for each thought token chunk."""
+def builder_generate_react(ui_spec: str, thinking_budget: int = 0) -> tuple[str, str]:
+    """Generates a standalone React component. Returns (code, thinking_text)."""
     system_instruction = """You are THE BUILDER — the code engine of Morph OS, a generative operating system that morphs the UI into whatever the user needs. Your output IS the product. It must be flawless.
 
 ════════════════════════════════════════
@@ -578,69 +575,35 @@ Before outputting, verify:
     thinking_text = ""
     code_text = ""
 
-    if on_thought:
-        # ── Streaming path: pipe thought tokens to caller in real time ───────
-        def _build_stream(model_name):
-            logger.info(f"Builder streaming with {model_name}...")
-            return client.models.generate_content_stream(
-                model=model_name,
-                contents=f"UI Spec:\n{ui_spec}",
-                config=types.GenerateContentConfig(**cfg_kwargs),
-            )
-
-        try:
-            stream = _build_stream(BUILDER_MODEL)
-        except Exception as e:
-            logger.warning(f"Streaming builder failed, falling back: {e}")
-            stream = _build_stream(BUILDER_FALLBACK)
-
-        try:
-            for chunk in stream:
-                try:
-                    for part in chunk.candidates[0].content.parts:
-                        part_text = part.text or ""
-                        if getattr(part, "thought", False):
-                            thinking_text += part_text
-                            if part_text:
-                                on_thought(part_text)
-                        else:
-                            code_text += part_text
-                except Exception:
-                    pass
-        except Exception as e:
-            logger.error(f"Error during streaming: {e}")
-
-    else:
-        # ── Non-streaming path (fallback) ────────────────────────────────────
-        @retry(
-            retry=retry_if_exception_type(errors.ServerError),
-            stop=stop_after_attempt(2),
-            wait=wait_exponential(multiplier=1, min=1, max=4),
+    @retry(
+        retry=retry_if_exception_type(errors.ServerError),
+        stop=stop_after_attempt(2),
+        wait=wait_exponential(multiplier=1, min=1, max=4),
+    )
+    def _build(model_name):
+        logger.info(f"Builder generating with {model_name}...")
+        return client.models.generate_content(
+            model=model_name,
+            contents=f"UI Spec:\n{ui_spec}",
+            config=types.GenerateContentConfig(**cfg_kwargs),
         )
-        def _build(model_name):
-            logger.info(f"Builder generating with {model_name}...")
-            return client.models.generate_content(
-                model=model_name,
-                contents=f"UI Spec:\n{ui_spec}",
-                config=types.GenerateContentConfig(**cfg_kwargs),
-            )
 
-        try:
-            response = _build(BUILDER_MODEL)
-        except Exception as e:
-            logger.warning(f"Primary builder failed, falling back: {e}")
-            response = _build(BUILDER_FALLBACK)
+    try:
+        response = _build(BUILDER_MODEL)
+    except Exception as e:
+        logger.warning(f"Primary builder failed, falling back: {e}")
+        response = _build(BUILDER_FALLBACK)
 
-        try:
-            for part in response.candidates[0].content.parts:
-                part_text = (part.text or "")
-                if getattr(part, "thought", False):
-                    thinking_text += part_text
-                else:
-                    code_text += part_text
-        except Exception:
-            pass
-        code_text = code_text or (response.text or "")
+    try:
+        for part in response.candidates[0].content.parts:
+            part_text = (part.text or "")
+            if getattr(part, "thought", False):
+                thinking_text += part_text
+            else:
+                code_text += part_text
+    except Exception:
+        pass
+    code_text = code_text or (response.text or "")
 
     code = code_text.strip()
     if code.startswith("```") and code.endswith("```"):
@@ -807,10 +770,8 @@ def chat_respond(
     prompt: str,
     history: list[dict] = [],
     thinking_budget: int = 0,
-    on_thought: callable = None,
 ) -> tuple[str, str]:
-    """Generates a thoughtful chat reply. Returns (reply_text, thinking_text).
-    If on_thought is provided and thinking_budget > 0, streams thought tokens via callback."""
+    """Generates a thoughtful chat reply. Returns (reply_text, thinking_text)."""
     system_instruction = """You are Morph OS — a smart, helpful AI assistant.
 Answer the user's question directly, accurately, and engagingly.
 Use markdown where it helps (code blocks, bullet lists, bold, etc.).

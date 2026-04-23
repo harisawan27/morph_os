@@ -618,7 +618,7 @@ function MessageRow({
       <div className="flex-1 min-w-0">
         {/* Thinking block — think model only, never swift */}
         {m.model === "think" && (m.thinking || m.pending) && (
-          <ThinkingBlock thinking={m.thinking} isPending={!!(m.pending && !m.thinking)} />
+          <ThinkingBlock thinking={m.thinking} isPending={!!(m.pending)} />
         )}
 
         {isError ? (

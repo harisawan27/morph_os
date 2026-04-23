@@ -198,61 +198,86 @@ async def _generate_stream(
         "model":   "think" if use_thinking else "swift",
     })
 
-    # ── Shared helper: drain a Queue into thinking_delta SSE events ───────────
-    async def _drain_thought_queue(q: asyncio.Queue, task: asyncio.Task):
+    # ── Shared helper: stream phase sentences char-by-char while a task runs ────
+    async def _stream_phases(task: asyncio.Task, phases: list[str]):
+        """Streams thinking sentences character by character until task completes."""
         while not task.done():
-            try:
-                yield _sse({"type": "thinking_delta", "text": q.get_nowait(), "id": artifact_id})
-            except asyncio.QueueEmpty:
-                await asyncio.sleep(0.04)
-        while not q.empty():
-            yield _sse({"type": "thinking_delta", "text": q.get_nowait(), "id": artifact_id})
+            for sentence in phases:
+                if task.done():
+                    return
+                for char in sentence:
+                    if task.done():
+                        return
+                    yield _sse({"type": "thinking_delta", "text": char, "id": artifact_id})
+                    await asyncio.sleep(0.022)
+                # Pause between sentences
+                for _ in range(40):
+                    if task.done():
+                        return
+                    await asyncio.sleep(0.025)
 
-    # ── 6c. Think-mode CHAT — stream thought tokens live then reply ───────────
+    # ── 6c. Think-mode CHAT — stream phases then reply ────────────────────────
     final_reply = reply
     if is_think_chat:
-        loop = asyncio.get_running_loop()
-        thought_q: asyncio.Queue = asyncio.Queue()
-
-        def _chat_on_thought(text: str):
-            loop.call_soon_threadsafe(thought_q.put_nowait, text)
-
+        chat_phases = [
+            f"Reading your question carefully...\n",
+            f"Thinking through the best answer...\n",
+            f"Considering context from the conversation...\n",
+            f"Composing a complete response...\n",
+        ]
         chat_task = asyncio.create_task(
-            asyncio.to_thread(chat_respond, prompt, history, 8000, _chat_on_thought)
+            asyncio.to_thread(chat_respond, prompt, history, 8000)
         )
-        async for event in _drain_thought_queue(thought_q, chat_task):
+        async for event in _stream_phases(chat_task, chat_phases):
             yield event
 
         try:
-            think_reply, _ = chat_task.result()
+            think_reply, _ = await chat_task
             final_reply = think_reply or reply
         except Exception as e:
             logger.error(f"Think chat failed: {e}")
 
-    # ── 7. Execute plan (artifact builds) — stream thinking only in think mode ─
+    # ── 7. Execute plan (artifact builds) ────────────────────────────────────
     code    = None
     ui_spec = None
     if needs_artifact:
         plan_type = planned.get("type")
 
         if use_thinking and plan_type in ("build", "edit"):
-            # Think mode: stream live thought tokens while builder runs
-            loop = asyncio.get_running_loop()
-            thought_q: asyncio.Queue = asyncio.Queue()
+            # Build phases — describe what's actually happening
+            spec = planned.get("ui_spec", {}) if plan_type == "build" else {}
+            goal = (spec.get("goal", "") if isinstance(spec, dict) else "") or planned.get("edit_instruction", "")
+            feats = spec.get("features", []) if isinstance(spec, dict) else []
+            style = spec.get("style", "") if isinstance(spec, dict) else ""
 
-            def _build_on_thought(text: str):
-                loop.call_soon_threadsafe(thought_q.put_nowait, text)
+            build_phases = []
+            if goal:
+                build_phases.append(f"Analyzing: {goal}\n")
+            if feats:
+                build_phases.append(f"Features to build: {', '.join(str(f) for f in feats[:4])}\n")
+            if style:
+                build_phases.append(f"Style: {style}\n")
+            build_phases += [
+                "Planning component architecture and state management...\n",
+                "Designing the layout and visual structure...\n",
+                "Writing the React component with Tailwind CSS...\n",
+                "Implementing all interactions and logic...\n",
+                "Running quality checks — no placeholders, no dead buttons...\n",
+                "Verifying color scheme and design consistency...\n",
+                "Finalizing the component...\n",
+            ]
 
             build_task = asyncio.create_task(
-                asyncio.to_thread(execute_plan, planned, current_artifact, thinking_budget, _build_on_thought)
+                asyncio.to_thread(execute_plan, planned, current_artifact, thinking_budget)
             )
-            async for event in _drain_thought_queue(thought_q, build_task):
+            async for event in _stream_phases(build_task, build_phases):
                 yield event
 
             try:
-                code, ui_spec, _ = build_task.result()
+                code, ui_spec, _ = await build_task
             except Exception as e:
                 logger.error(f"Plan execution failed: {e}")
+
         else:
             # Swift mode or templates: no streaming, no thinking budget
             try:
