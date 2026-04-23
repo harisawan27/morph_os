@@ -792,7 +792,7 @@ function ThinkingBlock({ thinking, isPending }: { thinking?: string | null; isPe
         style={{ background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.14)" }}>
         <Brain size={12} className="shrink-0 animate-pulse" style={{ color: "rgba(196,181,253,0.6)" }} />
         <span style={{ color: "rgba(196,181,253,0.5)", fontStyle: "italic" }}>{displayed}</span>
-        <span className="inline-block w-[2px] h-[10px] ml-px rounded-sm animate-pulse"
+        <span className="inline-block w-0.5 h-2.5 ml-px rounded-sm animate-pulse"
           style={{ background: "rgba(196,181,253,0.55)", animationDuration: "0.75s" }} />
       </div>
     );
