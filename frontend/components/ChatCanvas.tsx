@@ -209,6 +209,14 @@ export default function ChatCanvas({
             ));
           }
 
+          if (event.type === "thinking_delta" && botMsgId) {
+            setMessages(prev => prev.map(m =>
+              m.id === botMsgId
+                ? { ...m, thinking: ((m.thinking ?? "") + (event.text as string)) }
+                : m
+            ));
+          }
+
           if (event.type === "reply_text" && botMsgId) {
             setMessages(prev => prev.map(m =>
               m.id === botMsgId ? { ...m, text: event.text as string, pending: false } : m
@@ -608,7 +616,7 @@ function MessageRow({
         <Ghost size={12} className="text-purple-300/70" />
       </div>
       <div className="flex-1 min-w-0">
-        {/* Thinking block — shows before answer when think mode is used */}
+        {/* Thinking block — live stream for builds, collapsible when done */}
         {(m.thinking || (m.pending && m.model === "think")) && (
           <ThinkingBlock thinking={m.thinking} isPending={!!(m.pending && !m.thinking)} />
         )}
@@ -619,8 +627,8 @@ function MessageRow({
           <MarkdownRenderer content={m.text} />
         ) : null}
 
-        {/* Bouncing dots — only for swift-mode artifact builds; think mode uses ThinkingBlock */}
-        {m.pending && !m.code && m.model !== "think" ? (
+        {/* Bouncing dots — only while no thinking has arrived yet */}
+        {m.pending && !m.code && m.model !== "think" && !m.thinking ? (
           <div
             className="mt-2.5 flex items-center gap-2 px-3 py-2 rounded-xl text-[11px]"
             style={{
@@ -673,7 +681,17 @@ function MessageRow({
 // ─── Thinking block ───────────────────────────────────────────────────────────
 function ThinkingBlock({ thinking, isPending }: { thinking?: string | null; isPending?: boolean }) {
   const [open, setOpen] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const isStreaming = isPending && !!thinking;
 
+  // Auto-scroll to bottom while streaming
+  useEffect(() => {
+    if (isStreaming && scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [thinking, isStreaming]);
+
+  // Idle state — no thinking yet, just show pulsing dots
   if (isPending && !thinking) {
     return (
       <div className="mt-2.5 flex items-center gap-2 px-3 py-2 rounded-xl text-[11px]"
@@ -690,6 +708,42 @@ function ThinkingBlock({ thinking, isPending }: { thinking?: string | null; isPe
     );
   }
 
+  // Streaming state — show live thought text with cursor blink
+  if (isStreaming) {
+    return (
+      <div className="mt-2.5 rounded-xl overflow-hidden"
+        style={{ background: "rgba(139,92,246,0.05)", border: "1px solid rgba(139,92,246,0.16)" }}>
+        {/* Header */}
+        <div className="flex items-center gap-2 px-3 py-2 border-b" style={{ borderColor: "rgba(139,92,246,0.12)" }}>
+          <Brain size={11} className="shrink-0 animate-pulse" style={{ color: "rgba(196,181,253,0.8)" }} />
+          <span className="text-[10px] tracking-wider uppercase" style={{ color: "rgba(196,181,253,0.6)" }}>Thinking</span>
+          <span className="flex gap-0.5 items-center ml-auto">
+            {[0,1,2].map(i => (
+              <span key={i} className="w-0.5 h-1.5 rounded-full animate-pulse"
+                style={{ background: "rgba(196,181,253,0.5)", animationDelay: `${i * 0.15}s`, animationDuration: "0.9s" }} />
+            ))}
+          </span>
+        </div>
+        {/* Streaming text */}
+        <div
+          ref={scrollRef}
+          className="px-3 py-2.5 text-[11px] leading-relaxed morph-scrollbar overflow-y-auto"
+          style={{
+            maxHeight: "180px",
+            color: "rgba(196,181,253,0.55)",
+            whiteSpace: "pre-wrap",
+            wordBreak: "break-word",
+          }}
+        >
+          {thinking}
+          <span className="inline-block w-[2px] h-[11px] ml-[1px] align-middle animate-pulse rounded-sm"
+            style={{ background: "rgba(196,181,253,0.7)", animationDuration: "0.8s" }} />
+        </div>
+      </div>
+    );
+  }
+
+  // Done state — collapsible summary block
   if (!thinking) return null;
 
   return (

@@ -201,26 +201,75 @@ async def _generate_stream(
         except Exception as e:
             logger.error(f"Think chat failed: {e}")
 
-    # ── 7. Execute plan (artifact builds) ─────────────────────────────────────
+    # ── 7. Execute plan — stream thinking tokens live ─────────────────────────
     code     = None
     ui_spec  = None
     thinking = None
     if needs_artifact:
-        try:
-            code, ui_spec, thinking = await asyncio.to_thread(
-                execute_plan, planned, current_artifact, thinking_budget
-            )
-        except Exception as e:
-            logger.error(f"Plan execution failed: {e}")
+        plan_type = planned.get("type")
 
-    # ── Stream thinking (artifact build thinking OR think-chat thinking) ──────
-    emit_thinking = thinking if needs_artifact else think_thought
-    if emit_thinking:
-        yield _sse({"type": "thinking", "text": emit_thinking, "id": artifact_id})
+        # Phase label: what the brain decided
+        goal = ""
+        if plan_type == "build":
+            spec = planned.get("ui_spec", {})
+            goal = spec.get("goal", "") if isinstance(spec, dict) else ""
+        elif plan_type == "edit":
+            goal = planned.get("edit_instruction", "")[:80]
+        elif plan_type == "template":
+            goal = f"Loading {planned.get('template_id', '')} template"
+
+        if goal:
+            yield _sse({"type": "thinking_delta", "text": f"Planning: {goal}\n", "id": artifact_id})
+
+        # Only custom builds stream real thought tokens — templates are instant
+        if plan_type in ("build", "edit"):
+            thought_queue: asyncio.Queue = asyncio.Queue()
+            loop = asyncio.get_event_loop()
+
+            def _on_thought(text: str):
+                loop.call_soon_threadsafe(thought_queue.put_nowait, text)
+
+            async def _run_plan():
+                return await asyncio.to_thread(
+                    execute_plan, planned, current_artifact, thinking_budget, _on_thought
+                )
+
+            execute_task = asyncio.ensure_future(_run_plan())
+
+            # Drain thought tokens while builder runs
+            while not execute_task.done():
+                try:
+                    token = thought_queue.get_nowait()
+                    yield _sse({"type": "thinking_delta", "text": token, "id": artifact_id})
+                except asyncio.QueueEmpty:
+                    await asyncio.sleep(0.04)
+
+            # Drain any remaining tokens after task completes
+            while not thought_queue.empty():
+                token = thought_queue.get_nowait()
+                yield _sse({"type": "thinking_delta", "text": token, "id": artifact_id})
+
+            try:
+                code, ui_spec, thinking = execute_task.result()
+            except Exception as e:
+                logger.error(f"Plan execution failed: {e}")
+        else:
+            # Template / vault: instant, no streaming needed
+            try:
+                code, ui_spec, thinking = await asyncio.to_thread(
+                    execute_plan, planned, current_artifact, thinking_budget
+                )
+            except Exception as e:
+                logger.error(f"Plan execution failed: {e}")
 
     # ── Stream artifact ───────────────────────────────────────────────────────
     if code:
         yield _sse({"type": "artifact", "code": code, "id": artifact_id})
+
+    # ── Emit final thinking blob for collapsible block (if any leftover) ──────
+    emit_thinking = None if needs_artifact else think_thought
+    if emit_thinking:
+        yield _sse({"type": "thinking", "text": emit_thinking, "id": artifact_id})
 
     # ── Stream updated chat reply for think-chat ──────────────────────────────
     if is_think_chat:

@@ -8,7 +8,16 @@ from google.genai import types, errors
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-PRIMARY_MODEL  = 'gemini-2.5-flash'
+# Brain + Chat: fast and cheap
+BRAIN_MODEL    = 'gemini-2.5-flash'
+CHAT_MODEL     = 'gemini-2.5-flash'
+
+# Builder + Critic + Fixer: best coding model
+BUILDER_MODEL  = 'gemini-3.1-pro-preview'
+BUILDER_FALLBACK = 'gemini-2.5-pro'
+
+# Legacy aliases kept for any direct callers
+PRIMARY_MODEL  = BRAIN_MODEL
 FALLBACK_MODEL = 'gemini-2.0-flash'
 
 # ThinkingConfig may not exist in older SDK versions — guard it
@@ -367,7 +376,7 @@ OUTPUT FORMAT — always valid JSON, one of:
         )
 
     try:
-        response = _call(PRIMARY_MODEL)
+        response = _call(BRAIN_MODEL)
     except Exception as e:
         logger.warning(f"Primary brain failed, falling back: {e}")
         response = _call(FALLBACK_MODEL)
@@ -379,9 +388,11 @@ def execute_plan(
     planned: dict,
     current_artifact: str | None = None,
     thinking_budget: int = 0,
+    on_thought: callable = None,
 ) -> tuple[str | None, str | None, str | None]:
     """
     Executes a brain plan and returns (code, ui_spec_json, thinking_text).
+    on_thought(str) is called with each thought token chunk when streaming.
     Runs entirely outside the async loop — safe to call via asyncio.to_thread.
     """
     from vault_manager import get_hydrated_template
@@ -418,7 +429,7 @@ def execute_plan(
         ui_spec = planned.get("ui_spec")
         if ui_spec:
             logger.info(f"BUILDER: generating React component...")
-            code, thinking = builder_generate_react(json.dumps(ui_spec), thinking_budget)
+            code, thinking = builder_generate_react(json.dumps(ui_spec), thinking_budget, on_thought=on_thought)
             return code, json.dumps(ui_spec), thinking or None
 
     # ── Chat / no artifact ───────────────────────────────────────────────────
@@ -452,65 +463,284 @@ def search_web(query: str) -> str:
     return response.text
 
 
-def builder_generate_react(ui_spec: str, thinking_budget: int = 0) -> tuple[str, str]:
-    """Generates a standalone React component. Returns (code, thinking_text)."""
-    system_instruction = """You are a Full-Stack Creative Engineer (THE BUILDER).
-Generate a SINGLE, standalone React Component (default export) using Tailwind CSS.
+def builder_generate_react(ui_spec: str, thinking_budget: int = 0, on_thought: callable = None) -> tuple[str, str]:
+    """Generates a standalone React component. Returns (code, thinking_text).
+    If on_thought is provided, uses streaming and calls on_thought(str) for each thought token chunk."""
+    system_instruction = """You are THE BUILDER — the code engine of Morph OS, a generative operating system that morphs the UI into whatever the user needs. Your output IS the product. It must be flawless.
 
-MEDIA INSTRUCTION: If building a YouTube or Music player:
-- Always use the YouTube Embed iframe: `https://www.youtube.com/embed/[ID]`.
-- Style it with premium Glassmorphism, blurred overlays, and Lucide-React icons.
+════════════════════════════════════════
+OUTPUT RULES (non-negotiable)
+════════════════════════════════════════
+- Return ONE standalone React component as a default export. Raw JS/JSX only — no markdown fences, no explanation text.
+- Use Tailwind CSS for all styling. Import React hooks and Lucide-React icons at the top.
+- The component must fill its container: use `className="h-full w-full ..."` on the root element.
+- Persist user data with localStorage where it makes sense (todos, transactions, notes, settings).
 
-DO NOT wrap in markdown code blocks. Just the raw JS/TS code.
-Include all necessary React imports."""
+════════════════════════════════════════
+FUNCTIONALITY — ZERO COMPROMISE
+════════════════════════════════════════
+- Every button, input, toggle, and control MUST have working React state behind it. No dead UI.
+- Every feature listed in the spec MUST be fully implemented. If it's in the spec, ship it.
+- NEVER write placeholder sections. NEVER write "Future updates will include…", "Coming soon", "Learn more", or any stub card. If you can't implement it fully, simplify the scope — do not fake it.
+- Forms must validate input. Empty/invalid submissions must be silently ignored or show inline feedback.
+- Lists must support add AND delete (and edit if relevant). Empty states must show a helpful message.
+- Calculators, converters, and any computation features must produce correct output on every interaction.
+
+════════════════════════════════════════
+COLOR & STYLE — APPLY EXACTLY
+════════════════════════════════════════
+- Read the "style" field in the UI spec and apply it faithfully throughout the entire component.
+- If the style says "neon green": use #39FF14 (or similar vivid green) as the primary accent. Apply it to buttons, active states, borders, highlights, stat values, and icons. The rest of the background stays dark (#0a0a0a or #0d0d0d).
+- If the style says "red theme", "blue theme", "purple", etc. — apply that color as the primary accent the same way.
+- If no color is specified: use the default dark glassmorphism aesthetic (bg-[#0a0a0a], white/8 borders, emerald/red for income/expense).
+- Accent color must appear on: primary action buttons, active tab/toggle highlight, stat values, icon fills, focus rings. It must feel intentional — not just one element.
+- Use `style={{ color: '#39FF14' }}` or inline hex when Tailwind's arbitrary value syntax `text-[#39FF14]` is needed.
+
+════════════════════════════════════════
+DESIGN QUALITY — MORPH OS STANDARD
+════════════════════════════════════════
+- Dark background (#0a0a0a). Cards use bg-white/4 or bg-white/[0.03] with border border-white/8.
+- Rounded corners: rounded-2xl for cards, rounded-xl for inputs/buttons, rounded-full for pills.
+- Typography: stat values in text-2xl font-light, labels in text-[10px] uppercase tracking-wider text-white/40.
+- Spacing: p-4 for section padding, gap-3 for grids, gap-2 for form rows.
+- Hover states on every interactive element. Transition-all on buttons and cards.
+- Scrollable lists use flex-1 overflow-y-auto with a thin custom scrollbar (scrollbar-thin scrollbar-thumb-white/10).
+- No external images. Use Lucide-React icons only.
+
+════════════════════════════════════════
+MEDIA INSTRUCTION
+════════════════════════════════════════
+- YouTube / Music player: embed via `https://www.youtube.com/embed/[VIDEO_ID]` in an iframe. Style with glassmorphism overlays and Lucide icons.
+
+════════════════════════════════════════
+SELF-CHECK BEFORE RETURNING
+════════════════════════════════════════
+Before outputting, verify:
+✓ Every feature in the spec is implemented — no stubs
+✓ The requested color scheme is applied across the whole UI
+✓ Every button has an onClick handler with real logic
+✓ No "Future updates", "Coming soon", or "Learn more" text anywhere
+✓ Component is a valid default export with all imports at the top
+✓ No markdown fences — raw code only"""
 
     cfg_kwargs = dict(
         system_instruction=system_instruction,
         temperature=0.4,
     )
-    if thinking_budget > 0:
-        tc = _thinking_cfg(thinking_budget)
-        if tc:
-            cfg_kwargs["thinking_config"] = tc
+    # Always enable thinking for the builder — it produces better code
+    tc = _thinking_cfg(max(thinking_budget, 8000))
+    if tc:
+        cfg_kwargs["thinking_config"] = tc
+
+    thinking_text = ""
+    code_text = ""
+
+    if on_thought:
+        # ── Streaming path: pipe thought tokens to caller in real time ───────
+        def _build_stream(model_name):
+            logger.info(f"Builder streaming with {model_name}...")
+            return client.models.generate_content_stream(
+                model=model_name,
+                contents=f"UI Spec:\n{ui_spec}",
+                config=types.GenerateContentConfig(**cfg_kwargs),
+            )
+
+        try:
+            stream = _build_stream(BUILDER_MODEL)
+        except Exception as e:
+            logger.warning(f"Streaming builder failed, falling back: {e}")
+            stream = _build_stream(BUILDER_FALLBACK)
+
+        try:
+            for chunk in stream:
+                try:
+                    for part in chunk.candidates[0].content.parts:
+                        part_text = part.text or ""
+                        if getattr(part, "thought", False):
+                            thinking_text += part_text
+                            if part_text:
+                                on_thought(part_text)
+                        else:
+                            code_text += part_text
+                except Exception:
+                    pass
+        except Exception as e:
+            logger.error(f"Error during streaming: {e}")
+
+    else:
+        # ── Non-streaming path (fallback) ────────────────────────────────────
+        @retry(
+            retry=retry_if_exception_type(errors.ServerError),
+            stop=stop_after_attempt(2),
+            wait=wait_exponential(multiplier=1, min=1, max=4),
+        )
+        def _build(model_name):
+            logger.info(f"Builder generating with {model_name}...")
+            return client.models.generate_content(
+                model=model_name,
+                contents=f"UI Spec:\n{ui_spec}",
+                config=types.GenerateContentConfig(**cfg_kwargs),
+            )
+
+        try:
+            response = _build(BUILDER_MODEL)
+        except Exception as e:
+            logger.warning(f"Primary builder failed, falling back: {e}")
+            response = _build(BUILDER_FALLBACK)
+
+        try:
+            for part in response.candidates[0].content.parts:
+                part_text = (part.text or "")
+                if getattr(part, "thought", False):
+                    thinking_text += part_text
+                else:
+                    code_text += part_text
+        except Exception:
+            pass
+        code_text = code_text or (response.text or "")
+
+    code = code_text.strip()
+    if code.startswith("```") and code.endswith("```"):
+        lines = code.split("\n")
+        code = "\n".join(lines[1:-1])
+
+    # Run the critic — auto-fix if it fails
+    code, thinking_text = _critic_and_fix(code, ui_spec, thinking_text)
+    return code, thinking_text
+
+
+# ── Critic + Fixer ───────────────────────────────────────────────────────────
+
+_STUB_PHRASES = [
+    "future updates will include",
+    "coming soon",
+    "will be added",
+    "not yet implemented",
+    "placeholder",
+    "learn more",
+    "stay tuned",
+]
+
+def _critic_check(code: str, ui_spec: str) -> list[str]:
+    """
+    Fast programmatic checks. Returns a list of failure reasons.
+    Empty list = code passed.
+    """
+    failures = []
+    code_lower = code.lower()
+
+    # 1. Stub/placeholder text
+    for phrase in _STUB_PHRASES:
+        if phrase in code_lower:
+            failures.append(f'Contains forbidden stub text: "{phrase}"')
+            break
+
+    # 2. Dead onClick handlers
+    import re
+    dead_clicks = re.findall(r'onClick=\{(?:\(\)\s*=>\s*\{\s*\}|\(\)\s*=>\s*null|undefined)\}', code)
+    if dead_clicks:
+        failures.append(f"Found {len(dead_clicks)} empty/dead onClick handler(s) — every button must have real logic")
+
+    # 3. Color check — if spec mentions a color, it must appear in the code
+    spec_lower = ui_spec.lower()
+    color_map = {
+        "neon green": ["#39ff14", "#00ff00", "#00e000", "neon", "lime"],
+        "red":        ["#ef4444", "#dc2626", "#f87171", "red-"],
+        "blue":       ["#3b82f6", "#2563eb", "#60a5fa", "blue-"],
+        "purple":     ["#8b5cf6", "#7c3aed", "#a78bfa", "purple-"],
+        "orange":     ["#f97316", "#ea580c", "#fb923c", "orange-"],
+        "pink":       ["#ec4899", "#db2777", "#f472b6", "pink-"],
+        "yellow":     ["#eab308", "#ca8a04", "#fbbf24", "yellow-"],
+        "cyan":       ["#06b6d4", "#0891b2", "#67e8f9", "cyan-"],
+    }
+    for color_name, indicators in color_map.items():
+        if color_name in spec_lower:
+            if not any(ind in code_lower for ind in indicators):
+                failures.append(f'Style requires "{color_name}" but no matching color found in generated code')
+            break
+
+    # 4. Must have a default export
+    if "export default" not in code:
+        failures.append("Missing default export — component will not render")
+
+    return failures
+
+
+def _critic_and_fix(code: str, ui_spec: str, thinking_text: str) -> tuple[str, str]:
+    """
+    Runs the critic. If it finds issues, calls the fixer once with 2.5 Pro.
+    Returns (final_code, thinking_text).
+    """
+    failures = _critic_check(code, ui_spec)
+    if not failures:
+        logger.info("Critic: PASSED — no issues found")
+        return code, thinking_text
+
+    failure_summary = "\n".join(f"- {f}" for f in failures)
+    logger.warning(f"Critic: FAILED — {len(failures)} issue(s):\n{failure_summary}")
+
+    fix_prompt = f"""The following React component has quality issues that MUST be fixed.
+
+ISSUES FOUND:
+{failure_summary}
+
+ORIGINAL COMPONENT:
+{code}
+
+UI SPEC (what this component should do and look like):
+{ui_spec}
+
+Fix every issue listed above. Apply the color scheme from the spec throughout the entire component.
+Remove ALL stub/placeholder text — implement features or remove them entirely.
+Every onClick must have real working logic.
+Return the COMPLETE fixed component. Raw JSX only — no markdown, no explanation."""
+
+    cfg_kwargs = dict(system_instruction="You are THE BUILDER — a senior React engineer fixing quality issues in a generated component. Follow the fix instructions exactly.", temperature=0.2)
 
     @retry(
         retry=retry_if_exception_type(errors.ServerError),
         stop=stop_after_attempt(2),
         wait=wait_exponential(multiplier=1, min=1, max=4),
     )
-    def _build(model_name):
-        logger.info(f"Builder generating with {model_name} (thinking={thinking_budget})...")
+    def _fix(model_name):
+        logger.info(f"Fixer running with {model_name}...")
         return client.models.generate_content(
             model=model_name,
-            contents=f"UI Spec:\n{ui_spec}",
+            contents=fix_prompt,
             config=types.GenerateContentConfig(**cfg_kwargs),
         )
 
     try:
-        response = _build(PRIMARY_MODEL)
+        fix_response = _fix(BUILDER_MODEL)
     except Exception as e:
-        logger.warning(f"Primary builder failed, falling back: {e}")
-        response = _build(FALLBACK_MODEL)
+        logger.warning(f"Fixer primary failed: {e} — falling back")
+        fix_response = _fix(BUILDER_FALLBACK)
 
-    thinking_text = ""
-    code_text = ""
+    fixed_code = ""
+    fixed_thinking = ""
     try:
-        for part in response.candidates[0].content.parts:
+        for part in fix_response.candidates[0].content.parts:
             part_text = (part.text or "")
             if getattr(part, "thought", False):
-                thinking_text += part_text
+                fixed_thinking += part_text
             else:
-                code_text += part_text
+                fixed_code += part_text
     except Exception:
         pass
 
-    code_text = code_text or (response.text or "")
+    fixed_code = fixed_code or (fix_response.text or "")
+    fixed_code = fixed_code.strip()
+    if fixed_code.startswith("```") and fixed_code.endswith("```"):
+        lines = fixed_code.split("\n")
+        fixed_code = "\n".join(lines[1:-1])
 
-    code = code_text.strip()
-    if code.startswith("```") and code.endswith("```"):
-        lines = code.split("\n")
-        code = "\n".join(lines[1:-1])
-    return code, thinking_text
+    remaining = _critic_check(fixed_code, ui_spec)
+    if remaining:
+        logger.warning(f"Critic post-fix: still {len(remaining)} issue(s) — shipping best effort")
+    else:
+        logger.info("Critic post-fix: PASSED")
+
+    return fixed_code or code, thinking_text + fixed_thinking
 
 
 def chat_respond(
@@ -552,7 +782,7 @@ Be thorough but concise."""
         )
 
     try:
-        response = _call(PRIMARY_MODEL)
+        response = _call(CHAT_MODEL)
     except Exception as e:
         logger.warning(f"Primary chat_respond failed, falling back: {e}")
         response = _call(FALLBACK_MODEL)
@@ -643,17 +873,16 @@ def analyze_file(file_bytes: bytes, mime_type: str, filename: str, user_prompt: 
 
 def builder_edit_react(current_code: str, instruction: str, thinking_budget: int = 0) -> tuple[str, str]:
     """Modifies an existing React component. Returns (code, thinking_text)."""
-    system_instruction = """You are a Full-Stack Creative Engineer (THE BUILDER) in EDIT MODE.
-You will receive an existing React component and an edit instruction.
+    system_instruction = """You are THE BUILDER in EDIT MODE — the code engine of Morph OS. You will receive a live React component and a precise edit instruction. Your job is surgical precision.
 
 YOUR TASK:
-- Modify the existing component exactly as instructed.
-- Preserve all existing functionality, state, style, and structure not mentioned in the instruction.
-- Keep the same dark glassmorphism / Tailwind CSS aesthetic.
-- Return the COMPLETE modified component (not a diff, not partial code).
-
-DO NOT wrap in markdown code blocks. Just the raw JS/TS code.
-Include all necessary React imports."""
+- Apply the edit instruction exactly. Touch only what was asked.
+- Preserve ALL existing functionality, state, logic, and structure that isn't mentioned.
+- If the instruction changes the color/theme — update it everywhere it appears (buttons, accents, borders, stat values, icons, highlights). A color change is never just one element.
+- NEVER introduce placeholder text ("Future updates…", "Coming soon", "Learn more"). If new features are requested, implement them fully or skip them — never stub.
+- Every new button or control you add must have real working logic. No dead UI.
+- Return the COMPLETE modified component — not a diff, not partial code.
+- Raw JS/JSX only. No markdown fences. All imports at the top."""
 
     edit_prompt = f"""EXISTING COMPONENT:
 {current_code}
@@ -686,10 +915,10 @@ Return the complete modified component."""
         )
 
     try:
-        response = _edit(PRIMARY_MODEL)
+        response = _edit(BUILDER_MODEL)
     except Exception as e:
         logger.warning(f"Primary editor failed, falling back: {e}")
-        response = _edit(FALLBACK_MODEL)
+        response = _edit(BUILDER_FALLBACK)
 
     thinking_text = ""
     code_text = ""
