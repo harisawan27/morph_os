@@ -1,6 +1,7 @@
 import os
 import json
 import uuid
+import queue as stdlib_queue
 import asyncio
 import logging
 import httpx
@@ -244,34 +245,30 @@ async def _generate_stream(
         plan_type = planned.get("type")
 
         if use_thinking and plan_type in ("build", "edit"):
-            # Build phases — describe what's actually happening
-            spec = planned.get("ui_spec", {}) if plan_type == "build" else {}
-            goal = (spec.get("goal", "") if isinstance(spec, dict) else "") or planned.get("edit_instruction", "")
-            feats = spec.get("features", []) if isinstance(spec, dict) else []
-            style = spec.get("style", "") if isinstance(spec, dict) else ""
-
-            build_phases = []
-            if goal:
-                build_phases.append(f"Analyzing: {goal}\n")
-            if feats:
-                build_phases.append(f"Features to build: {', '.join(str(f) for f in feats[:4])}\n")
-            if style:
-                build_phases.append(f"Style: {style}\n")
-            build_phases += [
-                "Planning component architecture and state management...\n",
-                "Designing the layout and visual structure...\n",
-                "Writing the React component with Tailwind CSS...\n",
-                "Implementing all interactions and logic...\n",
-                "Running quality checks — no placeholders, no dead buttons...\n",
-                "Verifying color scheme and design consistency...\n",
-                "Finalizing the component...\n",
-            ]
+            # Real thought token streaming via thread-safe queue
+            thought_q = stdlib_queue.Queue()
 
             build_task = asyncio.create_task(
-                asyncio.to_thread(execute_plan, planned, current_artifact, thinking_budget)
+                asyncio.to_thread(execute_plan, planned, current_artifact, thinking_budget, thought_q)
             )
-            async for event in _stream_phases(build_task, build_phases):
-                yield event
+
+            # Drain thought chunks while builder runs in thread
+            while not build_task.done():
+                try:
+                    chunk = thought_q.get_nowait()
+                    if chunk:
+                        yield _sse({"type": "thinking_delta", "text": chunk, "id": artifact_id})
+                except stdlib_queue.Empty:
+                    await asyncio.sleep(0.015)
+
+            # Flush any remaining chunks after task finishes
+            while True:
+                try:
+                    chunk = thought_q.get_nowait()
+                    if chunk:
+                        yield _sse({"type": "thinking_delta", "text": chunk, "id": artifact_id})
+                except stdlib_queue.Empty:
+                    break
 
             try:
                 code, ui_spec, _ = await build_task

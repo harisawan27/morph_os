@@ -136,6 +136,13 @@ export default function ChatCanvas({
 
     let botMsgId: string | null = null;
 
+    // Always send the most recent artifact code — even if the canvas panel is closed.
+    // Without this, brain gets has_active_artifact=False and routes "fix it" as chat.
+    const lastArtifactCode =
+      activeArtifact?.code ??
+      messages.slice().reverse().find(m => m.code)?.code ??
+      null;
+
     try {
       let res: Response;
 
@@ -145,7 +152,7 @@ export default function ChatCanvas({
         if (sessionId) form.append("session_id", sessionId);
         form.append("history", JSON.stringify(messages.map(m => ({ role: m.role, text: m.text }))));
         form.append("user_context", JSON.stringify(user_context ?? {}));
-        if (activeArtifact?.code) form.append("current_artifact", activeArtifact.code);
+        if (lastArtifactCode) form.append("current_artifact", lastArtifactCode);
         form.append("file", file);
         form.append("model", model);
         res = await fetch(`${API}/api/generate-with-file`, {
@@ -164,7 +171,7 @@ export default function ChatCanvas({
             session_id: sessionId,
             history: messages.map(m => ({ role: m.role, text: m.text })),
             user_context,
-            current_artifact: activeArtifact?.code ?? null,
+            current_artifact: lastArtifactCode,
             model,
           }),
           signal: controller.signal,
@@ -686,10 +693,41 @@ function MessageRow({
 }
 
 // ─── Thinking block ───────────────────────────────────────────────────────────
+const THINK_LINES = [
+  "double checking the double checks...",
+  "consulting the rubber duck...",
+  "thinking in 12 dimensions...",
+  "running mental debugger...",
+  "staring at the code until it blinks...",
+  "asking the void for guidance...",
+  "pretending this is easy...",
+  "summoning the ghost of Dijkstra...",
+  "reticulating splines...",
+  "reading the docs (lying)...",
+  "vibing with the codebase...",
+  "questioning my own existence...",
+  "counting electrons, losing track...",
+  "checking if the tests pass (they don't)...",
+];
+
 function ThinkingBlock({ thinking, isPending }: { thinking?: string | null; isPending?: boolean }) {
   const [open, setOpen] = useState(false);
+  const [lineIdx, setLineIdx] = useState(0);
+  const [displayed, setDisplayed] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const isStreaming = isPending && !!thinking;
+
+  // Funny line typewriter — only in idle state (pending, no real thinking yet)
+  useEffect(() => {
+    if (!isPending || !!thinking) return;
+    const line = THINK_LINES[lineIdx % THINK_LINES.length];
+    if (displayed.length < line.length) {
+      const t = setTimeout(() => setDisplayed(line.slice(0, displayed.length + 1)), 38);
+      return () => clearTimeout(t);
+    }
+    const t = setTimeout(() => { setLineIdx(i => i + 1); setDisplayed(""); }, 1600);
+    return () => clearTimeout(t);
+  }, [isPending, thinking, lineIdx, displayed]);
 
   // Auto-scroll to bottom while streaming
   useEffect(() => {
@@ -698,19 +736,15 @@ function ThinkingBlock({ thinking, isPending }: { thinking?: string | null; isPe
     }
   }, [thinking, isStreaming]);
 
-  // Idle state — no thinking yet, just show pulsing dots
+  // Idle state — funny cycling lines while waiting for real thought tokens
   if (isPending && !thinking) {
     return (
       <div className="mt-2.5 flex items-center gap-2 px-3 py-2 rounded-xl text-[11px]"
         style={{ background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.14)" }}>
         <Brain size={12} className="shrink-0 animate-pulse" style={{ color: "rgba(196,181,253,0.6)" }} />
-        <span style={{ color: "rgba(196,181,253,0.6)" }}>Thinking…</span>
-        <span className="flex gap-0.5 items-center ml-0.5">
-          {[0,1,2].map(i => (
-            <span key={i} className="w-0.5 h-2 rounded-full animate-pulse"
-              style={{ background: "rgba(196,181,253,0.4)", animationDelay: `${i * 0.2}s`, animationDuration: "1s" }} />
-          ))}
-        </span>
+        <span style={{ color: "rgba(196,181,253,0.5)", fontStyle: "italic" }}>{displayed}</span>
+        <span className="inline-block w-[2px] h-[10px] ml-px rounded-sm animate-pulse"
+          style={{ background: "rgba(196,181,253,0.55)", animationDuration: "0.75s" }} />
       </div>
     );
   }

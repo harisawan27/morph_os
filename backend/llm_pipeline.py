@@ -13,7 +13,7 @@ BRAIN_MODEL    = 'gemini-2.5-flash'
 CHAT_MODEL     = 'gemini-2.5-flash'
 
 # Builder + Critic + Fixer: best coding model
-BUILDER_MODEL  = 'gemini-3.1-pro-preview'
+BUILDER_MODEL    = 'gemini-3.1-pro-preview'
 BUILDER_FALLBACK = 'gemini-2.5-pro'
 
 # Legacy aliases kept for any direct callers
@@ -405,6 +405,7 @@ def execute_plan(
     planned: dict,
     current_artifact: str | None = None,
     thinking_budget: int = 0,
+    thought_queue=None,
 ) -> tuple[str | None, str | None, str | None]:
     """
     Executes a brain plan and returns (code, ui_spec_json, thinking_text).
@@ -415,16 +416,20 @@ def execute_plan(
     plan_type = planned.get("type")
 
     # ── Edit existing artifact ───────────────────────────────────────────────
-    if plan_type == "edit" and current_artifact:
+    if plan_type == "edit":
         instruction = planned.get("edit_instruction", "")
-        logger.info(f"EDIT MODE: {instruction[:80]}...")
-        try:
-            code, thinking = builder_edit_react(current_artifact, instruction, thinking_budget)
-            return code, None, thinking or None
-        except Exception as e:
-            logger.error(f"Edit failed: {e} — falling back to fresh build")
-            plan_type = "build"
-            planned.setdefault("ui_spec", {"goal": instruction, "features": [], "style": "dark glassmorphism"})
+        if current_artifact:
+            logger.info(f"EDIT MODE: {instruction[:80]}...")
+            try:
+                code, thinking = builder_edit_react(current_artifact, instruction, thinking_budget, thought_queue)
+                return code, None, thinking or None
+            except Exception as e:
+                logger.error(f"Edit failed: {e} — falling back to fresh build")
+        else:
+            logger.warning("EDIT requested but no current_artifact — falling back to fresh build")
+        # Fall through to build using the edit instruction as the goal
+        plan_type = "build"
+        planned.setdefault("ui_spec", {"goal": instruction, "features": [], "style": "dark glassmorphism"})
 
     # ── Vault template ───────────────────────────────────────────────────────
     if plan_type == "template":
@@ -444,7 +449,7 @@ def execute_plan(
         ui_spec = planned.get("ui_spec")
         if ui_spec:
             logger.info(f"BUILDER: generating React component...")
-            code, thinking = builder_generate_react(json.dumps(ui_spec), thinking_budget)
+            code, thinking = builder_generate_react(json.dumps(ui_spec), thinking_budget, thought_queue)
             return code, json.dumps(ui_spec), thinking or None
 
     # ── Chat / no artifact ───────────────────────────────────────────────────
@@ -478,7 +483,7 @@ def search_web(query: str) -> str:
     return response.text
 
 
-def builder_generate_react(ui_spec: str, thinking_budget: int = 0) -> tuple[str, str]:
+def builder_generate_react(ui_spec: str, thinking_budget: int = 0, thought_queue=None) -> tuple[str, str]:
     """Generates a standalone React component. Returns (code, thinking_text)."""
     system_instruction = """You are THE BUILDER — the code engine of Morph OS, a generative operating system that morphs the UI into whatever the user needs. Your output IS the product. It must be flawless.
 
@@ -600,38 +605,70 @@ Before outputting, verify:
         if tc:
             cfg_kwargs["thinking_config"] = tc
 
-    thinking_text = ""
-    code_text = ""
+    def _run_stream(model_name) -> tuple[str, str]:
+        """Streaming path — real thought tokens go into thought_queue as they arrive."""
+        logger.info(f"Builder streaming with {model_name}...")
+        c, t = "", ""
+        stream = client.models.generate_content_stream(
+            model=model_name,
+            contents=f"UI Spec:\n{ui_spec}",
+            config=types.GenerateContentConfig(**cfg_kwargs),
+        )
+        for chunk in stream:
+            try:
+                for part in chunk.candidates[0].content.parts:
+                    pt = part.text or ""
+                    if getattr(part, "thought", False):
+                        t += pt
+                        if thought_queue is not None and pt:
+                            thought_queue.put(pt)
+                    else:
+                        c += pt
+            except Exception:
+                pass
+        return c, t
 
     @retry(
         retry=retry_if_exception_type(errors.ServerError),
         stop=stop_after_attempt(2),
         wait=wait_exponential(multiplier=1, min=1, max=4),
     )
-    def _build(model_name):
+    def _run_non_stream(model_name) -> tuple[str, str]:
         logger.info(f"Builder generating with {model_name}...")
-        return client.models.generate_content(
+        resp = client.models.generate_content(
             model=model_name,
             contents=f"UI Spec:\n{ui_spec}",
             config=types.GenerateContentConfig(**cfg_kwargs),
         )
+        c, t = "", ""
+        try:
+            for part in resp.candidates[0].content.parts:
+                pt = part.text or ""
+                if getattr(part, "thought", False):
+                    t += pt
+                else:
+                    c += pt
+        except Exception:
+            pass
+        return c or (resp.text or ""), t
 
-    try:
-        response = _build(BUILDER_MODEL)
-    except Exception as e:
-        logger.warning(f"Primary builder failed, falling back: {e}")
-        response = _build(BUILDER_FALLBACK)
-
-    try:
-        for part in response.candidates[0].content.parts:
-            part_text = (part.text or "")
-            if getattr(part, "thought", False):
-                thinking_text += part_text
-            else:
-                code_text += part_text
-    except Exception:
-        pass
-    code_text = code_text or (response.text or "")
+    code_text, thinking_text = "", ""
+    if thought_queue is not None and thinking_budget > 0:
+        try:
+            code_text, thinking_text = _run_stream(BUILDER_MODEL)
+        except Exception as e:
+            logger.warning(f"Builder stream failed ({BUILDER_MODEL}): {e} — trying fallback")
+            try:
+                code_text, thinking_text = _run_stream(BUILDER_FALLBACK)
+            except Exception as e2:
+                logger.error(f"Fallback stream also failed: {e2} — non-stream")
+                code_text, thinking_text = _run_non_stream(BUILDER_FALLBACK)
+    else:
+        try:
+            code_text, thinking_text = _run_non_stream(BUILDER_MODEL)
+        except Exception as e:
+            logger.warning(f"Builder non-stream failed: {e} — falling back")
+            code_text, thinking_text = _run_non_stream(BUILDER_FALLBACK)
 
     code = code_text.strip()
     if code.startswith("```") and code.endswith("```"):
@@ -921,7 +958,7 @@ def analyze_file(file_bytes: bytes, mime_type: str, filename: str, user_prompt: 
     }
 
 
-def builder_edit_react(current_code: str, instruction: str, thinking_budget: int = 0) -> tuple[str, str]:
+def builder_edit_react(current_code: str, instruction: str, thinking_budget: int = 0, thought_queue=None) -> tuple[str, str]:
     """Modifies an existing React component. Returns (code, thinking_text)."""
     system_instruction = """You are THE BUILDER in EDIT MODE — the code engine of Morph OS. You will receive a live React component and a precise edit instruction.
 
@@ -966,38 +1003,69 @@ Return the complete modified component."""
         if tc:
             cfg_kwargs["thinking_config"] = tc
 
+    def _run_stream(model_name) -> tuple[str, str]:
+        logger.info(f"Editor streaming with {model_name}...")
+        c, t = "", ""
+        stream = client.models.generate_content_stream(
+            model=model_name,
+            contents=edit_prompt,
+            config=types.GenerateContentConfig(**cfg_kwargs),
+        )
+        for chunk in stream:
+            try:
+                for part in chunk.candidates[0].content.parts:
+                    pt = part.text or ""
+                    if getattr(part, "thought", False):
+                        t += pt
+                        if thought_queue is not None and pt:
+                            thought_queue.put(pt)
+                    else:
+                        c += pt
+            except Exception:
+                pass
+        return c, t
+
     @retry(
         retry=retry_if_exception_type(errors.ServerError),
         stop=stop_after_attempt(2),
         wait=wait_exponential(multiplier=1, min=1, max=4),
     )
-    def _edit(model_name):
-        logger.info(f"Editor running with {model_name} (thinking={thinking_budget})...")
-        return client.models.generate_content(
+    def _run_non_stream(model_name) -> tuple[str, str]:
+        logger.info(f"Editor generating with {model_name}...")
+        resp = client.models.generate_content(
             model=model_name,
             contents=edit_prompt,
             config=types.GenerateContentConfig(**cfg_kwargs),
         )
+        c, t = "", ""
+        try:
+            for part in resp.candidates[0].content.parts:
+                pt = part.text or ""
+                if getattr(part, "thought", False):
+                    t += pt
+                else:
+                    c += pt
+        except Exception:
+            pass
+        return c or (resp.text or ""), t
 
-    try:
-        response = _edit(BUILDER_MODEL)
-    except Exception as e:
-        logger.warning(f"Primary editor failed, falling back: {e}")
-        response = _edit(BUILDER_FALLBACK)
-
-    thinking_text = ""
-    code_text = ""
-    try:
-        for part in response.candidates[0].content.parts:
-            part_text = (part.text or "")
-            if getattr(part, "thought", False):
-                thinking_text += part_text
-            else:
-                code_text += part_text
-    except Exception:
-        pass
-
-    code_text = code_text or (response.text or "")
+    code_text, thinking_text = "", ""
+    if thought_queue is not None and thinking_budget > 0:
+        try:
+            code_text, thinking_text = _run_stream(BUILDER_MODEL)
+        except Exception as e:
+            logger.warning(f"Editor stream failed ({BUILDER_MODEL}): {e} — trying fallback")
+            try:
+                code_text, thinking_text = _run_stream(BUILDER_FALLBACK)
+            except Exception as e2:
+                logger.error(f"Fallback stream also failed: {e2} — non-stream")
+                code_text, thinking_text = _run_non_stream(BUILDER_FALLBACK)
+    else:
+        try:
+            code_text, thinking_text = _run_non_stream(BUILDER_MODEL)
+        except Exception as e:
+            logger.warning(f"Editor non-stream failed: {e} — falling back")
+            code_text, thinking_text = _run_non_stream(BUILDER_FALLBACK)
 
     code = code_text.strip()
     if code.startswith("```") and code.endswith("```"):
