@@ -11,6 +11,8 @@ type Message = {
   role: "user" | "assistant";
   text: string;
   code?: string | null;
+  thinking?: string | null;
+  model?: "swift" | "think";
 };
 
 export default function SessionPage() {

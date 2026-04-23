@@ -18,4 +18,6 @@ class Artifact(Base):
     code = Column(Text, nullable=True) # React code from Builder
     embedding = Column(Vector(768)) # Using 768 for standard text-embedding models like text-embedding-004
     state = Column(Text, nullable=True)  # JSON blob — persisted UI state (todos, notes content, etc.)
+    thinking = Column(Text, nullable=True)  # Accumulated thought tokens from Think mode
+    model = Column(String(16), nullable=True)  # "think" or "swift"
     created_at = Column(DateTime, default=datetime.datetime.utcnow)

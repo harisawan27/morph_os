@@ -47,6 +47,8 @@ def init_db():
         "ALTER TABLE artifacts ADD COLUMN IF NOT EXISTS reply TEXT;",
         "ALTER TABLE artifacts ADD COLUMN IF NOT EXISTS ui_spec TEXT;",
         "ALTER TABLE artifacts ADD COLUMN IF NOT EXISTS session_title VARCHAR;",
+        "ALTER TABLE artifacts ADD COLUMN IF NOT EXISTS thinking TEXT;",
+        "ALTER TABLE artifacts ADD COLUMN IF NOT EXISTS model VARCHAR(16);",
         "CREATE INDEX IF NOT EXISTS ix_artifacts_session_id ON artifacts(session_id);",
     ]
     with engine.connect() as conn:

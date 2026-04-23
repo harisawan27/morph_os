@@ -187,7 +187,9 @@ async def _generate_stream(
             db = SessionLocal()
             try:
                 db.add(Artifact(id=artifact_id, user_id=user_id, session_id=session_id,
-                                prompt=prompt, reply=reply, embedding=embedding))
+                                prompt=prompt, reply=reply,
+                                model="think" if use_thinking else "swift",
+                                embedding=embedding))
                 db.commit()
             except Exception as e:
                 logger.error(f"Persist search failed: {e}"); db.rollback()
@@ -231,6 +233,7 @@ async def _generate_stream(
 
     # ── 6c. Think-mode CHAT — real thought + text streaming ──────────────────
     final_reply = reply
+    accumulated_thinking = ""
     if is_think_chat:
         thought_q = stdlib_queue.Queue()
         text_q    = stdlib_queue.Queue()
@@ -243,6 +246,7 @@ async def _generate_stream(
             try:
                 chunk = thought_q.get_nowait()
                 if chunk:
+                    accumulated_thinking += chunk
                     yield _sse({"type": "thinking_delta", "text": chunk, "id": artifact_id})
                     drained = True
             except stdlib_queue.Empty:
@@ -263,6 +267,8 @@ async def _generate_stream(
                 try:
                     chunk = q.get_nowait()
                     if chunk:
+                        if etype == "thinking_delta":
+                            accumulated_thinking += chunk
                         yield _sse({"type": etype, "text": chunk, "id": artifact_id})
                 except stdlib_queue.Empty:
                     break
@@ -319,6 +325,7 @@ async def _generate_stream(
                 try:
                     chunk = thought_q.get_nowait()
                     if chunk:
+                        accumulated_thinking += chunk
                         yield _sse({"type": "thinking_delta", "text": chunk, "id": artifact_id})
                 except stdlib_queue.Empty:
                     await asyncio.sleep(0.015)
@@ -328,6 +335,7 @@ async def _generate_stream(
                 try:
                     chunk = thought_q.get_nowait()
                     if chunk:
+                        accumulated_thinking += chunk
                         yield _sse({"type": "thinking_delta", "text": chunk, "id": artifact_id})
                 except stdlib_queue.Empty:
                     break
@@ -359,7 +367,10 @@ async def _generate_stream(
         db = SessionLocal()
         try:
             db.add(Artifact(id=artifact_id, user_id=user_id, session_id=session_id,
-                            prompt=prompt, reply=final_reply, ui_spec=ui_spec, code=code, embedding=embedding))
+                            prompt=prompt, reply=final_reply, ui_spec=ui_spec, code=code,
+                            thinking=accumulated_thinking or None,
+                            model="think" if use_thinking else "swift",
+                            embedding=embedding))
             db.commit()
             logger.info(f"Persisted artifact {artifact_id}")
         except Exception as e:
@@ -576,7 +587,14 @@ def get_session_history(
     last_artifact = None
     for a in artifacts:
         messages.append({"id": f"{a.id}_user", "role": "user", "text": a.prompt})
-        messages.append({"id": a.id, "role": "assistant", "text": a.reply or "Done.", "code": a.code})
+        messages.append({
+            "id":      a.id,
+            "role":    "assistant",
+            "text":    a.reply or "Done.",
+            "code":    a.code,
+            "thinking": a.thinking,
+            "model":   a.model or "swift",
+        })
         if a.code:
             last_artifact = {"code": a.code, "id": a.id}
     return {"messages": messages, "active_artifact": last_artifact}
