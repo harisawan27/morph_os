@@ -74,6 +74,15 @@ export default function ChatCanvas({
     return () => window.removeEventListener("resize", check);
   }, []);
 
+  // Scroll to bottom only if already near it — lets user scroll up to read without interruption
+  const scrollIfNearBottom = useCallback(() => {
+    const el = chatScrollRef.current;
+    if (!el) return;
+    if (el.scrollHeight - el.scrollTop - el.clientHeight < 180) {
+      el.scrollTop = el.scrollHeight;
+    }
+  }, []);
+
   // ── Scroll: new message → top of that message; streaming → follow if near bottom ─
   useEffect(() => {
     if (messages.length === 0) return;
@@ -118,15 +127,6 @@ export default function ChatCanvas({
 
   const handleStop = useCallback(() => {
     abortRef.current?.abort();
-  }, []);
-
-  // Scroll to bottom only if already near it — lets user scroll up to read without interruption
-  const scrollIfNearBottom = useCallback(() => {
-    const el = chatScrollRef.current;
-    if (!el) return;
-    if (el.scrollHeight - el.scrollTop - el.clientHeight < 180) {
-      el.scrollTop = el.scrollHeight;
-    }
   }, []);
 
   // ── Core generate (streaming SSE) ───────────────────────────────────────
@@ -826,7 +826,7 @@ function ThinkingBlock({ thinking, isPending }: { thinking?: string | null; isPe
           }}
         >
           {thinking}
-          <span className="inline-block w-[2px] h-[11px] ml-[1px] align-middle animate-pulse rounded-sm"
+          <span className="inline-block w-0.5 h-2.75 ml-px align-middle animate-pulse rounded-sm"
             style={{ background: "rgba(196,181,253,0.7)", animationDuration: "0.8s" }} />
         </div>
       </div>
