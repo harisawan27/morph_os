@@ -6,6 +6,10 @@ Morph OS is a generative operating system that turns natural language into fully
 
 > **Installable on any device.** Morph OS is a PWA — tap the **Install App** button in the sidebar to add it to your home screen or desktop. It launches like a native app with no browser chrome.
 
+<br>
+
+[![Morph OS — Live Demo](https://img.youtube.com/vi/-IvSksU49Ms/maxresdefault.jpg)](https://youtu.be/-IvSksU49Ms)
+
 ---
 
 ## What makes it different
