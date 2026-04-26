@@ -8,7 +8,7 @@ Morph OS is a generative operating system that turns natural language into fully
 
 <br>
 
-[![Morph OS — Live Demo](https://img.youtube.com/vi/-IvSksU49Ms/maxresdefault.jpg)](https://youtu.be/-IvSksU49Ms)
+[![Morph OS — Live Demo](https://img.youtube.com/vi/rCgnH5MLSpk/maxresdefault.jpg)](https://youtu.be/rCgnH5MLSpk)
 
 ---
 
