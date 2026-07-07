@@ -493,8 +493,8 @@ function PomodoroPreview() {
     <div className="flex items-center gap-4">
       <div className="relative w-14 h-14 shrink-0">
         <svg width={56} height={56} className="-rotate-90" viewBox="0 0 56 56">
-          <circle cx={28} cy={28} r={22} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth={5} />
-          <circle cx={28} cy={28} r={22} fill="none" stroke="#a855f7" strokeWidth={5}
+          <circle cx={28} cy={28} r={22} fill="none" stroke="var(--border)" strokeWidth={5} />
+          <circle cx={28} cy={28} r={22} fill="none" stroke="var(--brand-purple)" strokeWidth={5}
             strokeDasharray={138} strokeDashoffset={35} strokeLinecap="round" />
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">
@@ -608,7 +608,7 @@ function BudgetPreview() {
     <div className="w-full">
       <div className="flex items-end gap-1 h-10 mb-1">
         {bars.map((h, i) => (
-          <div key={i} className="flex-1 rounded-t" style={{ height: `${h}%`, background: h > 70 ? "rgba(34,197,94,0.5)" : "rgba(34,197,94,0.25)" }} />
+          <div key={i} className="flex-1 rounded-t" style={{ height: `${h}%`, background: h > 70 ? "var(--brand-green)" : "var(--brand-green-bg)" }} />
         ))}
       </div>
       <div className="flex justify-between text-[8px] text-white/20">
@@ -652,8 +652,8 @@ function DrawPreview() {
   return (
     <div className="w-full h-16 bg-white/[0.02] border border-white/[0.06] rounded-xl relative overflow-hidden">
       <svg width="100%" height="100%" viewBox="0 0 120 64">
-        <path d="M10 50 Q30 20 50 35 Q70 50 90 15 Q100 8 110 20" fill="none" stroke="rgba(236,72,153,0.6)" strokeWidth="2.5" strokeLinecap="round" />
-        <path d="M20 55 Q40 40 60 45 Q80 50 100 30" fill="none" stroke="rgba(168,85,247,0.5)" strokeWidth="2" strokeLinecap="round" />
+        <path d="M10 50 Q30 20 50 35 Q70 50 90 15 Q100 8 110 20" fill="none" stroke="var(--brand-pink)" strokeWidth="2.5" strokeLinecap="round" />
+        <path d="M20 55 Q40 40 60 45 Q80 50 100 30" fill="none" stroke="var(--brand-purple)" strokeWidth="2" strokeLinecap="round" />
       </svg>
     </div>
   );
@@ -670,11 +670,11 @@ function PixelPreview() {
     [0,0,1,0,0,1,0,0],
     [0,0,1,0,0,1,0,0],
   ];
-  const palette = ["transparent","rgba(239,68,68,0.7)"];
+  const palette = ["transparent","var(--brand-red)"];
   return (
     <div className="grid gap-0.5 mx-auto" style={{ gridTemplateColumns: "repeat(8,1fr)", width: 72 }}>
       {art.flat().map((v, i) => (
-        <div key={i} className="aspect-square rounded-[1px]" style={{ background: palette[v] || "rgba(255,255,255,0.04)" }} />
+        <div key={i} className="aspect-square rounded-[1px]" style={{ background: palette[v] || "var(--bg-hover)" }} />
       ))}
     </div>
   );
@@ -729,10 +729,10 @@ function ClockPreview() {
   return (
     <div className="flex gap-3 items-center">
       <svg width={48} height={48} viewBox="0 0 48 48">
-        <circle cx={24} cy={24} r={20} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth={2} />
-        <line x1={24} y1={24} x2={24} y2={8} stroke="rgba(255,255,255,0.6)" strokeWidth={1.5} strokeLinecap="round" />
-        <line x1={24} y1={24} x2={34} y2={28} stroke="rgba(255,255,255,0.4)" strokeWidth={1.5} strokeLinecap="round" />
-        <circle cx={24} cy={24} r={2} fill="rgba(168,85,247,0.8)" />
+        <circle cx={24} cy={24} r={20} fill="none" stroke="var(--border-md)" strokeWidth={2} />
+        <line x1={24} y1={24} x2={24} y2={8} stroke="var(--t2)" strokeWidth={1.5} strokeLinecap="round" />
+        <line x1={24} y1={24} x2={34} y2={28} stroke="var(--t4)" strokeWidth={1.5} strokeLinecap="round" />
+        <circle cx={24} cy={24} r={2} fill="var(--brand-purple)" />
       </svg>
       <div className="space-y-1">
         {["New York","London","Tokyo"].map((c, i) => (
@@ -752,7 +752,7 @@ function ChartPreview() {
     <div className="w-full">
       <div className="flex items-end gap-1 h-12">
         {vals.map((v, i) => (
-          <div key={i} className="flex-1 rounded-t" style={{ height: `${v}%`, background: `rgba(139,92,246,${0.3 + v / 250})` }} />
+          <div key={i} className="flex-1 rounded-t" style={{ height: `${v}%`, background: "var(--brand-purple)" }} />
         ))}
       </div>
       <div className="h-px bg-white/[0.06] mt-1" />
@@ -767,7 +767,7 @@ function MatrixPreview() {
       {Array(4).fill(0).map((_, col) => (
         <div key={col} className="absolute top-0" style={{ left: `${col * 25}%` }}>
           {chars.slice(col * 4, col * 4 + 8).split("").map((c, i) => (
-            <div key={i} style={{ color: i === 0 ? "#ffffff" : `rgba(0,255,65,${1 - i * 0.12})` }}>{c}</div>
+            <div key={i} style={{ color: i === 0 ? "var(--t1)" : "var(--brand-green)" }}>{c}</div>
           ))}
         </div>
       ))}
@@ -934,7 +934,7 @@ function ChessPreview() {
           const dark = (r + c) % 2 === 1;
           return (
             <div key={`${r}-${c}`} className="flex items-center justify-center text-[13px]"
-              style={{ width: 18, height: 18, background: dark ? "#1e1e2a" : "#0e0e14", color: r < 2 ? "rgba(96,165,250,0.85)" : "rgba(248,248,255,0.85)" }}>
+              style={{ width: 18, height: 18, background: dark ? "var(--bg-active)" : "var(--bg-card)", color: r < 2 ? "var(--brand-blue)" : "var(--t2)" }}>
               {piece}
             </div>
           );
@@ -955,9 +955,9 @@ function CheckersPreview() {
           const dark = (r + c) % 2 === 1;
           return (
             <div key={`${r}-${c}`} className="flex items-center justify-center"
-              style={{ width: 18, height: 18, background: dark ? "#1e1e1e" : "#0e0e0e" }}>
-              {cell === 1 && <div className="w-2.5 h-2.5 rounded-full" style={{ background: "radial-gradient(circle at 35% 35%, rgba(252,165,165,0.9), rgba(220,38,38,0.85))" }} />}
-              {cell === 2 && <div className="w-2.5 h-2.5 rounded-full" style={{ background: "radial-gradient(circle at 35% 35%, rgba(147,197,253,0.9), rgba(29,78,216,0.85))" }} />}
+              style={{ width: 18, height: 18, background: dark ? "var(--bg-active)" : "var(--bg-card)" }}>
+              {cell === 1 && <div className="w-2.5 h-2.5 rounded-full" style={{ background: "var(--brand-red)" }} />}
+              {cell === 2 && <div className="w-2.5 h-2.5 rounded-full" style={{ background: "var(--brand-blue)" }} />}
             </div>
           );
         })
@@ -970,12 +970,12 @@ function TossPreview() {
   return (
     <div className="flex flex-col items-center gap-2">
       <div className="w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold"
-        style={{ background: "linear-gradient(135deg,#7c3aed,#6366f1)", border: "2px solid rgba(255,255,255,0.08)", boxShadow: "0 6px 24px rgba(0,0,0,0.5)" }}>
+        style={{ background: "var(--brand-purple)", color: "white", border: "2px solid var(--border-md)", boxShadow: "0 6px 24px var(--bg-hover)" }}>
         H
       </div>
       <div className="flex gap-1.5">
-        <div className="px-2.5 py-1 rounded-full text-[9px] font-medium" style={{ background: "rgba(124,58,237,0.15)", border: "1px solid rgba(124,58,237,0.3)", color: "#c4b5fd" }}>Heads</div>
-        <div className="px-2.5 py-1 rounded-full text-[9px] font-medium" style={{ background: "rgba(29,78,216,0.15)", border: "1px solid rgba(29,78,216,0.3)", color: "#93c5fd" }}>Tails</div>
+        <div className="px-2.5 py-1 rounded-full text-[9px] font-medium" style={{ background: "var(--brand-purple-bg)", border: "1px solid var(--brand-purple-border)", color: "var(--brand-purple)" }}>Heads</div>
+        <div className="px-2.5 py-1 rounded-full text-[9px] font-medium" style={{ background: "var(--brand-blue-bg)", border: "1px solid var(--brand-blue-border)", color: "var(--brand-blue)" }}>Tails</div>
       </div>
     </div>
   );

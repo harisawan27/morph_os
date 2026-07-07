@@ -82,7 +82,7 @@ function TextInput({ value, onChange, placeholder, hint }: {
         placeholder={placeholder}
         className="w-full rounded-xl px-3.5 py-2.5 text-sm outline-none transition-all"
         style={{ background: "var(--bg-input)", border: "1px solid var(--border)", color: "var(--t1)" }}
-        onFocus={e => { (e.target as HTMLElement).style.borderColor = "var(--border-hi)"; (e.target as HTMLElement).style.boxShadow = "0 0 0 3px rgba(139,92,246,0.08)"; }}
+        onFocus={e => { (e.target as HTMLElement).style.borderColor = "var(--border-hi)"; (e.target as HTMLElement).style.boxShadow = "0 0 0 3px var(--brand-purple-bg)"; }}
         onBlur={e => { (e.target as HTMLElement).style.borderColor = "var(--border)"; (e.target as HTMLElement).style.boxShadow = "none"; }}
       />
       {hint && <p className="text-[10px] mt-1.5 ml-0.5" style={{ color: "var(--t5)" }}>{hint}</p>}
@@ -104,7 +104,7 @@ function SavedBadge({ show }: { show: boolean }) {
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0 }}
           className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full"
-          style={{ background: "rgba(52,211,153,0.08)", border: "1px solid rgba(52,211,153,0.2)", color: "#34d399" }}
+          style={{ background: "var(--brand-green-bg)", border: "1px solid var(--brand-green-border)", color: "var(--brand-green)" }}
         >
           <Check size={9} strokeWidth={2.5} /> Saved
         </motion.span>
@@ -127,8 +127,8 @@ function Toggle({ on, onToggle, label, desc }: {
         onClick={onToggle}
         className="relative w-11 h-6 rounded-full transition-all duration-300 flex items-center px-0.5 shrink-0 ml-4"
         style={{
-          background: on ? "rgba(139,92,246,0.3)" : "var(--bg-input)",
-          border: `1px solid ${on ? "rgba(139,92,246,0.4)" : "var(--border)"}`,
+          background: on ? "var(--brand-purple-bg)" : "var(--bg-input)",
+          border: `1px solid ${on ? "var(--brand-purple-border)" : "var(--border)"}`,
         }}
         aria-label={label}
       >
@@ -137,7 +137,7 @@ function Toggle({ on, onToggle, label, desc }: {
           transition={{ type: "spring", stiffness: 600, damping: 35 }}
           className="w-5 h-5 rounded-full shadow-sm"
           style={{
-            background: on ? "#7c3aed" : "var(--t5)",
+            background: on ? "var(--brand-purple)" : "var(--t5)",
             marginLeft: on ? "auto" : 0,
           }}
         />
@@ -240,7 +240,7 @@ function ProfileTab({ googleName }: { googleName?: string | null }) {
             rows={3}
             className="w-full rounded-xl px-3.5 py-2.5 text-sm outline-none resize-none transition-all leading-relaxed"
             style={{ background: "var(--bg-input)", border: "1px solid var(--border)", color: "var(--t1)" }}
-            onFocus={e => { (e.target as HTMLElement).style.borderColor = "var(--border-hi)"; (e.target as HTMLElement).style.boxShadow = "0 0 0 3px rgba(139,92,246,0.08)"; }}
+            onFocus={e => { (e.target as HTMLElement).style.borderColor = "var(--border-hi)"; (e.target as HTMLElement).style.boxShadow = "0 0 0 3px var(--brand-purple-bg)"; }}
             onBlur={e => { (e.target as HTMLElement).style.borderColor = "var(--border)"; (e.target as HTMLElement).style.boxShadow = "none"; }}
           />
           <p className="text-[10px] mt-1.5 ml-0.5" style={{ color: "var(--t5)" }}>The more you share, the smarter Morph gets with you.</p>
@@ -260,16 +260,16 @@ function ProfileTab({ googleName }: { googleName?: string | null }) {
             onClick={() => update({ tone: t.key })}
             className="flex flex-col items-start gap-0.5 p-3.5 rounded-xl border text-left transition-all"
             style={ctx.tone === t.key
-              ? { background: "rgba(139,92,246,0.08)", borderColor: "rgba(139,92,246,0.3)", color: "var(--t1)" }
+              ? { background: "var(--brand-purple-bg)", borderColor: "var(--brand-purple-border)", color: "var(--t1)" }
               : { background: "transparent", borderColor: "var(--border)", color: "var(--t3)" }
             }
             onMouseEnter={e => { if (ctx.tone !== t.key) (e.currentTarget as HTMLElement).style.borderColor = "var(--border-md)"; }}
             onMouseLeave={e => { if (ctx.tone !== t.key) (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; }}
           >
-            <span className="text-xs font-medium" style={{ color: ctx.tone === t.key ? "#c4b5fd" : "var(--t2)" }}>{t.label}</span>
+            <span className="text-xs font-medium" style={{ color: ctx.tone === t.key ? "var(--brand-purple)" : "var(--t2)" }}>{t.label}</span>
             <span className="text-[10px] leading-snug" style={{ color: "var(--t4)" }}>{t.desc}</span>
             {ctx.tone === t.key && (
-              <span className="mt-1.5 w-1.5 h-1.5 rounded-full" style={{ background: "#7c3aed" }} />
+              <span className="mt-1.5 w-1.5 h-1.5 rounded-full" style={{ background: "var(--brand-purple)" }} />
             )}
           </button>
         ))}
@@ -307,8 +307,8 @@ function AppearanceTab() {
             onClick={() => { if (s.id !== theme) toggleTheme(); }}
             className="flex flex-col items-start gap-2 p-3 rounded-xl border transition-all"
             style={{
-              borderColor: s.id === theme ? "rgba(139,92,246,0.5)" : "var(--border)",
-              background: s.id === theme ? "rgba(139,92,246,0.05)" : "transparent",
+              borderColor: s.id === theme ? "var(--brand-purple-border)" : "var(--border)",
+              background: s.id === theme ? "var(--brand-purple-bg)" : "transparent",
               minWidth: 96,
             }}
           >
@@ -319,7 +319,7 @@ function AppearanceTab() {
             </div>
             <div className="flex items-center justify-between w-full">
               <span className="text-xs font-medium" style={{ color: "var(--t2)" }}>{s.label}</span>
-              {s.id === theme && <Check size={11} style={{ color: "#7c3aed" }} strokeWidth={2.5} />}
+              {s.id === theme && <Check size={11} style={{ color: "var(--brand-purple)" }} strokeWidth={2.5} />}
             </div>
           </button>
         ))}
@@ -427,11 +427,11 @@ function DangerTab() {
             disabled={clearing || cleared}
             className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition-all active:scale-[0.97]"
             style={cleared
-              ? { background: "rgba(52,211,153,0.08)", border: "1px solid rgba(52,211,153,0.2)", color: "#34d399" }
-              : { background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.18)", color: "rgba(239,68,68,0.7)" }
+              ? { background: "var(--brand-green-bg)", border: "1px solid var(--brand-green-border)", color: "var(--brand-green)" }
+              : { background: "var(--brand-red-bg)", border: "1px solid var(--brand-red-border)", color: "var(--brand-red)" }
             }
-            onMouseEnter={e => { if (!cleared) (e.currentTarget as HTMLElement).style.background = "rgba(239,68,68,0.12)"; }}
-            onMouseLeave={e => { if (!cleared) (e.currentTarget as HTMLElement).style.background = "rgba(239,68,68,0.06)"; }}
+            onMouseEnter={e => { if (!cleared) (e.currentTarget as HTMLElement).style.background = "var(--brand-red-border)"; }}
+            onMouseLeave={e => { if (!cleared) (e.currentTarget as HTMLElement).style.background = "var(--brand-red-bg)"; }}
           >
             {clearing ? <><span className="w-3 h-3 rounded-full border border-red-400/30 border-t-red-400 animate-spin" /> Clearing…</> :
              cleared   ? <><Check size={11} /> Cleared!</> :
@@ -546,7 +546,7 @@ export default function SettingsPage() {
                 onMouseEnter={e => { if (activeTab !== tab.id) (e.currentTarget as HTMLElement).style.color = "var(--t2)"; }}
                 onMouseLeave={e => { if (activeTab !== tab.id) (e.currentTarget as HTMLElement).style.color = "var(--t3)"; }}
               >
-                <span style={{ color: activeTab === tab.id ? "#a78bfa" : "var(--t4)" }}>{tab.icon}</span>
+                <span style={{ color: activeTab === tab.id ? "var(--brand-purple)" : "var(--t4)" }}>{tab.icon}</span>
                 {tab.label}
               </button>
             ))}

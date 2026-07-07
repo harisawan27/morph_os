@@ -98,11 +98,11 @@ export default function OmniBar({
         <div className="mb-2 px-1">
           <div
             className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-[12px]"
-            style={{ background: "rgba(147,51,234,0.08)", border: "1px solid rgba(147,51,234,0.15)" }}
+            style={{ background: "var(--brand-purple-bg)", border: "1px solid var(--brand-purple-border)" }}
           >
             {previewUrl
               ? <img src={previewUrl} alt="" className="w-5 h-5 rounded-lg object-cover shrink-0" />
-              : <FileText size={12} style={{ color: "rgba(192,132,252,0.7)" }} className="shrink-0" />}
+              : <FileText size={12} style={{ color: "var(--brand-purple)" }} className="shrink-0" />}
             <span className="truncate" style={{ color: "var(--t2)", maxWidth: "200px" }}>{file.name}</span>
             <button
               type="button"
@@ -124,7 +124,7 @@ export default function OmniBar({
         style={{
           background: "var(--bg-input)",
           border: `1px solid ${borderColor}`,
-          boxShadow: focused ? "0 0 0 3px rgba(139,92,246,0.08)" : "none",
+          boxShadow: focused ? "0 0 0 3px var(--brand-purple-bg)" : "none",
           transition: "border-color 150ms, box-shadow 150ms",
         }}
         onFocusCapture={() => setFocused(true)}
@@ -182,9 +182,9 @@ export default function OmniBar({
                 disabled={isLoading}
                 className="flex items-center gap-1.5 h-7 px-2.5 rounded-xl text-[11px] font-medium transition-all duration-150 disabled:opacity-40"
                 style={{
-                  background: model === "think" ? "rgba(139,92,246,0.10)" : "var(--bg-card)",
-                  border:     model === "think" ? "1px solid rgba(139,92,246,0.28)" : "1px solid var(--border)",
-                  color:      model === "think" ? "#c4b5fd" : "var(--t3)",
+                  background: model === "think" ? "var(--brand-purple-bg)" : "var(--bg-card)",
+                  border:     model === "think" ? "1px solid var(--brand-purple-border)" : "1px solid var(--border)",
+                  color:      model === "think" ? "var(--brand-purple)" : "var(--t3)",
                 }}
                 onMouseEnter={e => {
                   if (model !== "think") {
@@ -237,14 +237,14 @@ export default function OmniBar({
                         if (model !== m.id) (e.currentTarget as HTMLElement).style.background = "transparent";
                       }}
                     >
-                      <span className="shrink-0" style={{ color: m.id === "think" ? "#c4b5fd" : "var(--t3)" }}>
+                      <span className="shrink-0" style={{ color: m.id === "think" ? "var(--brand-purple)" : "var(--t3)" }}>
                         {m.icon}
                       </span>
                       <div className="flex-1 min-w-0">
                         <p className="text-[12px] font-medium leading-none mb-0.5">{m.label}</p>
                         <p className="text-[10px]" style={{ color: "var(--t4)" }}>{m.desc}</p>
                       </div>
-                      {model === m.id && <Check size={11} style={{ color: "#a78bfa" }} />}
+                      {model === m.id && <Check size={11} style={{ color: "var(--brand-purple)" }} />}
                     </button>
                   ))}
                 </div>
@@ -256,7 +256,10 @@ export default function OmniBar({
               <button
                 type="button" onClick={onStop}
                 className="w-7 h-7 rounded-xl flex items-center justify-center transition-all duration-150 active:scale-90"
-                style={{ background: "var(--t1)", color: "var(--bg-page)" }}
+                style={{ background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--t2)" }}
+                title="Stop generating"
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--brand-red-bg)"; (e.currentTarget as HTMLElement).style.borderColor = "var(--brand-red-border)"; (e.currentTarget as HTMLElement).style.color = "var(--brand-red)"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-card)"; (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; (e.currentTarget as HTMLElement).style.color = "var(--t2)"; }}
               >
                 <Square size={10} fill="currentColor" strokeWidth={0} />
               </button>

@@ -610,7 +610,7 @@ function MessageRow({
               <button
                 onClick={submitEdit}
                 className="px-2.5 py-1 text-[11px] rounded-lg flex items-center gap-1 transition-all"
-                style={{ color: "var(--t1)", background: "rgba(147,51,234,0.15)", border: "1px solid rgba(147,51,234,0.25)" }}
+                style={{ color: "var(--t1)", background: "var(--brand-purple-bg)", border: "1px solid var(--brand-purple-border)" }}
               >
                 <CornerDownLeft size={10} />
                 Send
@@ -625,7 +625,7 @@ function MessageRow({
             >
               {m.attachment && (
                 <div className="mb-2 inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px]"
-                  style={{ background: "rgba(147,51,234,0.08)", border: "1px solid rgba(147,51,234,0.15)", color: "var(--t3)" }}>
+                  style={{ background: "var(--brand-purple-bg)", border: "1px solid var(--brand-purple-border)", color: "var(--brand-purple)" }}>
                   {m.attachment.isImage ? <Image size={10} /> : <FileText size={10} />}
                   <span className="truncate" style={{ maxWidth: "180px" }}>{m.attachment.name}</span>
                 </div>
@@ -691,30 +691,30 @@ function MessageRow({
           <div
             className="mt-2.5 flex items-center gap-2 px-3 py-2 rounded-xl text-[11px]"
             style={{
-              background: "rgba(147,51,234,0.05)",
-              border: "1px solid rgba(147,51,234,0.10)",
-              color: "rgba(192,132,252,0.45)",
+              background: "var(--brand-purple-bg)",
+              border: "1px solid var(--brand-purple-border)",
+              color: "var(--brand-purple)",
             }}
           >
-            <span className="flex gap-1 items-center shrink-0">
+            <span className="flex gap-1 items-center shrink-0 opacity-60">
               {[0,1,2].map(i => (
                 <span key={i} className="w-1 h-1 rounded-full animate-bounce"
-                  style={{ background: "rgba(192,132,252,0.45)", animationDelay: `${i * 0.15}s` }} />
+                  style={{ background: "var(--brand-purple)", animationDelay: `${i * 0.15}s` }} />
               ))}
             </span>
-            <span>Building canvas…</span>
+            <span className="opacity-80">Building canvas…</span>
           </div>
         ) : m.code ? (
           <button
             onClick={onShowArtifact}
             className="mt-2.5 flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-medium transition-all active:scale-[0.97]"
             style={{
-              background: "rgba(147,51,234,0.07)",
-              border: "1px solid rgba(147,51,234,0.16)",
-              color: "rgba(192,132,252,0.7)",
+              background: "var(--brand-purple-bg)",
+              border: "1px solid var(--brand-purple-border)",
+              color: "var(--brand-purple)",
             }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(147,51,234,0.13)"; (e.currentTarget as HTMLElement).style.color = "rgba(192,132,252,1)"; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(147,51,234,0.07)"; (e.currentTarget as HTMLElement).style.color = "rgba(192,132,252,0.7)"; }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--brand-purple-border)"; (e.currentTarget as HTMLElement).style.opacity = "1"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "var(--brand-purple-bg)"; (e.currentTarget as HTMLElement).style.opacity = "0.8"; }}
           >
             <Layers size={11} />
             <span>Open in Canvas</span>
@@ -785,11 +785,11 @@ function ThinkingBlock({ thinking, isPending }: { thinking?: string | null; isPe
   if (isPending && !thinking) {
     return (
       <div className="mt-2.5 flex items-center gap-2 px-3 py-2 rounded-xl text-[11px]"
-        style={{ background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.14)" }}>
-        <Brain size={12} className="shrink-0 animate-pulse" style={{ color: "rgba(196,181,253,0.6)" }} />
-        <span style={{ color: "rgba(196,181,253,0.5)", fontStyle: "italic" }}>{displayed}</span>
-        <span className="inline-block w-0.5 h-2.5 ml-px rounded-sm animate-pulse"
-          style={{ background: "rgba(196,181,253,0.55)", animationDuration: "0.75s" }} />
+        style={{ background: "var(--brand-purple-bg)", border: "1px solid var(--brand-purple-border)" }}>
+        <Brain size={12} className="shrink-0 animate-pulse opacity-80" style={{ color: "var(--brand-purple)" }} />
+        <span className="opacity-70" style={{ color: "var(--brand-purple)", fontStyle: "italic" }}>{displayed}</span>
+        <span className="inline-block w-0.5 h-2.5 ml-px rounded-sm animate-pulse opacity-80"
+          style={{ background: "var(--brand-purple)", animationDuration: "0.75s" }} />
       </div>
     );
   }
@@ -798,15 +798,15 @@ function ThinkingBlock({ thinking, isPending }: { thinking?: string | null; isPe
   if (isStreaming) {
     return (
       <div className="mt-2.5 rounded-xl overflow-hidden"
-        style={{ background: "rgba(139,92,246,0.05)", border: "1px solid rgba(139,92,246,0.16)" }}>
+        style={{ background: "var(--brand-purple-bg)", border: "1px solid var(--brand-purple-border)" }}>
         {/* Header */}
-        <div className="flex items-center gap-2 px-3 py-2 border-b" style={{ borderColor: "rgba(139,92,246,0.12)" }}>
-          <Brain size={11} className="shrink-0 animate-pulse" style={{ color: "rgba(196,181,253,0.8)" }} />
-          <span className="text-[10px] tracking-wider uppercase" style={{ color: "rgba(196,181,253,0.6)" }}>Thinking</span>
+        <div className="flex items-center gap-2 px-3 py-2 border-b" style={{ borderColor: "var(--brand-purple-border)" }}>
+          <Brain size={11} className="shrink-0 animate-pulse opacity-80" style={{ color: "var(--brand-purple)" }} />
+          <span className="text-[10px] tracking-wider uppercase opacity-60" style={{ color: "var(--brand-purple)" }}>Thinking</span>
           <span className="flex gap-0.5 items-center ml-auto">
             {[0,1,2].map(i => (
-              <span key={i} className="w-0.5 h-1.5 rounded-full animate-pulse"
-                style={{ background: "rgba(196,181,253,0.5)", animationDelay: `${i * 0.15}s`, animationDuration: "0.9s" }} />
+              <span key={i} className="w-0.5 h-1.5 rounded-full animate-pulse opacity-50"
+                style={{ background: "var(--brand-purple)", animationDelay: `${i * 0.15}s`, animationDuration: "0.9s" }} />
             ))}
           </span>
         </div>
@@ -816,14 +816,14 @@ function ThinkingBlock({ thinking, isPending }: { thinking?: string | null; isPe
           className="px-3 py-2.5 text-[11px] leading-relaxed morph-scrollbar overflow-y-auto"
           style={{
             maxHeight: "180px",
-            color: "rgba(196,181,253,0.55)",
+            color: "var(--t3)",
             whiteSpace: "pre-wrap",
             wordBreak: "break-word",
           }}
         >
           {thinking}
-          <span className="inline-block w-0.5 h-2.75 ml-px align-middle animate-pulse rounded-sm"
-            style={{ background: "rgba(196,181,253,0.7)", animationDuration: "0.8s" }} />
+          <span className="inline-block w-0.5 h-2.75 ml-px align-middle animate-pulse rounded-sm opacity-70"
+            style={{ background: "var(--brand-purple)", animationDuration: "0.8s" }} />
         </div>
       </div>
     );
@@ -838,14 +838,14 @@ function ThinkingBlock({ thinking, isPending }: { thinking?: string | null; isPe
         onClick={() => setOpen(v => !v)}
         className="flex items-center gap-2 px-3 py-2 rounded-xl text-[11px] w-full transition-all duration-150"
         style={{
-          background: open ? "rgba(139,92,246,0.08)" : "rgba(139,92,246,0.04)",
-          border: "1px solid rgba(139,92,246,0.14)",
-          color: "rgba(196,181,253,0.7)",
+          background: open ? "var(--brand-purple-bg)" : "var(--bg-card)",
+          border: "1px solid var(--brand-purple-border)",
+          color: "var(--t3)",
         }}
-        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(139,92,246,0.1)"; }}
-        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = open ? "rgba(139,92,246,0.08)" : "rgba(139,92,246,0.04)"; }}
+        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--brand-purple-bg)"; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = open ? "var(--brand-purple-bg)" : "var(--bg-card)"; }}
       >
-        <Brain size={11} className="shrink-0" style={{ color: "rgba(196,181,253,0.7)" }} />
+        <Brain size={11} className="shrink-0 opacity-70" style={{ color: "var(--brand-purple)" }} />
         <span className="flex-1 text-left">Thought about this</span>
         <ChevronDown
           size={10}
@@ -856,8 +856,8 @@ function ThinkingBlock({ thinking, isPending }: { thinking?: string | null; isPe
         <div
           className="mt-1 px-3 py-3 rounded-xl text-[11px] leading-relaxed morph-scrollbar overflow-y-auto"
           style={{
-            background: "rgba(139,92,246,0.04)",
-            border: "1px solid rgba(139,92,246,0.10)",
+            background: "var(--bg-card)",
+            border: "1px solid var(--border)",
             color: "var(--t4)",
             maxHeight: "220px",
             whiteSpace: "pre-wrap",
@@ -932,12 +932,12 @@ function OnboardingNudge() {
         <div
           className="relative flex items-start gap-3 px-4 py-3.5 rounded-2xl"
           style={{
-            background: "linear-gradient(to right, rgba(147,51,234,0.07), rgba(37,99,235,0.07))",
-            border: "1px solid rgba(147,51,234,0.15)",
+            background: "linear-gradient(to right, var(--brand-purple-bg), var(--brand-blue-bg))",
+            border: "1px solid var(--brand-purple-border)",
           }}
         >
-          <div className="p-1.5 rounded-xl shrink-0 mt-0.5" style={{ background: "rgba(147,51,234,0.15)" }}>
-            <Sparkles size={13} className="text-purple-400" />
+          <div className="p-1.5 rounded-xl shrink-0 mt-0.5" style={{ background: "var(--brand-purple-bg)" }}>
+            <Sparkles size={13} style={{ color: "var(--brand-purple)" }} />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-xs font-medium leading-none mb-1" style={{ color: "var(--t1)" }}>Personalize Morph OS</p>

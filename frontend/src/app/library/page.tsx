@@ -227,7 +227,7 @@ function ArtifactCard({
                 <button
                   onClick={handleDelete}
                   className="flex-1 py-1.5 text-[11px] rounded-xl font-medium transition-all"
-                  style={{ background: "rgba(239,68,68,0.12)", color: "#f87171", border: "1px solid rgba(239,68,68,0.22)" }}
+                  style={{ background: "var(--brand-red-bg)", color: "var(--brand-red)", border: "1px solid var(--brand-red-border)" }}
                 >
                   {deleting
                     ? <span className="w-2.5 h-2.5 rounded-full border border-red-400/30 border-t-red-400 animate-spin block mx-auto" />
@@ -251,7 +251,7 @@ function ArtifactCard({
                 onClick={() => setConfirmDelete(true)}
                 className="w-9 flex items-center justify-center rounded-xl transition-all active:scale-[0.98]"
                 style={{ background: "var(--bg-input)", border: "1px solid var(--border)", color: "var(--t5)" }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(239,68,68,0.10)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(239,68,68,0.22)"; (e.currentTarget as HTMLElement).style.color = "#f87171"; }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--brand-red-bg)"; (e.currentTarget as HTMLElement).style.borderColor = "var(--brand-red-border)"; (e.currentTarget as HTMLElement).style.color = "var(--brand-red)"; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-input)"; (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; (e.currentTarget as HTMLElement).style.color = "var(--t5)"; }}
               >
                 <Trash2 size={12} />

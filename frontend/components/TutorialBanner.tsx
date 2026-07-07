@@ -41,8 +41,8 @@ export default function TutorialBanner() {
           }}
         >
           <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
-            style={{ background: "rgba(139,92,246,0.15)", border: "1px solid rgba(139,92,246,0.26)" }}>
-            <BookOpen size={14} style={{ color: "#a78bfa" }} />
+            style={{ background: "var(--brand-purple-bg)", border: "1px solid var(--brand-purple-border)" }}>
+            <BookOpen size={14} style={{ color: "var(--brand-purple)" }} />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-xs font-medium leading-tight mb-0.5" style={{ color: "var(--t1)" }}>
