@@ -1,4 +1,15 @@
+---
+title: Morph OS
+emoji: 🚀
+colorFrom: blue
+colorTo: gray
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # Morph OS
+
 
 > **The AI workspace that thinks before it builds.**
 
