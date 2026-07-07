@@ -208,11 +208,8 @@ export default function ChatCanvas({
           let event: Record<string, unknown>;
           try { event = JSON.parse(part.slice(6).trim()); } catch { continue; }
 
-          // thinking_start — fires before brain runs (~300ms after send)
-          // Creates the bot message immediately so ThinkingBlock + funny lines appear at once
           if (event.type === "thinking_start") {
             botMsgId = event.id as string;
-            setIsGenerating(false);
             setMessages(prev => [...prev, {
               id:      event.id as string,
               role:    "assistant",
@@ -225,7 +222,6 @@ export default function ChatCanvas({
 
           if (event.type === "reply") {
             const serverId = event.id as string;
-            setIsGenerating(false);
             if (botMsgId === serverId) {
               // Already created via thinking_start — update fields in place, same ID = no remount
               setMessages(prev => prev.map(m =>
@@ -301,14 +297,14 @@ export default function ChatCanvas({
         if (botMsgId) {
           setMessages(prev => prev.map(m =>
             m.id === botMsgId
-              ? { ...m, text: "You canceled this request.", pending: false, thinking: null }
+              ? { ...m, text: "Response generation terminated.", pending: false, thinking: null }
               : m
           ));
         } else {
           setMessages(prev => [...prev, {
             id:   Date.now().toString(),
             role: "assistant",
-            text: "You canceled this request.",
+            text: "Response generation terminated.",
           }]);
         }
       } else {
