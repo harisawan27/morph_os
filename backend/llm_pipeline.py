@@ -14,15 +14,15 @@ logger = logging.getLogger(__name__)
 BRAIN_MODEL    = 'gemini-3.5-flash'
 
 # Chat + Search: quality text generation + Google grounding
-CHAT_MODEL     = 'gemini-3.1-flash'
-SEARCH_MODEL   = 'gemini-3.1-flash'
+CHAT_MODEL     = 'gemini-3.1-flash-lite'
+SEARCH_MODEL   = 'gemini-3.1-flash-lite'
 
 # Builder: Gemma for all code generation (Swift + Think)
 BUILDER_MODEL    = 'gemma-4-31b-it'
 BUILDER_FALLBACK = 'gemma-4-26b-a4b-it'
 
 # Vision: shares pool with Brain
-VISION_MODEL   = 'gemini-3.5-flash'
+VISION_MODEL   = 'gemini-3.1-flash-lite'
 
 # Legacy aliases kept for any direct callers
 PRIMARY_MODEL  = BRAIN_MODEL
