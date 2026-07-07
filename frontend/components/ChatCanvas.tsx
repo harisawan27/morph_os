@@ -442,7 +442,7 @@ export default function ChatCanvas({
             </div>
           </div>
 
-          <div className="shrink-0 px-3 sm:px-4 py-3 pb-safe" style={{ borderTop: "1px solid var(--border)" }}>
+          <div className="shrink-0 px-3 sm:px-4 py-3 pb-safe" style={{ background: "var(--bg-panel)", borderTop: "1px solid var(--border)" }}>
             <OmniBar onGenerate={handleGenerate} onStop={handleStop} isLoading={isGenerating} model={model} onModelChange={setModel} />
           </div>
         </>
@@ -457,14 +457,22 @@ export default function ChatCanvas({
     return (
       <div className="h-screen-dvh w-full overflow-hidden flex flex-col" style={{ background: "var(--bg-panel)", color: "var(--t1)" }}>
         {/* Top bar */}
-        {activeArtifact && (
-          <div className="shrink-0 h-14 flex items-center justify-center px-4" style={{ borderBottom: "1px solid var(--border)" }}>
+        <div
+          className="shrink-0 flex items-center justify-center px-4 relative border-b"
+          style={{
+            background: "var(--bg-sidebar)",
+            borderColor: "var(--border)",
+            height: "calc(56px + env(safe-area-inset-top, 0px))",
+            paddingTop: "env(safe-area-inset-top, 0px)",
+          }}
+        >
+          {activeArtifact ? (
             <div className="flex rounded-full p-0.5 gap-0.5" style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
               {(["chat", "artifact"] as const).map(v => (
                 <button
                   key={v}
                   onClick={() => setMobileView(v)}
-                  className="px-3 py-1 rounded-full text-[11px] font-medium transition-all flex items-center gap-1"
+                  className="px-3 py-1 rounded-full text-[11px] font-medium transition-all flex items-center gap-1 cursor-pointer"
                   style={{
                     background: mobileView === v ? "var(--bg-active)" : "transparent",
                     color: mobileView === v ? "var(--t1)" : "var(--t3)",
@@ -475,8 +483,21 @@ export default function ChatCanvas({
                 </button>
               ))}
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="flex items-center gap-2 select-none">
+              <div
+                className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
+                style={{
+                  background: "linear-gradient(135deg, rgba(139,92,246,0.35), rgba(79,70,229,0.25))",
+                  border: "1px solid rgba(139,92,246,0.35)",
+                }}
+              >
+                <Ghost size={12} style={{ color: "var(--icon-brand)" }} />
+              </div>
+              <span className="text-sm font-semibold tracking-tight" style={{ color: "var(--t1)" }}>Morph OS</span>
+            </div>
+          )}
+        </div>
 
         <div className="flex-1 overflow-hidden relative">
           <AnimatePresence mode="wait" initial={false}>

@@ -1000,7 +1000,7 @@ function TemplateCard({ t, index }: { t: Template; index: number }) {
       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; }}
     >
       {/* Preview area */}
-      <div className={`relative h-32 bg-gradient-to-br ${t.accent} flex items-center justify-center p-4 overflow-hidden`}
+      <div className={`morph-static-dark relative h-32 bg-[#0c0f17] bg-gradient-to-br ${t.accent} flex items-center justify-center p-4 overflow-hidden`}
         style={{ borderBottom: "1px solid var(--border)" }}>
         {t.preview}
       </div>

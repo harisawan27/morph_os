@@ -171,7 +171,7 @@ function ArtifactCard({
     >
       {/* Icon area */}
       <div
-        className={`relative h-28 bg-gradient-to-br ${item.accent} flex items-center justify-center overflow-hidden`}
+        className={`morph-static-dark relative h-28 bg-[#0c0f17] bg-gradient-to-br ${item.accent} flex items-center justify-center overflow-hidden`}
         style={{ borderBottom: "1px solid var(--border)" }}
       >
         <div className="p-4 bg-white/[0.06] rounded-2xl border border-white/[0.08]">
