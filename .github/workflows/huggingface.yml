@@ -1,0 +1,34 @@
+name: Deploy to Hugging Face Spaces
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Hugging Face Hub CLI
+        run: |
+          pip install --upgrade "huggingface_hub>=0.22.0"
+
+      - name: Upload to Hugging Face Space
+        env:
+          HF_OIDC_RESOURCE: spaces/harisawan27/morph_os
+        run: |
+          # huggingface_hub automatically uses the GitHub Actions OIDC token
+          # to authorize this upload keylessly via Trusted Publishers.
+          huggingface-cli upload harisawan27/morph_os . --repo-type=space --exclude ".git/*"

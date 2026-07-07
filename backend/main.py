@@ -1,12 +1,14 @@
 import os
 import json
 import uuid
+import time
 import queue as stdlib_queue
 import asyncio
 import logging
 import httpx
+from collections import defaultdict
 from fastapi import FastAPI, Depends, HTTPException, Query, File, UploadFile, Form
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -19,6 +21,25 @@ from llm_pipeline import brain_plan_ui, execute_plan, embed_text, search_web, lo
 from auth import get_current_user, get_optional_user
 
 logger = logging.getLogger(__name__)
+
+
+# ── Per-user rate limiting ──────────────────────────────────────────────────
+_user_request_times: dict[str, list[float]] = defaultdict(list)
+_RATE_LIMIT_RPM = 10  # max requests per minute per user
+_RATE_LIMIT_WINDOW = 60  # seconds
+
+def _check_rate_limit(user_id: str | None) -> bool:
+    """Returns True if the user is within rate limits, False if exceeded."""
+    if not user_id:
+        return True  # don't rate-limit anonymous users (they can't persist anyway)
+    now = time.time()
+    times = _user_request_times[user_id]
+    # Prune old entries
+    _user_request_times[user_id] = [t for t in times if now - t < _RATE_LIMIT_WINDOW]
+    if len(_user_request_times[user_id]) >= _RATE_LIMIT_RPM:
+        return False
+    _user_request_times[user_id].append(now)
+    return True
 
 app = FastAPI(title="Morph OS Backend")
 
@@ -93,6 +114,11 @@ async def _generate_stream(
 ):
     """Core SSE generator — shared by JSON and multipart endpoints."""
 
+    # ── 0. Per-user rate limiting ────────────────────────────────────────────
+    if not _check_rate_limit(user_id):
+        yield _sse({"type": "error", "text": "You're sending too many requests. Please wait a moment and try again."})
+        return
+
     # artifact_id created up-front so thinking_start can reference it before brain runs
     artifact_id = str(uuid.uuid4())
 
@@ -116,10 +142,10 @@ async def _generate_stream(
             )
             if closest:
                 hit, distance = closest
-                if distance is not None and distance < 0.06:
+                if distance is not None and distance < 0.08:
                     from difflib import SequenceMatcher
                     text_ratio = SequenceMatcher(None, prompt.lower(), (hit.prompt or "").lower()).ratio()
-                    if text_ratio > 0.75:
+                    if text_ratio > 0.65:
                         yield _sse({"type": "reply", "text": hit.reply or "Found in memory.", "id": hit.id})
                         if hit.code:
                             yield _sse({"type": "artifact", "code": hit.code, "id": hit.id})
@@ -202,8 +228,10 @@ async def _generate_stream(
     needs_artifact = planned.get("type") in ("template", "build", "edit") or planned.get("requires_ui")
     is_think_chat  = use_thinking and not needs_artifact and planned.get("type") == "chat"
     is_swift_chat  = not use_thinking and not needs_artifact and planned.get("type") == "chat"
-    # thinking_budget only for think-mode builds — swift builds get 0 (faster + no thought stream)
-    thinking_budget = 8000 if (use_thinking and needs_artifact) else 0
+    # thinking_budget: Gemma builder doesn't use ThinkingConfig but we still pass
+    # a non-zero budget so main.py knows to set up thought_queue for streaming
+    # Gemma's natural reasoning. Chat uses gemini-3.1-flash with real ThinkingConfig.
+    thinking_budget = 4000 if (use_thinking and needs_artifact) else 0
 
     yield _sse({
         "type":    "reply",
@@ -238,7 +266,7 @@ async def _generate_stream(
         thought_q = stdlib_queue.Queue()
         text_q    = stdlib_queue.Queue()
         chat_task = asyncio.create_task(
-            asyncio.to_thread(chat_respond, prompt, history, 8000, thought_q, text_q)
+            asyncio.to_thread(chat_respond, prompt, history, 4000, thought_q, text_q)
         )
 
         while not chat_task.done():
@@ -674,8 +702,13 @@ async def youtube_search(q: str = Query(..., min_length=1)):
     return {"videoId": video_id, "title": title}
 
 
-# ─── Health ───────────────────────────────────────────────────────────────────
+# ─── Health ─────────────────────────────────────────────────────────────────────
 
 @app.get("/")
 def health_check():
     return {"status": "system liquid."}
+
+@app.get("/api/health")
+def health():
+    """Keep-alive endpoint for HuggingFace Spaces (prevents sleeping after 15 min)."""
+    return {"status": "ok", "ts": int(time.time())}

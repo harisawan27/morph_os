@@ -5,6 +5,7 @@ import AuthProvider from "../../components/AuthProvider";
 import ShellWrapper from "../../components/ShellWrapper";
 import PWARegister from "../../components/PWARegister";
 import ThemeProvider from "../../components/ThemeProvider";
+import KeepAlive from "../../components/KeepAlive";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -47,6 +48,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <ShellWrapper>{children}</ShellWrapper>
           </ThemeProvider>
         </AuthProvider>
+        <KeepAlive />
         <PWARegister />
       </body>
     </html>

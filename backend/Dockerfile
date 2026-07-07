@@ -13,4 +13,6 @@ COPY backend/ .
 RUN mkdir -p /frontend/src/vault/templates
 COPY frontend/src/vault/templates/ /frontend/src/vault/templates/
 
-CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8080}"]
+# HuggingFace Spaces expects port 7860
+EXPOSE 7860
+CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-7860}"]

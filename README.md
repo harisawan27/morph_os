@@ -44,7 +44,7 @@ User input
     │
     ▼
 ┌──────────────────────────────────────────────────┐
-│  BRAIN  (Gemini 2.5 Flash)                       │
+│  BRAIN  (Gemini 3.5 Flash)                       │
 │  Classifies intent in one pass                   │
 │  chat / search / template / build / edit         │
 │  Reads full conversation + active artifact code  │
@@ -56,17 +56,17 @@ User input
     │  VAULT  │ │SEARCH│ │BUILDER │ │  CHAT   │
     │ 34 pre- │ │Google│ │ React  │ │ Direct  │
     │ built   │ │Ground│ │ gen    │ │ reply   │
-    │templates│ │  ing │ │        │ │         │
+    │templates│ │  ing │ │(Gemma) │ │(Gemini) │
     └─────────┘ └──────┘ └────────┘ └─────────┘
 ```
 
-**The Brain** is the intelligence layer. It reads the full conversation history plus the source code of any active artifact, understands intent, and routes accordingly — never spawning a UI when a sentence suffices, never answering with text when a live tool is needed. Complaint signals ("it's broken", "fix the arrows", "not working") on an active artifact are routed directly to Edit, never to chat.
+**The Brain** is the intelligence layer using **Gemini 3.5 Flash**. It reads the full conversation history plus the source code of any active artifact, understands intent, and routes accordingly — never spawning a UI when a sentence suffices, never answering with text when a live tool is needed. Complaint signals ("it's broken", "fix the arrows", "not working") on an active artifact are routed directly to Edit, never to chat.
 
 **The Vault** holds 34 battle-tested templates. When the Brain matches one, it's hydrated and served in milliseconds — zero generation cost. Parametric requests ("calculator in green") are recognised as customised builds and routed to the Builder with a precise spec.
 
-**The Builder** handles genuinely custom requests. It receives a structured spec from the Brain and generates a standalone React component. In **Think mode**, the Builder runs `gemini-3.1-pro-preview` with `ThinkingConfig(thinking_budget=8000)` — real reasoning tokens stream back to the UI before the artifact renders.
+**The Builder** handles genuinely custom requests using **Gemma-4-31B-it**. It receives a structured spec from the Brain and generates a standalone React component. Its natural chain-of-thought output streams to the UI before the artifact renders.
 
-**The Chat handler** uses Gemini 2.5 Flash for conversational replies, with full thought + text streaming in Think mode.
+**The Chat handler** uses **Gemini 3.1 Flash** for conversational replies, with full thought + text streaming in Think mode.
 
 ---
 
@@ -124,14 +124,14 @@ Only **code artifacts** are eligible for cache hits. Plain chat replies are stor
 
 ## Model configuration
 
-| Role | Model | Notes |
-|---|---|---|
-| **Brain** | `gemini-2.5-flash` | Intent classification, routing |
-| **Builder (primary)** | `gemini-3.1-pro-preview` | React generation with real thought streaming |
-| **Builder (fallback)** | `gemini-2.5-pro` | Automatic fallback on quota/availability |
-| **Chat** | `gemini-2.5-flash` | Conversational replies, streamed |
-| **Search** | `gemini-2.5-flash` + Google grounding | Live web answers |
-| **Embeddings** | `gemini-embedding-001` | 768-dim semantic cache |
+| Role | Model | Notes | RPD Pool |
+|---|---|---|---|
+| **Brain** | `gemini-3.5-flash` | Intent routing and image analysis | Pool 1 (~1,500) |
+| **Chat** | `gemini-3.1-flash` | Conversational replies | Pool 2 (~1,500) |
+| **Search** | `gemini-3.1-flash` | Web search with Google grounding | Pool 2 (shared) |
+| **Builder (primary)** | `gemma-4-31b-it` | React generation + natural thought extraction | Pool 3 (~1,500) |
+| **Builder (fallback)** | `gemma-4-26b-a4b-it` | Automatic fallback on quota/availability | Pool 4 (~1,500) |
+| **Embeddings** | `gemini-embedding-001` | 768-dim semantic cache | Pool 5 (almost free) |
 
 ---
 
@@ -143,17 +143,17 @@ Two generation modes selectable per-message from the OmniBar:
 
 | | Swift ⚡ | Think 🧠 |
 |---|---|---|
-| **Builder model** | gemini-2.5-flash (no thinking) | gemini-3.1-pro-preview (thinking_budget=8000) |
-| **Chat model** | gemini-2.5-flash | gemini-2.5-flash + thinking |
+| **Builder model** | `gemma-4-31b-it` | `gemma-4-31b-it` |
+| **Chat model** | `gemini-3.1-flash` | `gemini-3.1-flash` + thinking |
 | **Text delivery** | Streams word-by-word | Streams word-by-word |
-| **Thinking block** | — | Live thought tokens → collapsible "Thought about this" |
+| **Thinking block** | — | Gemma natural reasoning → collapsible "Thought about this" |
 | **Pending indicator** | Bouncing dots | Funny typewriter lines → real thoughts |
-| **Build time** | Faster | Slower, higher quality |
+| **Build time** | Slower (large model) | Slower, extracts reasoning |
 
 **Think mode UX detail:**
 1. The moment the user sends a message, `thinking_start` fires (~300 ms). The ThinkingBlock appears instantly.
 2. While the Brain classifies the request, the idle state cycles through humorous typewriter lines — "consulting the rubber duck...", "summoning the ghost of Dijkstra...", "staring at the code until it blinks..." — typed character by character at 38 ms/char with 1.6 s pauses between lines.
-3. When real model thoughts arrive via `thinking_delta`, the display transitions to live streaming model reasoning.
+3. When the Builder model runs, its natural chain-of-thought/reasoning output is streamed directly into the ThinkingBlock.
 4. When the reply is complete, the block collapses to "Thought about this ▾" — readable on demand, not in the way.
 
 ### Real text streaming
@@ -376,11 +376,26 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-### Docker
+### Deployment
 
-```bash
-docker-compose up --build
-```
+#### Backend: HuggingFace Spaces (Docker Space)
+1. Create a new Space on [Hugging Face](https://huggingface.co/new-space) and select **Docker** (using blank template or python template).
+2. Set the following secrets in the Space settings:
+   - `GEMINI_API_KEY`: Your Google AI Studio API Key.
+   - `DATABASE_URL`: Your PostgreSQL connection string.
+   - `ALLOWED_ORIGINS`: Your Vercel frontend domain.
+3. Configure your GitHub repository with Hugging Face as a trusted publisher or push directly to the HF git remote. The space will automatically build and deploy using the root `backend/Dockerfile` on port `7860`.
+
+#### Frontend: Vercel
+1. Link your frontend repository to [Vercel](https://vercel.com).
+2. Configure the build settings to use **Next.js** preset.
+3. Set the following environment variables:
+   - `NEXT_PUBLIC_API_URL`: Your HuggingFace Space live URL (e.g. `https://username-space-name.hf.space`).
+   - `NEXTAUTH_URL`: Your Vercel deployment URL.
+   - `NEXTAUTH_SECRET`: A random secure string.
+   - `GOOGLE_CLIENT_ID`: Your Google OAuth Client ID.
+   - `GOOGLE_CLIENT_SECRET`: Your Google OAuth Client Secret.
+4. Deploy. Vercel will trigger automatic rebuilds for every new commit.
 
 ---
 

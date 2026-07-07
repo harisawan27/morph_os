@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import logging
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
@@ -8,19 +9,27 @@ from google.genai import types, errors
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Brain + Chat: fast and cheap
-BRAIN_MODEL    = 'gemini-2.5-flash'
-CHAT_MODEL     = 'gemini-2.5-flash'
+# ── Model Configuration ──────────────────────────────────────────────────────
+# Brain: newest flash, intent classification + image analysis
+BRAIN_MODEL    = 'gemini-3.5-flash'
 
-# Builder + Critic + Fixer: best coding model
-BUILDER_MODEL    = 'gemini-3.1-pro-preview'
-BUILDER_FALLBACK = 'gemini-2.5-pro'
+# Chat + Search: quality text generation + Google grounding
+CHAT_MODEL     = 'gemini-3.1-flash'
+SEARCH_MODEL   = 'gemini-3.1-flash'
+
+# Builder: Gemma for all code generation (Swift + Think)
+BUILDER_MODEL    = 'gemma-4-31b-it'
+BUILDER_FALLBACK = 'gemma-4-26b-a4b-it'
+
+# Vision: shares pool with Brain
+VISION_MODEL   = 'gemini-3.5-flash'
 
 # Legacy aliases kept for any direct callers
 PRIMARY_MODEL  = BRAIN_MODEL
-FALLBACK_MODEL = 'gemini-2.0-flash'
+FALLBACK_MODEL = BUILDER_FALLBACK
 
 # ThinkingConfig may not exist in older SDK versions — guard it
+# NOTE: Gemma models do NOT support ThinkingConfig — only used for Chat (gemini-3.1-flash)
 def _thinking_cfg(budget: int):
     try:
         # include_thoughts=True is required — without it the model thinks internally
@@ -35,6 +44,101 @@ def _thinking_cfg(budget: int):
         return None
 
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+
+
+# ── Code extraction for Gemma models ─────────────────────────────────────────
+# Gemma outputs natural reasoning before code. These helpers extract clean
+# React components and optionally split reasoning from code for the ThinkingBlock.
+
+_CODE_START_SIGNALS = ('import ', 'const ', 'export ', 'function ', '"use ', "'use ")
+
+def _extract_react_code(raw: str) -> str:
+    """Extracts clean React component code from model output.
+    Handles Gemma models that prefix reasoning/chain-of-thought before code."""
+    raw = raw.strip()
+    if not raw:
+        return raw
+
+    # Strategy 1: Find code inside markdown fences (```jsx ... ``` or ```javascript ... ```)
+    fence_match = re.search(r'```(?:jsx?|tsx?|react|javascript)?\s*\n(.*?)```', raw, re.DOTALL)
+    if fence_match:
+        return fence_match.group(1).strip()
+
+    # Strategy 2: Find the first import/const/export/function line and take everything from there
+    lines = raw.split('\n')
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if any(stripped.startswith(sig) for sig in _CODE_START_SIGNALS):
+            code = '\n'.join(lines[i:])
+            # Strip trailing fence if present
+            if code.rstrip().endswith('```'):
+                code = code.rstrip()[:-3]
+            return code.strip()
+
+    # Strategy 3: Old behavior — strip wrapping fences
+    if raw.startswith("```") and raw.endswith("```"):
+        lines = raw.split("\n")
+        return "\n".join(lines[1:-1]).strip()
+
+    return raw
+
+
+def _stream_gemma_with_reasoning(model_name: str, contents: str, cfg_kwargs: dict, thought_queue=None) -> tuple[str, str]:
+    """Streams Gemma output, splitting natural reasoning from code in real-time.
+    Reasoning lines go to thought_queue (for ThinkingBlock), code is collected separately.
+    Returns (code_text, reasoning_text)."""
+    logger.info(f"Builder streaming (Gemma reasoning mode) with {model_name}...")
+    full_text = ""
+    reasoning_lines = []
+    code_started = False
+
+    stream = client.models.generate_content_stream(
+        model=model_name,
+        contents=contents,
+        config=types.GenerateContentConfig(**cfg_kwargs),
+    )
+
+    # Buffer for accumulating partial lines across chunks
+    line_buffer = ""
+
+    for chunk in stream:
+        try:
+            for part in chunk.candidates[0].content.parts:
+                text = part.text or ""
+                full_text += text
+
+                if code_started:
+                    # Already in code section — skip reasoning logic
+                    continue
+
+                # Process text to detect transition from reasoning to code
+                line_buffer += text
+                while '\n' in line_buffer:
+                    line, line_buffer = line_buffer.split('\n', 1)
+                    stripped = line.strip()
+
+                    # Check if this line starts actual code
+                    if any(stripped.startswith(sig) for sig in _CODE_START_SIGNALS):
+                        code_started = True
+                        break
+                    # Check for markdown fence start (```jsx)
+                    if stripped.startswith('```') and not stripped.endswith('```'):
+                        code_started = True
+                        break
+
+                    # This is reasoning — send to ThinkingBlock
+                    if stripped and thought_queue is not None:
+                        # Clean up bullet markers for nicer display
+                        display = stripped.lstrip('*-•').strip()
+                        if display:
+                            thought_queue.put(display + '\n')
+                            reasoning_lines.append(display)
+        except Exception:
+            pass
+
+    code = _extract_react_code(full_text)
+    reasoning = '\n'.join(reasoning_lines)
+    return code, reasoning
 
 
 # ── Local template fast-path ─────────────────────────────────────────────────
@@ -395,8 +499,8 @@ OUTPUT FORMAT — always valid JSON, one of:
     try:
         response = _call(BRAIN_MODEL)
     except Exception as e:
-        logger.warning(f"Primary brain failed, falling back: {e}")
-        response = _call(FALLBACK_MODEL)
+        logger.warning(f"Brain failed ({BRAIN_MODEL}), falling back to {CHAT_MODEL}: {e}")
+        response = _call(CHAT_MODEL)
 
     return response.text
 
@@ -475,10 +579,10 @@ def search_web(query: str) -> str:
         )
 
     try:
-        response = _search(PRIMARY_MODEL)
+        response = _search(SEARCH_MODEL)
     except Exception as e:
-        logger.warning(f"Primary search failed, falling back: {e}")
-        response = _search(FALLBACK_MODEL)
+        logger.warning(f"Search failed, falling back to brain model: {e}")
+        response = _search(BRAIN_MODEL)
 
     return response.text
 
@@ -600,33 +704,14 @@ Before outputting, verify:
         system_instruction=system_instruction,
         temperature=0.4,
     )
-    if thinking_budget > 0:
-        tc = _thinking_cfg(thinking_budget)
-        if tc:
-            cfg_kwargs["thinking_config"] = tc
+    # NOTE: Gemma models do NOT support ThinkingConfig — reasoning is extracted
+    # from the model's natural chain-of-thought output instead.
 
-    def _run_stream(model_name) -> tuple[str, str]:
-        """Streaming path — real thought tokens go into thought_queue as they arrive."""
-        logger.info(f"Builder streaming with {model_name}...")
-        c, t = "", ""
-        stream = client.models.generate_content_stream(
-            model=model_name,
-            contents=f"UI Spec:\n{ui_spec}",
-            config=types.GenerateContentConfig(**cfg_kwargs),
+    def _run_stream_gemma(model_name) -> tuple[str, str]:
+        """Streaming path — Gemma's natural reasoning goes to thought_queue."""
+        return _stream_gemma_with_reasoning(
+            model_name, f"UI Spec:\n{ui_spec}", cfg_kwargs, thought_queue
         )
-        for chunk in stream:
-            try:
-                for part in chunk.candidates[0].content.parts:
-                    pt = part.text or ""
-                    if getattr(part, "thought", False):
-                        t += pt
-                        if thought_queue is not None and pt:
-                            thought_queue.put(pt)
-                    else:
-                        c += pt
-            except Exception:
-                pass
-        return c, t
 
     @retry(
         retry=retry_if_exception_type(errors.ServerError),
@@ -640,40 +725,37 @@ Before outputting, verify:
             contents=f"UI Spec:\n{ui_spec}",
             config=types.GenerateContentConfig(**cfg_kwargs),
         )
-        c, t = "", ""
+        raw = ""
         try:
             for part in resp.candidates[0].content.parts:
-                pt = part.text or ""
-                if getattr(part, "thought", False):
-                    t += pt
-                else:
-                    c += pt
+                raw += part.text or ""
         except Exception:
             pass
-        return c or (resp.text or ""), t
+        raw = raw or (resp.text or "")
+        code = _extract_react_code(raw)
+        return code, ""
 
     code_text, thinking_text = "", ""
-    if thought_queue is not None and thinking_budget > 0:
+    if thought_queue is not None:
+        # Stream with reasoning → ThinkingBlock (works for both Swift+Think)
         try:
-            code_text, thinking_text = _run_stream(BUILDER_MODEL)
+            code_text, thinking_text = _run_stream_gemma(BUILDER_MODEL)
         except Exception as e:
             logger.warning(f"Builder stream failed ({BUILDER_MODEL}): {e} — trying fallback")
             try:
-                code_text, thinking_text = _run_stream(BUILDER_FALLBACK)
+                code_text, thinking_text = _run_stream_gemma(BUILDER_FALLBACK)
             except Exception as e2:
                 logger.error(f"Fallback stream also failed: {e2} — non-stream")
                 code_text, thinking_text = _run_non_stream(BUILDER_FALLBACK)
     else:
+        # No streaming — just generate and extract code
         try:
             code_text, thinking_text = _run_non_stream(BUILDER_MODEL)
         except Exception as e:
             logger.warning(f"Builder non-stream failed: {e} — falling back")
             code_text, thinking_text = _run_non_stream(BUILDER_FALLBACK)
 
-    code = code_text.strip()
-    if code.startswith("```") and code.endswith("```"):
-        lines = code.split("\n")
-        code = "\n".join(lines[1:-1])
+    code = _extract_react_code(code_text) if code_text else ""
 
     # Run the critic — auto-fix if it fails
     code, thinking_text = _critic_and_fix(code, ui_spec, thinking_text)
@@ -756,7 +838,7 @@ def _critic_check(code: str, ui_spec: str) -> list[str]:
 
 def _critic_and_fix(code: str, ui_spec: str, thinking_text: str) -> tuple[str, str]:
     """
-    Runs the critic. If it finds issues, calls the fixer once with 2.5 Pro.
+    Runs the critic. If it finds issues, calls the fixer once with Gemma.
     Returns (final_code, thinking_text).
     """
     failures = _critic_check(code, ui_spec)
@@ -804,23 +886,15 @@ Return the COMPLETE fixed component. Raw JSX only — no markdown, no explanatio
         logger.warning(f"Fixer primary failed: {e} — falling back")
         fix_response = _fix(BUILDER_FALLBACK)
 
-    fixed_code = ""
-    fixed_thinking = ""
+    raw_fix = ""
     try:
         for part in fix_response.candidates[0].content.parts:
-            part_text = (part.text or "")
-            if getattr(part, "thought", False):
-                fixed_thinking += part_text
-            else:
-                fixed_code += part_text
+            raw_fix += (part.text or "")
     except Exception:
         pass
 
-    fixed_code = fixed_code or (fix_response.text or "")
-    fixed_code = fixed_code.strip()
-    if fixed_code.startswith("```") and fixed_code.endswith("```"):
-        lines = fixed_code.split("\n")
-        fixed_code = "\n".join(lines[1:-1])
+    raw_fix = raw_fix or (fix_response.text or "")
+    fixed_code = _extract_react_code(raw_fix)
 
     remaining = _critic_check(fixed_code, ui_spec)
     if remaining:
@@ -828,7 +902,7 @@ Return the COMPLETE fixed component. Raw JSX only — no markdown, no explanatio
     else:
         logger.info("Critic post-fix: PASSED")
 
-    return fixed_code or code, thinking_text + fixed_thinking
+    return fixed_code or code, thinking_text
 
 
 def chat_respond(
@@ -916,13 +990,13 @@ Be thorough but concise."""
                 reply_text, thinking_text = _run_non_stream(CHAT_MODEL)
             except Exception as e2:
                 logger.warning(f"Chat non-stream also failed: {e2} — last resort")
-                reply_text, thinking_text = _run_non_stream(FALLBACK_MODEL)
+                reply_text, thinking_text = _run_non_stream(BRAIN_MODEL)
     else:
         try:
             reply_text, thinking_text = _run_non_stream(CHAT_MODEL)
         except Exception as e:
             logger.warning(f"Chat non-stream failed: {e} — falling back")
-            reply_text, thinking_text = _run_non_stream(FALLBACK_MODEL)
+            reply_text, thinking_text = _run_non_stream(BRAIN_MODEL)
 
     return reply_text.strip(), thinking_text
 
@@ -961,7 +1035,7 @@ def analyze_file(file_bytes: bytes, mime_type: str, filename: str, user_prompt: 
     if mime_type.startswith("image/"):
         encoded = base64.b64encode(file_bytes).decode()
         response = client.models.generate_content(
-            model=PRIMARY_MODEL,
+            model=VISION_MODEL,
             contents=[
                 types.Content(role="user", parts=[
                     types.Part(inline_data=types.Blob(mime_type=mime_type, data=encoded)),
@@ -1034,32 +1108,14 @@ Return the complete modified component."""
         system_instruction=system_instruction,
         temperature=0.3,
     )
-    if thinking_budget > 0:
-        tc = _thinking_cfg(thinking_budget)
-        if tc:
-            cfg_kwargs["thinking_config"] = tc
+    # NOTE: Gemma models do NOT support ThinkingConfig — reasoning is extracted
+    # from the model's natural chain-of-thought output instead.
 
-    def _run_stream(model_name) -> tuple[str, str]:
-        logger.info(f"Editor streaming with {model_name}...")
-        c, t = "", ""
-        stream = client.models.generate_content_stream(
-            model=model_name,
-            contents=edit_prompt,
-            config=types.GenerateContentConfig(**cfg_kwargs),
+    def _run_stream_gemma(model_name) -> tuple[str, str]:
+        """Streaming path — Gemma's natural reasoning goes to thought_queue."""
+        return _stream_gemma_with_reasoning(
+            model_name, edit_prompt, cfg_kwargs, thought_queue
         )
-        for chunk in stream:
-            try:
-                for part in chunk.candidates[0].content.parts:
-                    pt = part.text or ""
-                    if getattr(part, "thought", False):
-                        t += pt
-                        if thought_queue is not None and pt:
-                            thought_queue.put(pt)
-                    else:
-                        c += pt
-            except Exception:
-                pass
-        return c, t
 
     @retry(
         retry=retry_if_exception_type(errors.ServerError),
@@ -1073,26 +1129,24 @@ Return the complete modified component."""
             contents=edit_prompt,
             config=types.GenerateContentConfig(**cfg_kwargs),
         )
-        c, t = "", ""
+        raw = ""
         try:
             for part in resp.candidates[0].content.parts:
-                pt = part.text or ""
-                if getattr(part, "thought", False):
-                    t += pt
-                else:
-                    c += pt
+                raw += part.text or ""
         except Exception:
             pass
-        return c or (resp.text or ""), t
+        raw = raw or (resp.text or "")
+        code = _extract_react_code(raw)
+        return code, ""
 
     code_text, thinking_text = "", ""
-    if thought_queue is not None and thinking_budget > 0:
+    if thought_queue is not None:
         try:
-            code_text, thinking_text = _run_stream(BUILDER_MODEL)
+            code_text, thinking_text = _run_stream_gemma(BUILDER_MODEL)
         except Exception as e:
             logger.warning(f"Editor stream failed ({BUILDER_MODEL}): {e} — trying fallback")
             try:
-                code_text, thinking_text = _run_stream(BUILDER_FALLBACK)
+                code_text, thinking_text = _run_stream_gemma(BUILDER_FALLBACK)
             except Exception as e2:
                 logger.error(f"Fallback stream also failed: {e2} — non-stream")
                 code_text, thinking_text = _run_non_stream(BUILDER_FALLBACK)
@@ -1103,8 +1157,5 @@ Return the complete modified component."""
             logger.warning(f"Editor non-stream failed: {e} — falling back")
             code_text, thinking_text = _run_non_stream(BUILDER_FALLBACK)
 
-    code = code_text.strip()
-    if code.startswith("```") and code.endswith("```"):
-        lines = code.split("\n")
-        code = "\n".join(lines[1:-1])
+    code = _extract_react_code(code_text) if code_text else ""
     return code, thinking_text
