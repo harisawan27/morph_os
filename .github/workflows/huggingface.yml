@@ -29,6 +29,5 @@ jobs:
         env:
           HF_OIDC_RESOURCE: spaces/harisawan27/morph_os
         run: |
-          # huggingface_hub automatically uses the GitHub Actions OIDC token
-          # to authorize this upload keylessly via Trusted Publishers.
-          huggingface-cli upload harisawan27/morph_os . --repo-type=space --exclude ".git/*"
+          # Deploy using Python HfApi which handles OIDC natively
+          python deploy.py
