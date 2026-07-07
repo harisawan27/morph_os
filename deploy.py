@@ -2,7 +2,7 @@ import os
 import sys
 from huggingface_hub import HfApi
 
-repo_id = "harisawan27/morph_os"
+repo_id = "harisawan07/morph-os"
 print(f"Deploying to Hugging Face Space: {repo_id}...")
 
 try:

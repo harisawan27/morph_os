@@ -27,7 +27,7 @@ jobs:
 
       - name: Upload to Hugging Face Space
         env:
-          HF_OIDC_RESOURCE: spaces/harisawan27/morph_os
+          HF_OIDC_RESOURCE: spaces/harisawan07/morph-os
         run: |
           # Deploy using Python HfApi which handles OIDC natively
           python deploy.py
