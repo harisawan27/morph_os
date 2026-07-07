@@ -1,7 +1,7 @@
 "use client";
 
 import { useSession, signIn, signOut } from "next-auth/react";
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LogOut, Trash2, Check, User, Mail, Loader2, MapPin,
@@ -166,6 +166,7 @@ function InfoRow({ label, value, icon, mono = false }: {
 
 // ─── Profile tab ─────────────────────────────────────────────────────────────
 function ProfileTab({ googleName }: { googleName?: string | null }) {
+  const { data: session } = useSession();
   // ✅ Fix: lazy initializer loads localStorage synchronously on first render — no double-refresh
   const [ctx,     setCtx]     = useState<UserContext>(() => {
     const loaded = loadContext();
@@ -175,18 +176,55 @@ function ProfileTab({ googleName }: { googleName?: string | null }) {
   const [flashed, setFlashed] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Load from DB on mount if authenticated
+  useEffect(() => {
+    if (!session) return;
+    let active = true;
+    const loadDbSettings = async () => {
+      try {
+        const res = await fetch("/api/settings");
+        if (res.ok) {
+          const data = await res.json();
+          if (active && data) {
+            setCtx(data);
+            try { localStorage.setItem(CTX_KEY, JSON.stringify(data)); } catch {}
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load settings from DB:", err);
+      }
+    };
+    loadDbSettings();
+    return () => { active = false; };
+  }, [session]);
+
   const update = useCallback((patch: Partial<UserContext>) => {
     setCtx(prev => {
       const next = { ...prev, ...patch };
       if (saveTimer.current) clearTimeout(saveTimer.current);
-      saveTimer.current = setTimeout(() => {
+      saveTimer.current = setTimeout(async () => {
+        // Save to local storage
         try { localStorage.setItem(CTX_KEY, JSON.stringify(next)); } catch {}
+        
+        // Save to DB if signed in
+        if (session) {
+          try {
+            await fetch("/api/settings", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(next),
+            });
+          } catch (err) {
+            console.error("Failed to save settings to DB:", err);
+          }
+        }
+        
         setFlashed(true);
         setTimeout(() => setFlashed(false), 2000);
       }, 500);
       return next;
     });
-  }, []);
+  }, [session]);
 
   const tones: { key: UserContext["tone"]; label: string; desc: string }[] = [
     { key: "casual",       label: "Casual",       desc: "Friendly & conversational" },

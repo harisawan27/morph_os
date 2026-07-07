@@ -21,3 +21,14 @@ class Artifact(Base):
     thinking = Column(Text, nullable=True)  # Accumulated thought tokens from Think mode
     model = Column(String(16), nullable=True)  # "think" or "swift"
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+class UserSetting(Base):
+    __tablename__ = 'user_settings'
+
+    user_id = Column(String, primary_key=True, index=True) # Decoded JWT user sub ID
+    name = Column(String, nullable=True)
+    role = Column(String, nullable=True)
+    about = Column(Text, nullable=True)
+    location = Column(String, nullable=True)
+    tone = Column(String(32), nullable=True)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)

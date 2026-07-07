@@ -16,7 +16,7 @@ from sqlalchemy import text
 from typing import Optional, Any
 
 from database import get_db, init_db, SessionLocal
-from models import Artifact
+from models import Artifact, UserSetting
 from llm_pipeline import brain_plan_ui, execute_plan, embed_text, search_web, local_template_match, analyze_file, chat_respond
 from auth import get_current_user, get_optional_user
 
@@ -88,6 +88,65 @@ def auth_status(user: dict | None = Depends(get_optional_user)):
     return {"authenticated": False, "reason": "No valid session cookie received"}
 
 
+# ─── Settings ────────────────────────────────────────────────────────────────
+
+class SettingsRequest(BaseModel):
+    name: Optional[str] = None
+    role: Optional[str] = None
+    about: Optional[str] = None
+    location: Optional[str] = None
+    tone: Optional[str] = None
+
+@app.get("/api/settings")
+def get_user_settings(
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    user_id = user.get("sub") or user.get("email")
+    if not user_id:
+        raise HTTPException(status_code=400, detail="User ID not found in session")
+    
+    settings = db.query(UserSetting).filter(UserSetting.user_id == user_id).first()
+    if not settings:
+        return {
+            "name": "",
+            "role": "",
+            "about": "",
+            "location": "",
+            "tone": "casual"
+        }
+    return {
+        "name": settings.name or "",
+        "role": settings.role or "",
+        "about": settings.about or "",
+        "location": settings.location or "",
+        "tone": settings.tone or "casual"
+    }
+
+@app.post("/api/settings")
+def update_user_settings(
+    req: SettingsRequest,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    user_id = user.get("sub") or user.get("email")
+    if not user_id:
+        raise HTTPException(status_code=400, detail="User ID not found in session")
+        
+    settings = db.query(UserSetting).filter(UserSetting.user_id == user_id).first()
+    if not settings:
+        settings = UserSetting(user_id=user_id)
+        db.add(settings)
+        
+    settings.name = req.name
+    settings.role = req.role
+    settings.about = req.about
+    settings.location = req.location
+    settings.tone = req.tone
+    db.commit()
+    return {"status": "success"}
+
+
 # ─── Generate ────────────────────────────────────────────────────────────────
 
 class GenerateRequest(BaseModel):
@@ -97,6 +156,7 @@ class GenerateRequest(BaseModel):
     user_context: Optional[dict] = None       # name, role, about, location, tone
     current_artifact: Optional[str] = None    # current rendered code for edit mode
     model: str = "swift"                       # "swift" | "think"
+    bypass_cache: Optional[bool] = False
 
 def _sse(event: dict) -> str:
     return f"data: {json.dumps(event)}\n\n"
@@ -108,11 +168,38 @@ async def _generate_stream(
     history: list[dict],
     user_context: Optional[dict],
     current_artifact: Optional[str],
-    user_id: Optional[str],
+    user: Optional[dict] = None,
     file_analysis: Optional[dict] = None,
     use_thinking: bool = False,
+    bypass_cache: bool = False,
 ):
     """Core SSE generator — shared by JSON and multipart endpoints."""
+    user_id = (user.get("email") or user.get("sub")) if user else None
+    email = user.get("email") if user else None
+
+    # Load context from DB if authenticated
+    if user_id:
+        db = SessionLocal()
+        try:
+            db_setting = db.query(UserSetting).filter(UserSetting.user_id == user_id).first()
+            if db_setting:
+                user_context = {
+                    "name": db_setting.name or "",
+                    "role": db_setting.role or "",
+                    "about": db_setting.about or "",
+                    "location": db_setting.location or "",
+                    "tone": db_setting.tone or "casual"
+                }
+        except Exception as e:
+            logger.error(f"Error querying UserSetting in stream: {e}")
+        finally:
+            db.close()
+
+    # Inject email to identify creator in LLM pipeline
+    if user_context is None:
+        user_context = {}
+    if email:
+        user_context["email"] = email
 
     # ── 0. Per-user rate limiting ────────────────────────────────────────────
     if not _check_rate_limit(user_id):
@@ -130,7 +217,7 @@ async def _generate_stream(
         return
 
     # ── 2. Semantic cache (skip on file uploads — always fresh) ─────────────
-    if user_id and not file_analysis:
+    if user_id and not file_analysis and not bypass_cache:
         db = SessionLocal()
         try:
             distance_col = Artifact.embedding.cosine_distance(embedding).label("distance")
@@ -239,6 +326,7 @@ async def _generate_stream(
         "id":      artifact_id,
         "pending": bool(needs_artifact) or is_think_chat or is_swift_chat,
         "model":   "think" if use_thinking else "swift",
+        "needs_artifact": bool(needs_artifact),
     })
 
     # ── Shared helper: stream phase sentences char-by-char while a task runs ────
@@ -414,7 +502,6 @@ async def generate_artifact(
     request: GenerateRequest,
     user: dict | None = Depends(get_optional_user),
 ):
-    user_id = (user.get("email") or user.get("sub")) if user else None
     return StreamingResponse(
         _generate_stream(
             prompt=request.prompt,
@@ -422,8 +509,9 @@ async def generate_artifact(
             history=request.history,
             user_context=request.user_context,
             current_artifact=request.current_artifact,
-            user_id=user_id,
+            user=user,
             use_thinking=request.model == "think",
+            bypass_cache=bool(request.bypass_cache),
         ),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
@@ -441,7 +529,6 @@ async def generate_with_file(
     file: UploadFile = File(...),
     user: dict | None = Depends(get_optional_user),
 ):
-    user_id = (user.get("email") or user.get("sub")) if user else None
     file_bytes = await file.read()
     mime_type  = file.content_type or "application/octet-stream"
     filename   = file.filename or "attachment"
@@ -463,7 +550,7 @@ async def generate_with_file(
             history=history_list,
             user_context=user_ctx,
             current_artifact=current_artifact,
-            user_id=user_id,
+            user=user,
             file_analysis=file_analysis,
             use_thinking=model == "think",
         ),

@@ -28,11 +28,6 @@ function loadTodos() {
   return SEED_TASKS;
 }
 
-function saveTodos(todos) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(todos)); } catch {}
-  if (typeof morphSaveState !== 'undefined') morphSaveState(todos);
-}
-
 export default function TodoArtifact() {
   const [todos, setTodosRaw] = useState(() => loadTodos());
   const [input, setInput] = useState('');
@@ -47,17 +42,20 @@ export default function TodoArtifact() {
     }
   }, []);
 
-  // Wrap setter to always persist
+  // Save to local storage and cloud on change (React compliant side-effect)
+  useEffect(() => {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(todos)); } catch {}
+    if (typeof morphSaveState !== 'undefined') {
+      morphSaveState(todos);
+    }
+  }, [todos]);
+
   const setTodos = (updater) => {
-    setTodosRaw(prev => {
-      const next = typeof updater === 'function' ? updater(prev) : updater;
-      saveTodos(next);
-      return next;
-    });
+    setTodosRaw(prev => typeof updater === 'function' ? updater(prev) : updater);
   };
 
   const addTodo = (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     if (!input.trim()) return;
     setTodos(prev => [...prev, { id: Date.now(), text: input.trim(), completed: false, priority }]);
     setInput('');
@@ -179,6 +177,7 @@ export default function TodoArtifact() {
           </div>
           <button
             type="submit"
+            onClick={addTodo}
             className="p-3.5 bg-blue-600/80 hover:bg-blue-600 rounded-2xl transition-all border border-blue-500/30 text-white shadow-[0_0_20px_rgba(59,130,246,0.2)]"
           >
             <Plus size={20} />

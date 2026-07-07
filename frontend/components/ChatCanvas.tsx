@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Panel, Group, Separator } from "react-resizable-panels";
 import { AnimatePresence, motion } from "framer-motion";
 import ArtifactRenderer from "./ArtifactRenderer";
-import { Ghost, Layers, ChevronRight, Sparkles, X, Copy, Check, Pencil, CornerDownLeft, FileText, Image, Brain, ChevronDown } from "lucide-react";
+import { Ghost, Layers, ChevronRight, Sparkles, X, Copy, Check, Pencil, CornerDownLeft, FileText, Image, Brain, ChevronDown, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import MarkdownRenderer from "./MarkdownRenderer";
 import OmniBar, { type ModelId } from "./OmniBar";
@@ -18,6 +18,7 @@ type Message = {
   attachment?: { name: string; isImage: boolean } | null;
   thinking?: string | null;
   model?: ModelId;
+  needsArtifact?: boolean;
 };
 type ActiveArtifact = { code: string; id: string } | null;
 
@@ -130,7 +131,7 @@ export default function ChatCanvas({
   }, []);
 
   // ── Core generate (streaming SSE) ───────────────────────────────────────
-  const handleGenerate = useCallback(async (prompt: string, file?: File | null) => {
+  const handleGenerate = useCallback(async (prompt: string, file?: File | null, options?: { bypassCache?: boolean }) => {
     const controller = new AbortController();
     abortRef.current = controller;
 
@@ -184,6 +185,7 @@ export default function ChatCanvas({
             user_context,
             current_artifact: lastArtifactCode,
             model,
+            bypass_cache: !!options?.bypassCache,
           }),
           signal: controller.signal,
         });
@@ -222,6 +224,7 @@ export default function ChatCanvas({
 
           if (event.type === "reply") {
             const serverId = event.id as string;
+            const needsArtifact = !!(event.needs_artifact);
             if (botMsgId === serverId) {
               // Already created via thinking_start — update fields in place, same ID = no remount
               setMessages(prev => prev.map(m =>
@@ -230,6 +233,7 @@ export default function ChatCanvas({
                   text:    (event.text as string) || m.text,
                   pending: !!(event.pending),
                   model:   (event.model as ModelId) ?? m.model ?? "swift",
+                  needsArtifact,
                 } : m
               ));
             } else {
@@ -242,6 +246,7 @@ export default function ChatCanvas({
                 code:    null,
                 pending: !!(event.pending),
                 model:   (event.model as ModelId) ?? "swift",
+                needsArtifact,
               }]);
             }
           }
@@ -327,7 +332,7 @@ export default function ChatCanvas({
 
   const handleResubmit = useCallback((index: number, newText: string) => {
     setMessages(prev => prev.slice(0, index));
-    handleGenerate(newText);
+    handleGenerate(newText, null, { bypassCache: true });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [handleGenerate]);
 
@@ -336,7 +341,7 @@ export default function ChatCanvas({
     if (lastUserIdx === -1) return;
     const prompt = messages[lastUserIdx].text;
     setMessages(prev => prev.slice(0, lastUserIdx));
-    handleGenerate(prompt);
+    handleGenerate(prompt, null, { bypassCache: true });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages, handleGenerate]);
 
@@ -411,28 +416,41 @@ export default function ChatCanvas({
               {isLoadingHistory ? (
                 <SkeletonMessages />
               ) : (
-                messages.map((m, i) => {
-                  const isLast = i === messages.length - 1;
-                  const row = (
-                    <MessageRow
-                      key={m.id}
-                      message={m}
-                      messageIndex={i}
-                      isLast={isLast}
-                      isMobile={isMobile}
-                      onShowArtifact={() => {
-                        if (m.code) {
-                          setActiveArtifact({ code: m.code!, id: m.id });
-                          if (isMobile) setMobileView("artifact");
-                        }
-                      }}
-                      onResubmit={handleResubmit}
-                    />
-                  );
-                  return isLast
-                    ? <div key={m.id} ref={newMsgRef}>{row}</div>
-                    : row;
-                })
+                (() => {
+                  const lastUserIdx = messages.map(m => m.role).lastIndexOf("user");
+                  const lastAssistantIdx = messages.map(m => m.role).lastIndexOf("assistant");
+                  
+                  return messages.map((m, i) => {
+                    const isLast = i === messages.length - 1;
+                    const row = (
+                      <MessageRow
+                        key={m.id}
+                        message={m}
+                        messageIndex={i}
+                        isLast={isLast}
+                        isMobile={isMobile}
+                        isLatestUser={i === lastUserIdx}
+                        isLatestAssistant={i === lastAssistantIdx}
+                        onShowArtifact={() => {
+                          if (m.code) {
+                            setActiveArtifact({ code: m.code!, id: m.id });
+                            if (isMobile) setMobileView("artifact");
+                          }
+                        }}
+                        onResubmit={handleResubmit}
+                        onRetry={() => {
+                          const precedingUser = messages[i - 1];
+                          if (precedingUser && precedingUser.role === "user") {
+                            handleResubmit(i - 1, precedingUser.text);
+                          }
+                        }}
+                      />
+                    );
+                    return isLast
+                      ? <div key={m.id} ref={newMsgRef}>{row}</div>
+                      : row;
+                  });
+                })()
               )}
 
               {/* Only show TypingIndicator when no bot message exists yet (brain still planning) */}
@@ -567,15 +585,21 @@ function MessageRow({
   messageIndex,
   isLast,
   isMobile,
+  isLatestUser,
+  isLatestAssistant,
   onShowArtifact,
   onResubmit,
+  onRetry,
 }: {
   message: Message;
   messageIndex: number;
   isLast: boolean;
   isMobile: boolean;
+  isLatestUser: boolean;
+  isLatestAssistant: boolean;
   onShowArtifact: () => void;
   onResubmit: (index: number, text: string) => void;
+  onRetry: () => void;
 }) {
   const isUser  = m.role === "user";
   const isError = m.text.startsWith("Signal lost");
@@ -653,24 +677,25 @@ function MessageRow({
               )}
               <p className="whitespace-pre-wrap wrap-break-word">{m.text}</p>
             </div>
-            {/* action bar — fades in on hover */}
+            {/* action bar — visible by default, solid on hover */}
             <div
-              className="flex items-center gap-0.5 pr-1 transition-opacity duration-150"
-              style={{ opacity: hovered || copied ? 1 : 0 }}
+              className="flex items-center gap-0.5 pr-1 transition-opacity duration-150 opacity-65 hover:opacity-100"
             >
-              <button
-                onClick={() => { setEditing(true); setEditText(m.text); }}
-                className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] transition-all"
-                style={{ color: "var(--t4)" }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-hover)"; (e.currentTarget as HTMLElement).style.color = "var(--t2)"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--t4)"; }}
-              >
-                <Pencil size={10} />
-                <span>Edit</span>
-              </button>
+              {isLatestUser && (
+                <button
+                  onClick={() => { setEditing(true); setEditText(m.text); }}
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] transition-all cursor-pointer"
+                  style={{ color: "var(--t4)" }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-hover)"; (e.currentTarget as HTMLElement).style.color = "var(--t2)"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--t4)"; }}
+                >
+                  <Pencil size={10} />
+                  <span>Edit</span>
+                </button>
+              )}
               <button
                 onClick={() => copy(m.text)}
-                className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] transition-all"
+                className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] transition-all cursor-pointer"
                 style={{ color: "var(--t4)" }}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-hover)"; (e.currentTarget as HTMLElement).style.color = "var(--t2)"; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--t4)"; }}
@@ -723,7 +748,7 @@ function MessageRow({
                   style={{ background: "var(--brand-purple)", animationDelay: `${i * 0.15}s` }} />
               ))}
             </span>
-            <span className="opacity-80">Building canvas…</span>
+            <span className="opacity-80">{m.needsArtifact ? "Building canvas…" : "Thinking…"}</span>
           </div>
         ) : m.code ? (
           <button
@@ -742,16 +767,30 @@ function MessageRow({
             <ChevronRight size={10} className="ml-0.5 opacity-50" />
           </button>
         ) : !isError && (
-          <button
-            onClick={() => copy(m.text)}
-            className="mt-1.5 flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] transition-all duration-150"
-            style={{ color: "var(--t4)" }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-hover)"; (e.currentTarget as HTMLElement).style.color = "var(--t2)"; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--t4)"; }}
-          >
-            {copied ? <Check size={10} /> : <Copy size={10} />}
-            <span>{copied ? "Copied!" : "Copy"}</span>
-          </button>
+          <div className="flex items-center gap-0.5 mt-1.5 opacity-65 hover:opacity-100 transition-opacity duration-150">
+            <button
+              onClick={() => copy(m.text)}
+              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] transition-all duration-150 cursor-pointer"
+              style={{ color: "var(--t4)" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-hover)"; (e.currentTarget as HTMLElement).style.color = "var(--t2)"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--t4)"; }}
+            >
+              {copied ? <Check size={10} /> : <Copy size={10} />}
+              <span>{copied ? "Copied" : "Copy"}</span>
+            </button>
+            {isLatestAssistant && (
+              <button
+                onClick={onRetry}
+                className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] transition-all duration-150 cursor-pointer"
+                style={{ color: "var(--t4)" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-hover)"; (e.currentTarget as HTMLElement).style.color = "var(--t2)"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--t4)"; }}
+              >
+                <RotateCcw size={10} />
+                <span>Retry</span>
+              </button>
+            )}
+          </div>
         )}
       </div>
     </div>

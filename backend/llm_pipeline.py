@@ -282,18 +282,50 @@ def embed_text(text: str) -> list[float]:
 
 
 def _build_user_ctx_block(user_context: dict = None) -> str:
-    """Builds a formatted block containing the user's persona and styling preferences."""
-    if not user_context:
-        return ""
-    parts = []
-    if user_context.get("name"):     parts.append(f"Name: {user_context['name']}")
-    if user_context.get("role"):     parts.append(f"Occupation: {user_context['role']}")
-    if user_context.get("about"):    parts.append(f"About: {user_context['about']}")
-    if user_context.get("location"): parts.append(f"Location: {user_context['location']}")
-    if user_context.get("tone"):     parts.append(f"Preferred Tone: {user_context['tone']}")
-    if parts:
-        return "USER PROFILE & CONTEXT:\n" + "\n".join(parts) + "\n\n"
-    return ""
+    """Builds a formatted block containing the user's persona and styling preferences, 
+    injects Morph OS's identity, creator details, and custom prompts for the creator."""
+    
+    # ── 1. Morph OS Identity & Creator Info (Always injected for context) ──
+    identity_block = """MORPH OS IDENTITY & ARCHITECTURE:
+- You are Morph OS (Generative Operating System), a state-of-the-art AI assistant and UI canvas engine.
+- You can converse naturally, search the web, and build/edit responsive web applications/games in React.
+- CREATOR DETAILS: Morph OS was built and designed by Muhammad Haris Awan.
+  * Creator Name: Muhammad Haris Awan (Haris)
+  * Creator Role: Full Stack Web Developer & Agentic AI Engineer
+  * Creator Location: Karachi, Pakistan
+  * Creator Linktree: https://linktr.ee/harisawan (Share this Linktree link if asked about contact details/socials/portfolio)
+  * Creator Email: haris@webxes.com (Share this email if someone wants to contact the creator)
+  * Creator Phone: +92-3361232724
+  * Specialties: Full stack web apps, agentic AI systems, Spec-Driven Development, and custom automation.
+- If someone asks "Who are you?", "Who built you?", "Who is your creator?", "Who is Haris?", or similar questions, answer in a detailed, respectful, and proud manner. Share his professional background, location, Linktree link (https://linktr.ee/harisawan), and email (haris@webxes.com) clearly and beautifully formatted. Do NOT hide this information.
+\n"""
+
+    # ── 2. Check if the user is the creator (Haris) ──
+    user_email = user_context.get("email") if user_context else None
+    is_creator = False
+    if user_email and user_email.lower().strip() == "111hariswan@gmail.com":
+        is_creator = True
+
+    # ── 3. Build User Profile block ──
+    user_parts = []
+    if is_creator:
+        user_parts.append("Name: Muhammad Haris Awan (Haris) [CREATOR & OWNER OF MORPH OS]")
+        user_parts.append("Role: Full Stack Web Developer & Agentic AI Engineer")
+        user_parts.append("Location: Karachi, Pakistan")
+        user_parts.append("Preferred Tone: creative")
+        user_parts.append("Special Status: YOU ARE TALKING DIRECTLY TO YOUR CREATOR. Greet him with immense respect and enthusiasm. Acknowledge him as your maker. You can say 'Welcome back, Boss!' or 'Hello Haris, my creator!' or similar. Be helpful, professional, yet warm and extremely devoted to his commands. Tailor your responses to assist his engineering workflow.")
+    elif user_context:
+        if user_context.get("name"):     user_parts.append(f"Name: {user_context['name']}")
+        if user_context.get("role"):     user_parts.append(f"Occupation: {user_context['role']}")
+        if user_context.get("about"):    user_parts.append(f"About: {user_context['about']}")
+        if user_context.get("location"): user_parts.append(f"Location: {user_context['location']}")
+        if user_context.get("tone"):     user_parts.append(f"Preferred Tone: {user_context['tone']}")
+
+    user_block = ""
+    if user_parts:
+        user_block = "USER PROFILE & CONTEXT:\n" + "\n".join(user_parts) + "\n\n"
+
+    return identity_block + user_block
 
 
 def brain_plan_ui(
@@ -395,7 +427,11 @@ FEW-SHOT EXAMPLES (calibrate your judgment here)
 "play me some lofi music" → template: youtube, data: {{"title": "lofi hip hop chill beats"}}
 "make flashcards for photosynthesis" → template: flashcard, data: {{"topic": "Photosynthesis", "cards": [...]}}
 "build a habit tracker for my gym routine" → template: habit (closest match, use template not build)
-"build me a custom CRM dashboard with lead scoring" → build [genuinely custom]
+"build me a custom CRM dashboard with lead scoring" → build: {"ui_spec": {"goal": "CRM dashboard with lead scoring", "features": ["lead list table", "lead details pane", "dynamic lead score indicator based on interactions", "filter/search leads"], "style": "dark glassmorphism theme"}, "reply": "Building your custom lead-scoring CRM dashboard now!"}
+"make a happy birthday wish app" → build: {"ui_spec": {"goal": "Happy Birthday Wish App", "features": ["interactive card interface", "custom name input", "pop-up confetti animation on click", "play festive birthday music track"], "style": "festive colorful theme"}, "reply": "Making a happy birthday wish app with confetti for you!"}
+"create a simple scoreboard app" → build: {"ui_spec": {"goal": "Scoreboard app", "features": ["two team score counters", "plus/minus buttons", "team name editing", "reset button"], "style": "dark dashboard theme"}, "reply": "Building your custom scoreboard app now!"}
+"generate a resume builder interface" → build: {"ui_spec": {"goal": "Resume builder", "features": ["input fields for profile, jobs, skills", "live preview layout on side", "mock export button"], "style": "clean slate professional theme"}, "reply": "Creating a custom resume builder app for you!"}
+"I want an app that tracks water intake" → build: {"ui_spec": {"goal": "Water intake tracker", "features": ["log daily intake logs", "daily progress goal ring", "drink history list", "quick add presets"], "style": "ocean blue theme"}, "reply": "Building a custom water intake tracker!"}
 "make it dark mode" [active artifact] → edit
 "add a reset button to it" [active artifact] → edit
 "the arrows aren't working" [active artifact] → edit: "Fix arrow key controls — attach keyboard listeners to window, not canvas"
