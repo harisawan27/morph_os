@@ -1,48 +1,102 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background: #000000;
-  --color-foreground: #ffffff;
+  --color-background: var(--bg-page);
+  --color-foreground: var(--t1);
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  /* Custom animations */
+  --animate-fade-in: fade-in 0.5s ease-out forwards;
+  --animate-slide-up: slide-up 0.5s ease-out forwards;
+  --animate-slide-in-right: slide-in-right 0.4s ease-out forwards;
+  --animate-pulse-glow: pulse-glow 2s ease-in-out infinite;
+  --animate-scale-in: scale-in 0.3s ease-out forwards;
+  --animate-bounce-in: bounce-in 0.6s ease-out forwards;
+  --animate-spin-slow: spin 3s linear infinite;
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-shimmer: shimmer 2s linear infinite;
+}
+
+/* ─── Keyframes ────────────────────────────────────────────────────────── */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(124, 58, 237, 0.1); }
+  50% { box-shadow: 0 0 40px rgba(124, 58, 237, 0.25); }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes bounce-in {
+  0% { opacity: 0; transform: scale(0.3); }
+  50% { opacity: 1; transform: scale(1.05); }
+  70% { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
 
 /* ─── Theme CSS variables ────────────────────────────────────────────────────── */
 :root {
-  /* Dark (default) */
-  --bg-page:     #0a0a0a;
-  --bg-panel:    #0d0d0d;
-  --bg-sidebar:  #111111;
-  --bg-card:     rgba(255,255,255,0.05);
-  --bg-input:    rgba(255,255,255,0.07);
-  --bg-hover:    rgba(255,255,255,0.07);
-  --bg-active:   rgba(255,255,255,0.11);
-  --border:      rgba(255,255,255,0.10);
-  --border-md:   rgba(255,255,255,0.14);
-  --border-hi:   rgba(255,255,255,0.24);
-  --t1:          rgba(255,255,255,0.98);
-  --t2:          rgba(255,255,255,0.85);
-  --t3:          rgba(255,255,255,0.70);
-  --t4:          rgba(255,255,255,0.52);
-  --t5:          rgba(255,255,255,0.28);
-  --msg-bg:      rgba(255,255,255,0.06);
-  --msg-border:  rgba(255,255,255,0.10);
-  --scroll-fg:   rgba(255,255,255,0.12);
-  --scroll-hover:rgba(255,255,255,0.20);
-  --placeholder: rgba(255,255,255,0.48);
-  --icon-brand:        rgb(216,180,254);
-  --bg-code:           #09090b;
-  --code-inline-color: rgba(216,180,254,0.95);
+  /* Gemini Dark Theme (Default) */
+  --bg-page:     #131314; /* Deep charcoal black, eliminates OLED smearing on low brightness */
+  --bg-panel:    #1e1f20; /* Layered panel background */
+  --bg-sidebar:  #1e1f20; /* Sidebar background */
+  --bg-card:     rgba(255, 255, 255, 0.04); /* Sleek card background */
+  --bg-input:    #1e1f20; /* Crisp input container */
+  --bg-hover:    rgba(255, 255, 255, 0.06);
+  --bg-active:   rgba(255, 255, 255, 0.10);
+  --border:      rgba(240, 244, 249, 0.08); /* Clean, high-fidelity light blue-gray borders */
+  --border-md:   rgba(240, 244, 249, 0.14);
+  --border-hi:   rgba(240, 244, 249, 0.22);
+  --t1:          #e3e3e3; /* Legible off-white primary text */
+  --t2:          #c4c7c5; /* Sharp secondary labels */
+  --t3:          #a5a7a5; /* Muted description text */
+  --t4:          #757575; /* Subtext and icon colors */
+  --t5:          #4e5052; /* Disabled state/lines */
+  --msg-bg:      #1e1f20;
+  --msg-border:  rgba(255, 255, 255, 0.06);
+  --scroll-fg:   rgba(255, 255, 255, 0.12);
+  --scroll-hover:rgba(255, 255, 255, 0.20);
+  --placeholder: #757575;
+  --icon-brand:  #a855f7; /* Brand purple */
+  --bg-code:     #0f0f10;
+  --code-inline-color: #c4b5fd;
 
-  /* ── Brand Semantic Colors (Dark Theme) ────────────────────────────────── */
+  /* ── Brand Semantic Colors (Dark Theme - Inspired by official purple/indigo logo) ── */
   --brand-purple:          #c4b5fd;
-  --brand-purple-muted:    #a78bfa;
-  --brand-purple-bg:       rgba(139, 92, 246, 0.12);
-  --brand-purple-border:   rgba(139, 92, 246, 0.28);
+  --brand-purple-muted:    #a855f7;
+  --brand-purple-bg:       rgba(124, 58, 237, 0.12);
+  --brand-purple-border:   rgba(124, 58, 237, 0.28);
   
-  --brand-blue:            #93c5fd;
-  --brand-blue-muted:      #60a5fa;
-  --brand-blue-bg:         rgba(59, 130, 246, 0.12);
-  --brand-blue-border:     rgba(59, 130, 246, 0.25);
+  --brand-blue:            #818cf8; /* Indigo matching the glow-g logo gradient stop */
+  --brand-blue-muted:      #4f46e5; /* Deep Indigo */
+  --brand-blue-bg:         rgba(79, 70, 229, 0.12);
+  --brand-blue-border:     rgba(79, 70, 229, 0.25);
   
   --brand-green:           #6ee7b7;
   --brand-green-muted:     #34d399;
@@ -64,83 +118,82 @@
   --brand-red-bg:          rgba(239, 68, 68, 0.10);
   --brand-red-border:      rgba(239, 68, 68, 0.20);
 
-  /* Active Sidebar / Navigation styling (Dark Mode) */
-  --bg-active-tab:         rgba(255, 255, 255, 0.07);
-  --text-active-tab:       var(--t1);
+  /* Active Navigation styling */
+  --bg-active-tab:         rgba(124, 58, 237, 0.12);
+  --text-active-tab:       #c4b5fd;
   --icon-active-tab:       #c4b5fd;
 
-  /* ── Template-safe color tokens ──────────────────────────────────────────
-     Templates use rgba(255,255,255,X) inline styles. These CSS vars give the
-     same values in dark mode and flip to dark equivalents in light mode.
-     Usage: style={{ color: 'var(--morph-60)' }} instead of rgba(255,255,255,.6)
-  ───────────────────────────────────────────────────────────────────────── */
-  --checker-dark:  #252525;
-  --checker-light: #181818;
-  --morph-bg:  #0a0a0a;
-  --morph-92:  rgba(255,255,255,0.95);
-  --morph-88:  rgba(255,255,255,0.90);
-  --morph-85:  rgba(255,255,255,0.88);
-  --morph-80:  rgba(255,255,255,0.84);
-  --morph-70:  rgba(255,255,255,0.76);
-  --morph-60:  rgba(255,255,255,0.68);
-  --morph-55:  rgba(255,255,255,0.64);
-  --morph-50:  rgba(255,255,255,0.60);
-  --morph-45:  rgba(255,255,255,0.56);
-  --morph-40:  rgba(255,255,255,0.52);
-  --morph-35:  rgba(255,255,255,0.48);
-  --morph-30:  rgba(255,255,255,0.44);
-  --morph-28:  rgba(255,255,255,0.42);
-  --morph-25:  rgba(255,255,255,0.40);
-  --morph-20:  rgba(255,255,255,0.34);
-  --morph-18:  rgba(255,255,255,0.32);
-  --morph-15:  rgba(255,255,255,0.28);
-  --morph-10:  rgba(255,255,255,0.22);
-  --morph-08:  rgba(255,255,255,0.18);
-  --morph-07:  rgba(255,255,255,0.16);
-  --morph-06:  rgba(255,255,255,0.14);
-  --morph-05:  rgba(255,255,255,0.12);
-  --morph-04:  rgba(255,255,255,0.10);
-  --morph-03:  rgba(255,255,255,0.08);
-  --morph-025: rgba(255,255,255,0.07);
-  --morph-018: rgba(255,255,255,0.05);
+  /* Checkerboard & Page layout helper tokens */
+  --checker-dark:  #18181a;
+  --checker-light: #131314;
+  --morph-bg:      #131314;
+  --morph-92:      rgba(255, 255, 255, 0.95);
+  --morph-88:      rgba(255, 255, 255, 0.90);
+  --morph-85:      rgba(255, 255, 255, 0.88);
+  --morph-80:      rgba(255, 255, 255, 0.84);
+  --morph-70:      rgba(255, 255, 255, 0.76);
+  --morph-60:      rgba(255, 255, 255, 0.68);
+  --morph-55:      rgba(255, 255, 255, 0.64);
+  --morph-50:      rgba(255, 255, 255, 0.60);
+  --morph-45:      rgba(255, 255, 255, 0.56);
+  --morph-40:      rgba(255, 255, 255, 0.52);
+  --morph-35:      rgba(255, 255, 255, 0.48);
+  --morph-30:      rgba(255, 255, 255, 0.44);
+  --morph-28:      rgba(255, 255, 255, 0.42);
+  --morph-25:      rgba(255, 255, 255, 0.40);
+  --morph-20:      rgba(255, 255, 255, 0.34);
+  --morph-18:      rgba(255, 255, 255, 0.32);
+  --morph-15:      rgba(255, 255, 255, 0.28);
+  --morph-10:      rgba(255, 255, 255, 0.22);
+  --morph-08:      rgba(255, 255, 255, 0.18);
+  --morph-07:      rgba(255, 255, 255, 0.16);
+  --morph-06:      rgba(255, 255, 255, 0.14);
+  --morph-05:      rgba(255, 255, 255, 0.12);
+  --morph-04:      rgba(255, 255, 255, 0.10);
+  --morph-03:      rgba(255, 255, 255, 0.08);
+  --morph-025:     rgba(255, 255, 255, 0.07);
+  --morph-018:     rgba(255, 255, 255, 0.05);
+
+  /* Official Brand Gradient Text */
+  --gradient-brand-text: linear-gradient(135deg, #a855f7 0%, #818cf8 50%, #93c5fd 100%);
 }
 
 html.light {
-  /* Premium Light Theme (ChatGPT/Gemini Style) */
-  --bg-page:     #f8f9fa;
-  --bg-panel:    #f0f2f5;
-  --bg-sidebar:  #eaecef;
+  /* Gemini Light Theme */
+  --bg-page:     #ffffff; /* Clean white canvas background */
+  --bg-panel:    #f0f4f9; /* Gemini blue-gray panel/sidebar background */
+  --bg-sidebar:  #f0f4f9;
   --bg-card:     #ffffff;
-  --bg-input:    rgba(15,15,15,0.05);
-  --bg-hover:    rgba(15,15,15,0.04);
-  --bg-active:   rgba(15,15,15,0.08);
-  --border:      rgba(15,15,15,0.08);
-  --border-md:   rgba(15,15,15,0.14);
-  --border-hi:   rgba(15,15,15,0.22);
-  --t1:          rgba(15,15,15,0.98); /* Sharp premium black */
-  --t2:          rgba(15,15,15,0.82); /* Clear secondary text/labels */
-  --t3:          rgba(15,15,15,0.68); /* Readable tertiary text/icons */
-  --t4:          rgba(15,15,15,0.52); /* High contrast muted subtext */
-  --t5:          rgba(15,15,15,0.28); /* Disabled placeholder gray */
-  --msg-bg:      #ffffff;
-  --msg-border:  rgba(15,15,15,0.06);
-  --scroll-fg:   rgba(15,15,15,0.16);
-  --scroll-hover:rgba(15,15,15,0.24);
-  --placeholder: rgba(15,15,15,0.48);
-  --icon-brand:        rgb(109,40,217);
-  --bg-code:           #f4f4f7;
-  --code-inline-color: rgba(109,40,217,0.95);
+  --bg-input:    #f0f4f9;
+  --bg-hover:    rgba(0, 0, 0, 0.04);
+  --bg-active:   rgba(0, 0, 0, 0.08);
+  --border:      #e3e3e3; /* Crisp, solid gray borders */
+  --border-md:   #c4c7c5;
+  --border-hi:   #8e918f;
+  --t1:          #1f1f1f; /* Crisp off-black for primary text */
+  --t2:          #474747; /* Readable secondary text */
+  --t3:          #757575; /* Tertiary labels/icons */
+  --t4:          #9e9e9e; /* Muted description text */
+  --t5:          #c4c7c5; /* Subtle layout lines */
+  --msg-bg:      #f0f4f9;
+  --msg-border:  rgba(0, 0, 0, 0.04);
+  --scroll-fg:   rgba(0, 0, 0, 0.12);
+  --scroll-hover:rgba(0, 0, 0, 0.20);
+  --placeholder: #757575;
+  --icon-brand:  #7c3aed; /* Brand purple */
+  --bg-code:     #f5f5f7;
+  --code-inline-color: #6d28d9;
 
-  /* ── Brand Semantic Colors (Light Theme) ────────────────────────────────── */
-  --brand-purple:          #6d28d9;
-  --brand-purple-muted:    #7c3aed;
-  --brand-purple-bg:       rgba(109, 40, 217, 0.07);
-  --brand-purple-border:   rgba(109, 40, 217, 0.22);
+  /* ── Brand Semantic Colors (Light Theme - Inspired by official purple/indigo logo) ── */
+  --brand-purple:          #7c3aed; /* Official logo brand purple */
+  --brand-purple-muted:    #6d28d9;
+  --brand-purple-bg:       rgba(124, 58, 237, 0.07);
+  --brand-purple-border:   rgba(124, 58, 237, 0.22);
   
-  --brand-blue:            #1d4ed8;
-  --brand-blue-muted:      #2563eb;
-  --brand-blue-bg:         rgba(29, 78, 216, 0.06);
-  --brand-blue-border:     rgba(29, 78, 216, 0.20);
+  --brand-blue:            #4f46e5; /* Official indigo */
+  --brand-blue-muted:      #3730a3;
+  --brand-blue-bg:         rgba(79, 70, 229, 0.06);
+  --brand-blue-border:     rgba(79, 70, 229, 0.20);
   
   --brand-green:           #047857;
   --brand-green-muted:     #059669;
@@ -162,44 +215,45 @@ html.light {
   --brand-red-bg:          rgba(185, 28, 28, 0.06);
   --brand-red-border:      rgba(185, 28, 28, 0.20);
 
-  /* Active Sidebar / Navigation styling (Light Mode) */
-  --bg-active-tab:         rgba(109, 40, 217, 0.08);
-  --text-active-tab:       #6d28d9;
-  --icon-active-tab:       #6d28d9;
+  /* Active Sidebar / Navigation styling */
+  --bg-active-tab:         rgba(124, 58, 237, 0.08);
+  --text-active-tab:       #7c3aed;
+  --icon-active-tab:       #7c3aed;
 
-  /* Checker board tokens */
-  --checker-dark:  #e2e4e8;
-  --checker-light: #f5f6f8;
-
-  /* Template tokens — light mode flipped values */
-  --morph-bg:  var(--bg-page);
-  --morph-92:  rgba(15,15,15,0.92);
-  --morph-88:  rgba(15,15,15,0.88);
-  --morph-85:  rgba(15,15,15,0.84);
-  --morph-80:  rgba(15,15,15,0.80);
-  --morph-70:  rgba(15,15,15,0.72);
-  --morph-60:  rgba(15,15,15,0.64);
-  --morph-55:  rgba(15,15,15,0.58);
-  --morph-50:  rgba(15,15,15,0.54);
-  --morph-45:  rgba(15,15,15,0.48);
-  --morph-40:  rgba(15,15,15,0.44);
-  --morph-35:  rgba(15,15,15,0.40);
-  --morph-30:  rgba(15,15,15,0.36);
-  --morph-28:  rgba(15,15,15,0.34);
-  --morph-25:  rgba(15,15,15,0.32);
-  --morph-20:  rgba(15,15,15,0.28);
-  --morph-18:  rgba(15,15,15,0.26);
-  --morph-15:  rgba(15,15,15,0.22);
-  --morph-10:  rgba(15,15,15,0.16);
-  --morph-08:  rgba(15,15,15,0.14);
-  --morph-07:  rgba(15,15,15,0.12);
-  --morph-06:  rgba(15,15,15,0.10);
-  --morph-05:  rgba(15,15,15,0.08);
-  --morph-04:  rgba(15,15,15,0.06);
-  --morph-03:  rgba(15,15,15,0.05);
-  --morph-025: rgba(15,15,15,0.04);
-  --morph-018: rgba(15,15,15,0.03);
+  /* Checkerboard & Page layout helper tokens (Light Theme) */
+  --checker-dark:  #e1e3e8;
+  --checker-light: #f5f6f9;
+  --morph-bg:      var(--bg-page);
+  --morph-92:      rgba(15, 15, 15, 0.92);
+  --morph-88:      rgba(15, 15, 15, 0.88);
+  --morph-85:      rgba(15, 15, 15, 0.84);
+  --morph-80:      rgba(15, 15, 15, 0.80);
+  --morph-70:      rgba(15, 15, 15, 0.72);
+  --morph-60:      rgba(15, 15, 15, 0.64);
+  --morph-55:      rgba(15, 15, 15, 0.58);
+  --morph-50:      rgba(15, 15, 15, 0.54);
+  --morph-45:      rgba(15, 15, 15, 0.48);
+  --morph-40:      rgba(15, 15, 15, 0.44);
+  --morph-35:      rgba(15, 15, 15, 0.40);
+  --morph-30:      rgba(15, 15, 15, 0.36);
+  --morph-28:      rgba(15, 15, 15, 0.34);
+  --morph-25:      rgba(15, 15, 15, 0.32);
+  --morph-20:      rgba(15, 15, 15, 0.28);
+  --morph-18:      rgba(15, 15, 15, 0.26);
+  --morph-15:      rgba(15, 15, 15, 0.22);
+  --morph-10:      rgba(15, 15, 15, 0.16);
+  --morph-08:      rgba(15, 15, 15, 0.14);
+  --morph-07:      rgba(15, 15, 15, 0.12);
+  --morph-06:      rgba(15, 15, 15, 0.10);
+  --morph-05:      rgba(15, 15, 15, 0.08);
+  --morph-04:      rgba(15, 15, 15, 0.06);
+  --morph-03:      rgba(15, 15, 15, 0.05);
+  --morph-025:     rgba(15, 15, 15, 0.04);
+  --morph-018:     rgba(15, 15, 15, 0.03);
+  /* Official Brand Gradient Text (Light Mode) */
+  --gradient-brand-text: linear-gradient(135deg, #7c3aed 0%, #4f46e5 50%, #818cf8 100%);
 }
+
 
 /* ─── Custom Tailwind utilities ──────────────────────────────────────────────── */
 @layer utilities {
@@ -242,16 +296,101 @@ body {
   text-rendering: optimizeLegibility;
   -webkit-text-size-adjust: 100%;
   transition: background 0.2s ease, color 0.2s ease;
+  position: relative;
+}
+
+/* Noise overlay for premium texture */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  opacity: 0.015; /* subtle for dark mode */
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+}
+
+html.light body::before {
+  opacity: 0.03; /* slightly higher contrast for light mode */
+}
+
+/* ─── Glass Card System ──────────────────────────────────────────────────────── */
+.glass {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+html.light .glass {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.glass-hover:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+html.light .glass-hover:hover {
+  background: rgba(255, 255, 255, 0.8);
+  border-color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.glass-elevated {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.03), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+html.light .glass-elevated {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.6) 100%);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(255, 255, 255, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+/* ─── dot-pattern / gradient-text / shimmer loaders ────────────────────────── */
+.dot-pattern {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+html.light .dot-pattern {
+  background-image: radial-gradient(rgba(15, 23, 42, 0.06) 1px, transparent 1px);
+}
+
+.gradient-text {
+  background: var(--gradient-brand-text);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.shimmer {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.04), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 2s linear infinite;
+}
+
+html.light .shimmer {
+  background: linear-gradient(90deg, transparent, rgba(15, 23, 42, 0.04), transparent);
+  background-size: 200% 100%;
 }
 
 /* Selection */
 ::selection {
-  background: rgba(147, 51, 234, 0.3);
+  background: rgba(124, 58, 237, 0.3);
   color: inherit;
 }
 
 html.light ::selection {
-  background: rgba(147, 51, 234, 0.2);
+  background: rgba(124, 58, 237, 0.2);
 }
 
 /* ─── Safe area inset utilities ──────────────────────────────── */

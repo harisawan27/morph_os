@@ -44,19 +44,6 @@ No mismatched artifacts. No unnecessary UIs. The right response for every input.
 
 ---
 
-## Agent Architecture & Key Concepts
-
-| Concept | Where demonstrated | File/mechanism |
-| :--- | :--- | :--- |
-| **Multi-agent / ADK** | Custom-built multi-agent system using a Planner/Executor pattern — a Brain agent plans and routes to five specialized executor agents (Builder, Editor, Critic, Chat, Search). Built directly on the google-genai SDK rather than the Google ADK library, implementing the same orchestration pattern ADK provides. | [llm_pipeline.py](backend/llm_pipeline.py) (`brain_plan_ui`, `execute_plan`, `builder_generate_react`, `builder_edit_react`, `chat_respond`, `search_web`). |
-| **MCP Server** | **Not implemented** (No Model Context Protocol client/server logic exists in this codebase). | N/A |
-| **Antigravity** | **Not implemented** (No workspace configurations or custom agent-extending skills are present in the `.agents` folder or root config). | N/A |
-| **Security** | End-to-end user identity protection and server isolation. Includes custom signed NextAuth HS256 JWT validation, secure cookie session handling, CORS origin restrictions, programmatic input sanitization, and API secret isolation. | [route.ts](frontend/src/app/api/auth/%5B...nextauth%5D/route.ts) (OAuth flow, custom jose HS256 JWT sign), [auth.py](backend/auth.py) (`get_current_user` JWT validation), [main.py](backend/main.py) (CORS `ALLOWED_ORIGINS` & custom `_check_rate_limit`), [ArtifactRenderer.tsx](frontend/components/ArtifactRenderer.tsx) (regex ES6 import sanitization). |
-| **Deployability** | Full multi-service containerization, build cache optimizations, and production environment mapping for Hugging Face Spaces & Vercel. | [Dockerfile](Dockerfile) (port `7860`, uvicorn CMD), [README_HF.md](backend/README_HF.md) (Hugging Face Docker Space setup instructions), [globals.css](frontend/src/app/globals.css) (PWA assets). |
-| **Agent Skills / Tool Use** | Live web grounding tool usage, programmatic rule checking Critic tool, structured file analysis, and browser state-syncing APIs. | [llm_pipeline.py](backend/llm_pipeline.py#L569) (`search_web` calling `google_search`), [llm_pipeline.py](backend/llm_pipeline.py#L1025) (`analyze_file` parser), [llm_pipeline.py](backend/llm_pipeline.py#L784) (`_critic_check` programmatic tool), [ArtifactRenderer.tsx](frontend/components/ArtifactRenderer.tsx) (`morphSaveState` / `morphLoadState`). |
-
----
-
 ## Architecture
 
 ### Multi-Agent Orchestration & Flow
