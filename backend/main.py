@@ -266,7 +266,7 @@ async def _generate_stream(
         thought_q = stdlib_queue.Queue()
         text_q    = stdlib_queue.Queue()
         chat_task = asyncio.create_task(
-            asyncio.to_thread(chat_respond, prompt, history, 4000, thought_q, text_q)
+            asyncio.to_thread(chat_respond, prompt, history, 4000, thought_q, text_q, user_context)
         )
 
         while not chat_task.done():
@@ -310,7 +310,7 @@ async def _generate_stream(
     if is_swift_chat:
         text_q = stdlib_queue.Queue()
         swift_task = asyncio.create_task(
-            asyncio.to_thread(chat_respond, prompt, history, 0, None, text_q)
+            asyncio.to_thread(chat_respond, prompt, history, 0, None, text_q, user_context)
         )
 
         while not swift_task.done():
@@ -345,7 +345,7 @@ async def _generate_stream(
             thought_q = stdlib_queue.Queue()
 
             build_task = asyncio.create_task(
-                asyncio.to_thread(execute_plan, planned, current_artifact, thinking_budget, thought_q)
+                asyncio.to_thread(execute_plan, planned, current_artifact, thinking_budget, thought_q, user_context)
             )
 
             # Drain thought chunks while builder runs in thread
@@ -377,7 +377,7 @@ async def _generate_stream(
             # Swift mode or templates: no streaming, no thinking budget
             try:
                 code, ui_spec, _ = await asyncio.to_thread(
-                    execute_plan, planned, current_artifact, 0
+                    execute_plan, planned, current_artifact, 0, None, user_context
                 )
             except Exception as e:
                 logger.error(f"Plan execution failed: {e}")

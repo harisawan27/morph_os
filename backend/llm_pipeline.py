@@ -281,6 +281,21 @@ def embed_text(text: str) -> list[float]:
     return response.embeddings[0].values
 
 
+def _build_user_ctx_block(user_context: dict = None) -> str:
+    """Builds a formatted block containing the user's persona and styling preferences."""
+    if not user_context:
+        return ""
+    parts = []
+    if user_context.get("name"):     parts.append(f"Name: {user_context['name']}")
+    if user_context.get("role"):     parts.append(f"Occupation: {user_context['role']}")
+    if user_context.get("about"):    parts.append(f"About: {user_context['about']}")
+    if user_context.get("location"): parts.append(f"Location: {user_context['location']}")
+    if user_context.get("tone"):     parts.append(f"Preferred Tone: {user_context['tone']}")
+    if parts:
+        return "USER PROFILE & CONTEXT:\n" + "\n".join(parts) + "\n\n"
+    return ""
+
+
 def brain_plan_ui(
     prompt: str,
     history: list[dict] = [],
@@ -292,17 +307,7 @@ def brain_plan_ui(
     Always returns valid JSON.
     """
 
-    # Build user context block
-    user_ctx_block = ""
-    if user_context:
-        parts = []
-        if user_context.get("name"):     parts.append(f"Name: {user_context['name']}")
-        if user_context.get("role"):     parts.append(f"Occupation: {user_context['role']}")
-        if user_context.get("about"):    parts.append(f"About: {user_context['about']}")
-        if user_context.get("location"): parts.append(f"Location: {user_context['location']}")
-        if user_context.get("tone"):     parts.append(f"Tone: {user_context['tone']}")
-        if parts:
-            user_ctx_block = "USER PROFILE:\n" + "\n".join(parts) + "\n\n"
+    user_ctx_block = _build_user_ctx_block(user_context)
 
     system_instruction = f"""{user_ctx_block}You are Morph OS — a smart AI assistant that can both CONVERSE naturally and generate interactive UI artifacts (apps, tools, games).
 
@@ -510,6 +515,7 @@ def execute_plan(
     current_artifact: str | None = None,
     thinking_budget: int = 0,
     thought_queue=None,
+    user_context: dict = None,
 ) -> tuple[str | None, str | None, str | None]:
     """
     Executes a brain plan and returns (code, ui_spec_json, thinking_text).
@@ -525,7 +531,7 @@ def execute_plan(
         if current_artifact:
             logger.info(f"EDIT MODE: {instruction[:80]}...")
             try:
-                code, thinking = builder_edit_react(current_artifact, instruction, thinking_budget, thought_queue)
+                code, thinking = builder_edit_react(current_artifact, instruction, thinking_budget, thought_queue, user_context)
                 return code, None, thinking or None
             except Exception as e:
                 logger.error(f"Edit failed: {e} — falling back to fresh build")
@@ -553,7 +559,7 @@ def execute_plan(
         ui_spec = planned.get("ui_spec")
         if ui_spec:
             logger.info(f"BUILDER: generating React component...")
-            code, thinking = builder_generate_react(json.dumps(ui_spec), thinking_budget, thought_queue)
+            code, thinking = builder_generate_react(json.dumps(ui_spec), thinking_budget, thought_queue, user_context)
             return code, json.dumps(ui_spec), thinking or None
 
     # ── Chat / no artifact ───────────────────────────────────────────────────
@@ -587,9 +593,10 @@ def search_web(query: str) -> str:
     return response.text
 
 
-def builder_generate_react(ui_spec: str, thinking_budget: int = 0, thought_queue=None) -> tuple[str, str]:
+def builder_generate_react(ui_spec: str, thinking_budget: int = 0, thought_queue=None, user_context: dict = None) -> tuple[str, str]:
     """Generates a standalone React component. Returns (code, thinking_text)."""
-    system_instruction = """You are THE BUILDER — the code engine of Morph OS, a generative operating system that morphs the UI into whatever the user needs. Your output IS the product. It must be flawless.
+    user_ctx_block = _build_user_ctx_block(user_context)
+    system_instruction = user_ctx_block + """You are THE BUILDER — the code engine of Morph OS, a generative operating system that morphs the UI into whatever the user needs. Your output IS the product. It must be flawless.
 
 ════════════════════════════════════════
 OUTPUT RULES (non-negotiable)
@@ -911,12 +918,26 @@ def chat_respond(
     thinking_budget: int = 0,
     thought_queue=None,
     text_queue=None,
+    user_context: dict = None,
 ) -> tuple[str, str]:
     """Generates a thoughtful chat reply. Returns (reply_text, thinking_text)."""
-    system_instruction = """You are Morph OS — a smart, helpful AI assistant.
+    user_ctx_block = _build_user_ctx_block(user_context)
+
+    # Determine response tone details
+    tone_instruction = ""
+    if user_context and user_context.get("tone"):
+        tone = user_context["tone"]
+        if tone == "casual":
+            tone_instruction = "Adopt a friendly, casual, warm, and highly conversational tone."
+        elif tone == "professional":
+            tone_instruction = "Adopt a professional, formal, polite, and precise tone. Be direct and clear."
+        elif tone == "creative":
+            tone_instruction = "Adopt a highly creative, expressive, and imaginative tone. Be original."
+
+    system_instruction = user_ctx_block + f"""You are Morph OS — a smart, helpful AI assistant.
 Answer the user's question directly, accurately, and engagingly.
 Use markdown where it helps (code blocks, bullet lists, bold, etc.).
-Be thorough but concise."""
+Be thorough but concise. {tone_instruction}"""
 
     history_context = ""
     if history:
@@ -1068,9 +1089,10 @@ def analyze_file(file_bytes: bytes, mime_type: str, filename: str, user_prompt: 
     }
 
 
-def builder_edit_react(current_code: str, instruction: str, thinking_budget: int = 0, thought_queue=None) -> tuple[str, str]:
+def builder_edit_react(current_code: str, instruction: str, thinking_budget: int = 0, thought_queue=None, user_context: dict = None) -> tuple[str, str]:
     """Modifies an existing React component. Returns (code, thinking_text)."""
-    system_instruction = """You are THE BUILDER in EDIT MODE — the code engine of Morph OS. You will receive a live React component and a precise edit instruction.
+    user_ctx_block = _build_user_ctx_block(user_context)
+    system_instruction = user_ctx_block + """You are THE BUILDER in EDIT MODE — the code engine of Morph OS. You will receive a live React component and a precise edit instruction.
 
 YOUR TASK:
 - Apply the edit instruction exactly.
