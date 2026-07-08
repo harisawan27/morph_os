@@ -154,7 +154,7 @@ export default function OmniBar({
         />
 
         {/* Bottom row */}
-        <div className="flex items-center justify-between px-2.5 pb-2.5 pt-1 gap-2">
+        <div className="flex items-center justify-between px-2.5 pb-2.5 pt-3 gap-2">
 
           {/* Attach pill — clearly visible */}
           <button

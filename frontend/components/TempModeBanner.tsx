@@ -20,14 +20,14 @@ export default function TempModeBanner() {
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 12 }}
         transition={{ delay: 1, duration: 0.3 }}
-        className="fixed left-1/2 -translate-x-1/2 z-50 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 px-4 py-3 rounded-2xl shadow-xl w-[92vw] sm:w-auto sm:max-w-xl bottom-[calc(env(safe-area-inset-bottom,0px)+88px)] sm:bottom-6"
+        className="fixed left-1/2 -translate-x-1/2 z-50 flex flex-row items-center justify-between gap-3 px-4 py-3 rounded-2xl shadow-xl w-[92vw] sm:w-auto sm:max-w-xl bottom-[calc(env(safe-area-inset-bottom,0px)+88px)] sm:bottom-6"
         style={{
           background: "var(--bg-card)",
           border: "1px solid var(--brand-amber-border)",
           boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
         }}
       >
-        <div className="flex items-center gap-3 w-full sm:w-auto">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
           <CloudOff size={15} style={{ color: "var(--brand-amber-muted)" }} className="shrink-0" />
           <p className="text-xs leading-snug text-left" style={{ color: "var(--t2)" }}>
             <span className="font-semibold" style={{ color: "var(--brand-amber-muted)" }}>Temporary mode</span>

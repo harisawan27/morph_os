@@ -460,8 +460,10 @@ export default function ChatCanvas({
             </div>
           </div>
 
-          <div className="shrink-0 px-3 sm:px-4 py-3 pb-safe" style={{ background: "var(--bg-panel)", borderTop: "1px solid var(--border)" }}>
-            <OmniBar onGenerate={handleGenerate} onStop={handleStop} isLoading={isGenerating} model={model} onModelChange={setModel} />
+          <div className="shrink-0 pt-2 pb-safe relative z-10 w-full" style={{ background: "var(--bg-panel)", borderTop: "1px solid var(--border)" }}>
+            <div className="px-2 sm:px-4 w-full">
+              <OmniBar onGenerate={handleGenerate} onStop={handleStop} isLoading={isGenerating} model={model} onModelChange={setModel} />
+            </div>
           </div>
         </>
       )}

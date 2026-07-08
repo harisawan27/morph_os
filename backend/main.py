@@ -482,8 +482,13 @@ async def _generate_stream(
     if user_id:
         db = SessionLocal()
         try:
+            # Semantic cache safety: Only cache successful builds
+            persist_code = code
+            if persist_code and (len(persist_code) < 30 or "export default" not in persist_code):
+                persist_code = None
+
             db.add(Artifact(id=artifact_id, user_id=user_id, session_id=session_id,
-                            prompt=prompt, reply=final_reply, ui_spec=ui_spec, code=code,
+                            prompt=prompt, reply=final_reply, ui_spec=ui_spec, code=persist_code,
                             thinking=accumulated_thinking or None,
                             model="think" if use_thinking else "swift",
                             embedding=embedding))

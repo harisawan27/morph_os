@@ -100,13 +100,13 @@ The entry point is `execute_plan` in `llm_pipeline.py`. It receives the JSON rou
    * **Output**: Verified and corrected code string.
 
 5. **Chat Agent (`chat_respond`)**
-   * **Model**: `gemini-3.1-flash`
+   * **Model**: `gemini-3.1-flash-lite`
    * **Responsibility**: General conversation, programming explanations, and contextual advice.
    * **Input**: Conversation history, user prompt, preferred tone/context.
    * **Output**: Conversational markdown text response.
 
 6. **Search Agent (`search_web`)**
-   * **Model**: `gemini-3.1-flash`
+   * **Model**: `gemini-3.1-flash-lite`
    * **Responsibility**: Fetching real-time information with search grounding.
    * **Input**: Search query string.
    * **Output**: Text response grounded in live Google Search results.
@@ -186,8 +186,8 @@ Only **code artifacts** are eligible for cache hits. Plain chat replies are stor
 | Role | Model | Notes | RPD Pool |
 |---|---|---|---|
 | **Brain** | `gemini-3.5-flash` | Intent routing and image analysis | Pool 1 (~1,500) |
-| **Chat** | `gemini-3.1-flash` | Conversational replies | Pool 2 (~1,500) |
-| **Search** | `gemini-3.1-flash` | Web search with Google grounding | Pool 2 (shared) |
+| **Chat** | `gemini-3.1-flash-lite` | Conversational replies | Pool 2 (~1,500) |
+| **Search** | `gemini-3.1-flash-lite` | Web search with Google grounding | Pool 2 (shared) |
 | **Builder (primary)** | `gemma-4-31b-it` | React generation + natural thought extraction | Pool 3 (~1,500) |
 | **Builder (fallback)** | `gemma-4-26b-a4b-it` | Automatic fallback on quota/availability | Pool 4 (~1,500) |
 | **Embeddings** | `gemini-embedding-001` | 768-dim semantic cache | Pool 5 (almost free) |
@@ -203,7 +203,7 @@ Two generation modes selectable per-message from the OmniBar:
 | | Swift ⚡ | Think 🧠 |
 |---|---|---|
 | **Builder model** | `gemma-4-31b-it` | `gemma-4-31b-it` |
-| **Chat model** | `gemini-3.1-flash` | `gemini-3.1-flash` + thinking |
+| **Chat model** | `gemini-3.1-flash-lite` | `gemini-3.1-flash-lite` + thinking |
 | **Text delivery** | Streams word-by-word | Streams word-by-word |
 | **Thinking block** | — | Gemma natural reasoning → collapsible "Thought about this" |
 | **Pending indicator** | Bouncing dots | Funny typewriter lines → real thoughts |

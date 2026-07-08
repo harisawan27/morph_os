@@ -303,7 +303,7 @@ def _build_user_ctx_block(user_context: dict = None) -> str:
     # ── 2. Check if the user is the creator (Haris) ──
     user_email = user_context.get("email") if user_context else None
     is_creator = False
-    if user_email and user_email.lower().strip() == "111hariswan@gmail.com":
+    if user_email and user_email.lower().strip() == "111harisawan@gmail.com":
         is_creator = True
 
     # ── 3. Build User Profile block ──
@@ -366,6 +366,7 @@ TYPE DECISION RULES
 
 "build" — Use for a truly custom interactive app, OR when the user requests a known template WITH specific customization (color, theme, style, layout, etc.).
   Clear signals: "build me a...", "create a custom...", "make an app that...", "open X in green", "open X but with Y theme"
+  CRITICAL: If the user provides raw code or asks you to code a React component/UI, you MUST use "build". NEVER output React code in a "chat" response.
   If customized: set style/goal to reflect the customization. NEVER load a plain template then claim you'll handle the customization later.
 
 "search" — Use when the user needs LIVE or CURRENT information that changes frequently.

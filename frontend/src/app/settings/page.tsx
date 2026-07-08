@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 import { useTheme } from "../../../components/ThemeProvider";
 
+const API = process.env.NEXT_PUBLIC_API_URL ?? "";
+
 // ─── Google SVG ───────────────────────────────────────────────────────────────
 function GoogleIcon({ size = 16 }: { size?: number }) {
   return (
@@ -182,7 +184,7 @@ function ProfileTab({ googleName }: { googleName?: string | null }) {
     let active = true;
     const loadDbSettings = async () => {
       try {
-        const res = await fetch("/api/settings");
+        const res = await fetch(`${API}/api/settings`, { credentials: "include" });
         if (res.ok) {
           const data = await res.json();
           if (active && data) {
@@ -209,8 +211,9 @@ function ProfileTab({ googleName }: { googleName?: string | null }) {
         // Save to DB if signed in
         if (session) {
           try {
-            await fetch("/api/settings", {
+            await fetch(`${API}/api/settings`, {
               method: "POST",
+              credentials: "include",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify(next),
             });
