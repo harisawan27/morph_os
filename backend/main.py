@@ -102,7 +102,7 @@ def get_user_settings(
     user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    user_id = user.get("sub") or user.get("email")
+    user_id = user.get("email") or user.get("sub")
     if not user_id:
         raise HTTPException(status_code=400, detail="User ID not found in session")
     
@@ -129,7 +129,7 @@ def update_user_settings(
     user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    user_id = user.get("sub") or user.get("email")
+    user_id = user.get("email") or user.get("sub")
     if not user_id:
         raise HTTPException(status_code=400, detail="User ID not found in session")
         

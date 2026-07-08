@@ -82,9 +82,6 @@ export default function OmniBar({
     clearFile();
   }, [prompt, file, isLoading, onGenerate, clearFile]);
 
-  const onKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); }
-  };
 
   const canSubmit   = (!!(prompt.trim() || file)) && !isLoading;
   const borderColor = isDragging ? "var(--border-hi)" : focused ? "var(--border-md)" : "var(--border)";
@@ -142,7 +139,6 @@ export default function OmniBar({
           rows={1}
           value={prompt}
           onChange={e => setPrompt(e.target.value)}
-          onKeyDown={onKey}
           disabled={isLoading}
           placeholder={file ? "Ask about this file..." : "Ask Morph anything..."}
           className="w-full bg-transparent text-[15px] resize-none outline-none disabled:opacity-40"

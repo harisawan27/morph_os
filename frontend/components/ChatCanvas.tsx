@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Panel, Group, Separator } from "react-resizable-panels";
 import { AnimatePresence, motion } from "framer-motion";
 import ArtifactRenderer from "./ArtifactRenderer";
-import { Ghost, Layers, ChevronRight, Sparkles, X, Copy, Check, Pencil, CornerDownLeft, FileText, Image, Brain, ChevronDown, RotateCcw } from "lucide-react";
+import { Brain, Copy, X, Ghost, Code2, Plus, Zap, User, Menu, Pencil, Trash2, Maximize2, Minimize2, Check, RefreshCw, Smartphone, ChevronRight, Download, FileText, Image, MousePointerClick, CornerDownLeft, RotateCcw, ChevronDown, ChevronUp, Sparkles, Layers } from "lucide-react";
 import Link from "next/link";
 import MarkdownRenderer from "./MarkdownRenderer";
 import OmniBar, { type ModelId } from "./OmniBar";
@@ -31,7 +31,6 @@ interface ChatCanvasProps {
 }
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "";
-
 
 export default function ChatCanvas({
   sessionId,
@@ -331,9 +330,20 @@ export default function ChatCanvas({
   }, [messages, sessionId, activeArtifact, isMobile, model]);
 
   const handleResubmit = useCallback((index: number, newText: string) => {
-    setMessages(prev => prev.slice(0, index));
+    setMessages(prev => {
+      const removedMessages = prev.slice(index);
+      const removedArtifactIds = Array.from(new Set(
+        removedMessages
+          .map(m => m.id.replace(/^msg-/, ""))
+          .filter(id => id.length > 5)
+      ));
+      
+      removedArtifactIds.forEach(id => {
+        fetch(`${API}/api/artifacts/${id}`, { method: "DELETE", credentials: "include" }).catch(() => {});
+      });
+      return prev.slice(0, index);
+    });
     handleGenerate(newText, null, { bypassCache: true });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [handleGenerate]);
 
   const handleRegenerate = useCallback(() => {
@@ -582,7 +592,32 @@ const HINTS = [
 ];
 
 // ─── Message row ──────────────────────────────────────────────────────────────
+function CollapsibleText({ text }: { text: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const lines = text.split('\n');
+  const isLong = lines.length > 5 || text.length > 300;
+  
+  if (!isLong) return <p className="whitespace-pre-wrap wrap-break-word">{text}</p>;
+  
+  const displayText = expanded ? text : (lines.slice(0, 5).join('\n') + (lines.length > 5 ? '...' : ''));
+  
+  return (
+    <div className="flex flex-col items-start w-full">
+      <p className="whitespace-pre-wrap wrap-break-word">{displayText}</p>
+      <button 
+        onClick={() => setExpanded(!expanded)}
+        className="mt-2 flex items-center gap-1 text-[11px] font-medium transition-colors cursor-pointer opacity-75 hover:opacity-100"
+        style={{ color: "var(--brand-purple)" }}
+      >
+        {expanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+        {expanded ? "Show less" : "Show more"}
+      </button>
+    </div>
+  );
+}
+
 function MessageRow({
+
   message: m,
   messageIndex,
   isLast,
@@ -677,7 +712,7 @@ function MessageRow({
                   <span className="truncate" style={{ maxWidth: "180px" }}>{m.attachment.name}</span>
                 </div>
               )}
-              <p className="whitespace-pre-wrap wrap-break-word">{m.text}</p>
+              <CollapsibleText text={m.text} />
             </div>
             {/* action bar — visible by default, solid on hover */}
             <div
