@@ -16,7 +16,7 @@ const nextConfig: NextConfig = {
    * NEXT_PUBLIC_API_URL=http://localhost:8000 is used directly.
    */
   async rewrites() {
-    const backendUrl = process.env.BACKEND_URL;
+    const backendUrl = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL;
     if (!backendUrl) return [];
     // Explicit routes only — /api/auth/** is intentionally absent so
     // NextAuth's route handler handles signin/callback/error undisturbed.
@@ -28,6 +28,7 @@ const nextConfig: NextConfig = {
       { source: "/api/artifacts",          destination: `${backendUrl}/api/artifacts` },
       { source: "/api/artifacts/:path*",   destination: `${backendUrl}/api/artifacts/:path*` },
       { source: "/api/youtube/:path*",     destination: `${backendUrl}/api/youtube/:path*` },
+      { source: "/api/settings",           destination: `${backendUrl}/api/settings` },
     ];
   },
 };

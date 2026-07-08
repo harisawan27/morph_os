@@ -51,7 +51,7 @@ export default function Sidebar() {
 
   const fetchSessions = useCallback(async () => {
     try {
-      const res = await fetch(`${API}/api/sessions`, { credentials: "include" });
+      const res = await fetch(`/api/sessions`, { credentials: "include" });
       if (res.ok) setSessions(await res.json());
     } catch {}
   }, []);
@@ -77,7 +77,7 @@ export default function Sidebar() {
     if (!trimmed) return;
     setSessions(prev => prev.map(s => s.id === id ? { ...s, title: trimmed } : s));
     try {
-      await fetch(`${API}/api/sessions/${id}`, {
+      await fetch(`/api/sessions/${id}`, {
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -92,7 +92,7 @@ export default function Sidebar() {
     const isCurrentSession = pathname === `/session/${id}`;
     if (isCurrentSession) router.push("/new");
     try {
-      await fetch(`${API}/api/sessions/${id}`, { method: "DELETE", credentials: "include" });
+      await fetch(`/api/sessions/${id}`, { method: "DELETE", credentials: "include" });
       setSessions(prev => prev.filter(s => s.id !== id));
     } catch {}
     setDeleting(null);

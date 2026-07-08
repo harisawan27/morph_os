@@ -166,14 +166,14 @@ export default function ChatCanvas({
         if (lastArtifactCode) form.append("current_artifact", lastArtifactCode);
         form.append("file", file);
         form.append("model", model);
-        res = await fetch(`${API}/api/generate-with-file`, {
+        res = await fetch(`/api/generate-with-file`, {
           method: "POST",
           credentials: "include",
           body: form,
           signal: controller.signal,
         });
       } else {
-        res = await fetch(`${API}/api/generate`, {
+        res = await fetch(`/api/generate`, {
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
@@ -339,7 +339,7 @@ export default function ChatCanvas({
       ));
       
       removedArtifactIds.forEach(id => {
-        fetch(`${API}/api/artifacts/${id}`, { method: "DELETE", credentials: "include" }).catch(() => {});
+        fetch(`/api/artifacts/${id}`, { method: "DELETE", credentials: "include" }).catch(() => {});
       });
       return prev.slice(0, index);
     });

@@ -184,7 +184,7 @@ function ProfileTab({ googleName }: { googleName?: string | null }) {
     let active = true;
     const loadDbSettings = async () => {
       try {
-        const res = await fetch(`${API}/api/settings`, { credentials: "include" });
+        const res = await fetch(`/api/settings`, { credentials: "include" });
         if (res.ok) {
           const data = await res.json();
           if (active && data) {
@@ -211,7 +211,7 @@ function ProfileTab({ googleName }: { googleName?: string | null }) {
         // Save to DB if signed in
         if (session) {
           try {
-            await fetch(`${API}/api/settings`, {
+            await fetch(`/api/settings`, {
               method: "POST",
               credentials: "include",
               headers: { "Content-Type": "application/json" },
