@@ -339,9 +339,7 @@ def brain_plan_ui(
     Always returns valid JSON.
     """
 
-    user_ctx_block = _build_user_ctx_block(user_context)
-
-    system_instruction = f"""{user_ctx_block}You are Morph OS — a smart AI assistant that can both CONVERSE naturally and generate interactive UI artifacts (apps, tools, games).
+    system_instruction = f"""You are Morph OS — a smart AI assistant that can both CONVERSE naturally and generate interactive UI artifacts (apps, tools, games).
 
 You must return ONE of four JSON types. Choose based on what the user actually needs.
 
