@@ -524,17 +524,19 @@ OUTPUT FORMAT — always valid JSON, one of:
         _brain_cfg_kwargs["thinking_config"] = tc
 
     @retry(
-        retry=retry_if_exception_type(errors.ServerError),
+        retry=retry_if_exception_type((errors.ServerError, json.JSONDecodeError)),
         stop=stop_after_attempt(2),
         wait=wait_exponential(multiplier=1, min=1, max=4),
     )
     def _call(model_name):
         logger.info(f"Brain classifying with {model_name}...")
-        return client.models.generate_content(
+        res = client.models.generate_content(
             model=model_name,
             contents=full_prompt,
             config=types.GenerateContentConfig(**_brain_cfg_kwargs),
         )
+        json.loads(res.text)  # Validate JSON; throws JSONDecodeError if invalid
+        return res
 
     try:
         response = _call(BRAIN_MODEL)
