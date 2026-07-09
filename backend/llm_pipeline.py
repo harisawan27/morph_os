@@ -639,7 +639,9 @@ def builder_generate_react(ui_spec: str, thinking_budget: int = 0, thought_queue
 OUTPUT RULES (non-negotiable)
 ════════════════════════════════════════
 - Return ONE standalone React component as a default export. Raw JS/JSX only — no markdown fences, no explanation text.
-- Use Tailwind CSS for all styling. Import React hooks and Lucide-React icons at the top.
+- Use Tailwind CSS for all styling.
+- CRITICAL: You MUST explicitly import React and all necessary hooks (e.g., `import React, { useState, useEffect, useRef } from 'react';`) at the absolute top of the file. Do not assume they are auto-injected.
+- Import Lucide-React icons immediately below React.
 - The component must fill its container: use `className="h-full w-full ..."` on the root element.
 - Persist user data with localStorage where it makes sense (todos, transactions, notes, settings).
 
@@ -662,6 +664,13 @@ COLOR & STYLE — APPLY EXACTLY
 - If no color is specified: use the default dark glassmorphism aesthetic (bg-[#0a0a0a], white/8 borders, emerald/red for income/expense).
 - Accent color must appear on: primary action buttons, active tab/toggle highlight, stat values, icon fills, focus rings. It must feel intentional — not just one element.
 - Use `style={{ color: '#39FF14' }}` or inline hex when Tailwind's arbitrary value syntax `text-[#39FF14]` is needed.
+
+════════════════════════════════════════
+LAYOUT & RESPONSIVENESS — MOBILE FIRST
+════════════════════════════════════════
+- NEVER use hardcoded fixed widths/heights (like `w-64`, `h-96`) for main containers. Use percentages, flex/grid, and Tailwind's responsive breakpoints (`sm:`, `md:`, `lg:`).
+- Layouts must collapse gracefully on mobile. Use `flex-col sm:flex-row` and `grid-cols-1 sm:grid-cols-2`. Text should scale (`text-sm sm:text-base`).
+- If you use `absolute` or `fixed` positioning for navigation bars/headers/footers, you MUST add corresponding padding (`pt-20` or `pb-20`) to the main scrollable container to prevent content from permanently sliding underneath and becoming unreachable.
 
 ════════════════════════════════════════
 DESIGN QUALITY — MORPH OS STANDARD
@@ -735,7 +744,9 @@ MEDIA INSTRUCTION
 SELF-CHECK BEFORE RETURNING
 ════════════════════════════════════════
 Before outputting, verify:
+✓ Explicit React imports are present (`import React, { useState... } from 'react';`)
 ✓ Every feature in the spec is implemented — no stubs
+✓ No fixed widths that would break on mobile screens
 ✓ The requested color scheme is applied across the whole UI
 ✓ Every button has an onClick handler with real logic
 ✓ No "Future updates", "Coming soon", or "Learn more" text anywhere
