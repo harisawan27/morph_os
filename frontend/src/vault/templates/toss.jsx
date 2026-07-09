@@ -5,15 +5,13 @@ import { RotateCcw } from 'lucide-react';
 // [MORZ_VAULT_TEMPLATE: toss]
 
 const KEY = 'morph_toss_v1';
-const load = () => { try { const d = localStorage.getItem(KEY); return d ? JSON.parse(d) : null; } catch { return null; } };
-const save = (s) => { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch {} };
 
 export default function CoinToss() {
   const [flipping, setFlipping]   = useState(false);
   const [side, setSide]           = useState(null);
   const [choice, setChoice]       = useState(null);
   const [history, setHistory]     = useState([]);
-  const [stats, setStats]         = useState(() => load() || { H: 0, T: 0, wins: 0, total: 0 });
+  const [stats, setStats]         = (typeof useCloudStorage !== 'undefined') ? useCloudStorage(KEY, { H: 0, T: 0, wins: 0, total: 0 }) : useState({ H: 0, T: 0, wins: 0, total: 0 });
 
   const flip = (picked) => {
     if (flipping) return;
@@ -27,7 +25,6 @@ export default function CoinToss() {
       const won = picked === result;
       setStats(s => {
         const next = { ...s, [result]: s[result] + 1, wins: s.wins + (won ? 1 : 0), total: s.total + 1 };
-        save(next);
         return next;
       });
       setHistory(h => [{ result, won }, ...h].slice(0, 10));
@@ -37,9 +34,7 @@ export default function CoinToss() {
   const reset = () => {
     setStats({ H: 0, T: 0, wins: 0, total: 0 });
     setHistory([]);
-    setSide(null);
     setChoice(null);
-    try { localStorage.removeItem(KEY); } catch {}
   };
 
   const pct = stats.total > 0 ? Math.round((stats.wins / stats.total) * 100) : 0;

@@ -28,9 +28,7 @@ export default function MemoryGame() {
   const [lock,     setLock]     = useState(false);
   const [secs,     setSecs]     = useState(0);
   const [running,  setRunning]  = useState(false);
-  const [best,     setBest]     = useState(() => {
-    try { const v = localStorage.getItem('morph_memory_best'); return v ? parseInt(v, 10) : null; } catch { return null; }
-  });
+  const [best,     setBest]     = (typeof useCloudStorage !== 'undefined') ? useCloudStorage('morph_memory_best_v2', 0) : useState(0);
 
   useEffect(() => {
     if (!running) return;
@@ -65,7 +63,6 @@ export default function MemoryGame() {
           const newBest = moves + 1;
           if (!best || newBest < best) {
             setBest(newBest);
-            try { localStorage.setItem('morph_memory_best', String(newBest)); } catch {}
           }
         }
       } else {

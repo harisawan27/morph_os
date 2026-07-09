@@ -15,18 +15,12 @@ const DEFAULT_HABITS = [
   { id: 2, name: 'Read 30 min',    checks: [true,  false, true,  true,  true,  false, false] },
   { id: 3, name: 'Drink 2L water', checks: [true,  true,  true,  false, true,  true,  false] },
 ];
-function loadHabits() {
-  try { const d = localStorage.getItem(STORAGE_KEY); return d ? JSON.parse(d) : null; } catch { return null; }
-}
+
 
 export default function HabitTracker() {
-  const [habits, setHabits] = useState(() => loadHabits() || DEFAULT_HABITS);
+  const [habits, setHabits] = (typeof useCloudStorage !== 'undefined') ? useCloudStorage(STORAGE_KEY, DEFAULT_HABITS) : useState(DEFAULT_HABITS);
   const [input, setInput] = useState('');
   const today = todayIndex();
-
-  useEffect(() => {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(habits)); } catch {}
-  }, [habits]);
 
   const addHabit = () => {
     if (!input.trim()) return;

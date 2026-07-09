@@ -32,3 +32,11 @@ class UserSetting(Base):
     location = Column(String, nullable=True)
     tone = Column(String(32), nullable=True)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+class AppStorage(Base):
+    __tablename__ = 'app_storage'
+
+    user_id = Column(String, primary_key=True, index=True) # Decoded JWT user sub ID
+    app_id = Column(String, primary_key=True, index=True) # Unique ID for the app, e.g., morph_budget
+    data = Column(Text, nullable=False) # JSON blob of stored data
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)

@@ -35,21 +35,16 @@ function bestMove(board) {
   return avail[Math.floor(Math.random() * avail.length)];
 }
 
-const SCORE_KEY = 'morph_ttt_v1';
-function loadScore() {
-  try { const d = localStorage.getItem(SCORE_KEY); return d ? JSON.parse(d) : null; } catch { return null; }
-}
+const SCORE_KEY = 'morph_tictactoe_score_v1';
 
 export default function TicTacToe() {
   const [board,  setBoard]  = useState(Array(9).fill(null));
   const [xTurn,  setXTurn]  = useState(true);
-  const [score,  setScore]  = useState(() => loadScore() || { X: 0, O: 0, D: 0 });
+  const [score,  setScore]  = (typeof useCloudStorage !== 'undefined') ? useCloudStorage(SCORE_KEY, { X: 0, O: 0, D: 0 }) : useState({ X: 0, O: 0, D: 0 });
   const [vsAI,   setVsAI]   = useState(true);
   const [locked, setLocked] = useState(false);
 
-  useEffect(() => {
-    try { localStorage.setItem(SCORE_KEY, JSON.stringify(score)); } catch {}
-  }, [score]);
+
 
   const winLine = checkWin(board, 'X') || checkWin(board, 'O');
   const winner  = winLine ? board[winLine[0]] : null;

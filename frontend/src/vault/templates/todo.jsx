@@ -20,39 +20,14 @@ const SEED_TASKS = [
   { id: 3, text: 'Wire semantic cache',    completed: false, priority: 'medium' },
 ];
 
-function loadTodos() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch {}
-  return SEED_TASKS;
-}
+
 
 export default function TodoArtifact() {
-  const [todos, setTodosRaw] = useState(() => loadTodos());
+  const [todos, setTodos] = (typeof useCloudStorage !== 'undefined') ? useCloudStorage(STORAGE_KEY, SEED_TASKS) : useState(SEED_TASKS);
   const [input, setInput] = useState('');
   const [priority, setPriority] = useState('medium');
   const [filter, setFilter] = useState('All');
   const [showPrioPicker, setShowPrioPicker] = useState(false);
-
-  // On mount: hydrate from cloud (overrides localStorage if cloud has newer state)
-  useEffect(() => {
-    if (typeof morphLoadState !== 'undefined') {
-      morphLoadState().then(s => { if (Array.isArray(s)) setTodosRaw(s); }).catch(() => {});
-    }
-  }, []);
-
-  // Save to local storage and cloud on change (React compliant side-effect)
-  useEffect(() => {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(todos)); } catch {}
-    if (typeof morphSaveState !== 'undefined') {
-      morphSaveState(todos);
-    }
-  }, [todos]);
-
-  const setTodos = (updater) => {
-    setTodosRaw(prev => typeof updater === 'function' ? updater(prev) : updater);
-  };
 
   const addTodo = (e) => {
     if (e) e.preventDefault();

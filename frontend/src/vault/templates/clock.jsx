@@ -132,9 +132,6 @@ const DEFAULT_PANEL = [
 ];
 
 const PANEL_KEY = 'morph_clock_panel_v1';
-function loadPanel() {
-  try { const d = localStorage.getItem(PANEL_KEY); return d ? JSON.parse(d) : null; } catch { return null; }
-}
 
 function nowInZone(tz) {
   if (!tz) return new Date();
@@ -196,7 +193,7 @@ function AnalogClock({ date, size = 168 }) {
 export default function ClockArtifact() {
   const [now,        setNow]        = useState(new Date());
   const [active,     setActive]     = useState(LOCAL);
-  const [panel,      setPanel]      = useState(() => loadPanel() || DEFAULT_PANEL);
+  const [panel,      setPanel]      = (typeof useCloudStorage !== 'undefined') ? useCloudStorage(PANEL_KEY, DEFAULT_PANEL) : useState(DEFAULT_PANEL);
   const [search,     setSearch]     = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const inputRef = useRef(null);
@@ -206,9 +203,7 @@ export default function ClockArtifact() {
     return () => clearInterval(id);
   }, []);
 
-  useEffect(() => {
-    try { localStorage.setItem(PANEL_KEY, JSON.stringify(panel)); } catch {}
-  }, [panel]);
+
 
   const displayTime = nowInZone(active.tz);
 

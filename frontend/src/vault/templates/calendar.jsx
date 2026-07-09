@@ -8,12 +8,7 @@ const STORAGE_KEY = 'morph_calendar_events';
 const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
-function loadEvents() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch { return {}; }
-}
-function saveEvents(e) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(e)); } catch {}
-}
+
 
 function daysInMonth(y, m) { return new Date(y, m + 1, 0).getDate(); }
 function startDay(y, m)    { return new Date(y, m, 1).getDay(); }
@@ -23,7 +18,7 @@ export default function CalendarApp() {
   const now   = new Date();
   const [year,   setYear]   = useState(now.getFullYear());
   const [month,  setMonth]  = useState(now.getMonth());
-  const [events, setEvents] = useState(loadEvents);
+  const [events, setEvents] = (typeof useCloudStorage !== 'undefined') ? useCloudStorage(STORAGE_KEY, {}) : useState({});
   const [sel,    setSel]    = useState(null);   // selected day
   const [input,  setInput]  = useState('');
 
@@ -54,7 +49,6 @@ export default function CalendarApp() {
     const next = { ...events, [key]: list };
     if (!list.length) delete next[key];
     setEvents(next);
-    saveEvents(next);
   };
 
   const total = daysInMonth(year, month);

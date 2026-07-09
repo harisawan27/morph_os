@@ -5,8 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 // [MORZ_VAULT_TEMPLATE: checkers]
 
 const KEY = 'morph_checkers_v1';
-const load = () => { try { const d = localStorage.getItem(KEY); return d ? JSON.parse(d) : null; } catch { return null; } };
-const save = (s) => { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch {} };
 
 // ── Board helpers ─────────────────────────────────────────────────────────────
 
@@ -111,7 +109,7 @@ export default function Checkers() {
   const [moveMap, setMoveMap] = useState({});
   const [vsAI, setVsAI]       = useState(true);
   const [locked, setLocked]   = useState(false);
-  const [score, setScore]     = useState(() => load() || { r: 0, b: 0 });
+  const [score, setScore]     = (typeof useCloudStorage !== 'undefined') ? useCloudStorage(KEY, { r: 0, b: 0 }) : useState({ r: 0, b: 0 });
   const [winner, setWinner]   = useState(null);
   const [lastMove, setLastMove] = useState(null);
 
@@ -136,11 +134,12 @@ export default function Checkers() {
     if (moves.length === 0) {
       const w = nextTurn === 'r' ? 'b' : 'r';
       setWinner(w);
-      setScore(s => ({ ...s, [w]: s[w] + 1 }));
+      const next = { ...score, [w]: score[w] + 1 };
+      setScore(next);
       return true;
     }
     return false;
-  }, []);
+  }, [score]);
 
   const doMove = useCallback((board, move, nextTurn) => {
     const nb = applyMove(board, move);

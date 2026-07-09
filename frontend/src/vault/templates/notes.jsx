@@ -9,15 +9,6 @@ const CONTENT_RAW  = "{{CONTENT}}";
 const NOTE_CONTENT = (!CONTENT_RAW || CONTENT_RAW.includes('{{')) ? '' : CONTENT_RAW;
 const STORAGE_KEY = `morph_notes_v2_${NOTE_TITLE.replace(/\s+/g, '_').toLowerCase()}`;
 
-function loadHtml() {
-  try { return localStorage.getItem(STORAGE_KEY) || ''; } catch { return ''; }
-}
-
-function saveHtml(html) {
-  try { localStorage.setItem(STORAGE_KEY, html); } catch {}
-  if (typeof morphSaveState !== 'undefined') morphSaveState({ html, title: NOTE_TITLE });
-}
-
 // ── Toolbar button ──────────────────────────────────────────────────────────
 function TB({ onClick, title, children }) {
   return (
@@ -45,33 +36,24 @@ export default function NotesArtifact() {
   const editorRef  = useRef(null);
   const saveTimer  = useRef(null);
 
+  const [cloudHtml, setCloudHtml] = (typeof useCloudStorage !== 'undefined') ? useCloudStorage(STORAGE_KEY, '') : useState('');
+
   // Mount: restore saved content, or pre-fill from file extraction
   useEffect(() => {
     if (!editorRef.current) return;
-    const saved = loadHtml();
-    if (saved) {
-      editorRef.current.innerHTML = saved;
-      setIsEmpty(false);
-      refreshStats(editorRef.current.innerText);
+    if (cloudHtml) {
+      if (editorRef.current.innerHTML !== cloudHtml) {
+        editorRef.current.innerHTML = cloudHtml;
+        setIsEmpty(false);
+        refreshStats(editorRef.current.innerText);
+      }
     } else if (NOTE_CONTENT) {
       editorRef.current.innerText = NOTE_CONTENT;
       setIsEmpty(false);
       refreshStats(NOTE_CONTENT);
     }
     editorRef.current.focus();
-  }, []);
-
-  // Cloud restore
-  useEffect(() => {
-    if (typeof morphLoadState === 'undefined') return;
-    morphLoadState().then(s => {
-      if (s?.html && editorRef.current) {
-        editorRef.current.innerHTML = s.html;
-        setIsEmpty(false);
-        refreshStats(editorRef.current.innerText);
-      }
-    }).catch(() => {});
-  }, []);
+  }, [cloudHtml]);
 
   function refreshStats(text) {
     setWords(text.trim() ? text.trim().split(/\s+/).length : 0);
@@ -85,7 +67,7 @@ export default function NotesArtifact() {
     setSaved(false);
     clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
-      saveHtml(el.innerHTML);
+      setCloudHtml(el.innerHTML);
       setSaved(true);
     }, 600);
   };
@@ -158,7 +140,7 @@ export default function NotesArtifact() {
   const clearNote = () => {
     if (!confirm('Clear this note?')) return;
     if (editorRef.current) editorRef.current.innerHTML = '';
-    saveHtml(''); setIsEmpty(true); setWords(0);
+    setCloudHtml(''); setIsEmpty(true); setWords(0);
   };
 
   return (

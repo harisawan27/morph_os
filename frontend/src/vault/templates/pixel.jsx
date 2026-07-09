@@ -15,24 +15,16 @@ function makeGrid(sz) { return Array(sz * sz).fill('#000000'); }
 const PIXEL_KEY = 'morph_pixel_v1';
 
 export default function PixelArt() {
-  const [size,    setSize]    = useState(() => {
-    try { const d = localStorage.getItem(PIXEL_KEY); return d ? (JSON.parse(d).size ?? 16) : 16; } catch { return 16; }
-  });
-  const [grid,    setGrid]    = useState(() => {
-    try {
-      const d = localStorage.getItem(PIXEL_KEY);
-      if (!d) return makeGrid(16);
-      const saved = JSON.parse(d);
-      const sz = saved.size ?? 16;
-      return (saved.grid && saved.grid.length === sz * sz) ? saved.grid : makeGrid(sz);
-    } catch { return makeGrid(16); }
-  });
+  const [prefs, setPrefs] = (typeof useCloudStorage !== 'undefined') ? useCloudStorage(PIXEL_KEY, { size: 16, grid: makeGrid(16) }) : useState({ size: 16, grid: makeGrid(16) });
+  const size = prefs.size;
+  const grid = prefs.grid;
+  
+  const setSize = (s) => setPrefs(p => ({ ...p, size: s }));
+  const setGrid = (g) => setPrefs(p => ({ ...p, grid: typeof g === 'function' ? g(p.grid) : g }));
   const [color,   setColor]   = useState('#ffffff');
   const [tool,    setTool]    = useState('draw');   // draw | erase | fill
 
-  useEffect(() => {
-    try { localStorage.setItem(PIXEL_KEY, JSON.stringify({ size, grid })); } catch {}
-  }, [grid, size]);
+
   const [drawing, setDrawing] = useState(false);
   const [showGrid, setShowGrid] = useState(true);
   const canvasRef = useRef(null);

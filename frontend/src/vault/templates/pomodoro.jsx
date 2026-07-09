@@ -9,12 +9,7 @@ const BREAK_MINS = 5;
 const LONG_BREAK = 15;
 const STORAGE_KEY = 'morph_pomodoro_tasks';
 
-function loadTasks() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch { return []; }
-}
-function saveTasks(t) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(t)); } catch {}
-}
+
 
 function Ring({ pct, size = 160, stroke = 10, mode }) {
   const r   = (size - stroke) / 2;
@@ -36,7 +31,7 @@ export default function PomodoroPlus() {
   const [secs,    setSecs]    = useState(WORK_MINS * 60);
   const [running, setRunning] = useState(false);
   const [rounds,  setRounds]  = useState(0);
-  const [tasks,   setTasks]   = useState(loadTasks);
+  const [tasks,   setTasks]   = (typeof useCloudStorage !== 'undefined') ? useCloudStorage(STORAGE_KEY, []) : useState([]);
   const [newTask, setNewTask] = useState('');
   const tickRef = useRef(null);
 

@@ -15,19 +15,13 @@ const DEFAULT_COLS = {
   doing: [{ id: 3, text: 'Build auth flow' }],
   done:  [{ id: 4, text: 'Setup repo' }],
 };
-function loadCols() {
-  try { const d = localStorage.getItem(STORAGE_KEY); return d ? JSON.parse(d) : null; } catch { return null; }
-}
+
 
 let _id = Date.now();
 const uid = () => ++_id;
 
 export default function KanbanBoard() {
-  const [cols, setCols] = useState(() => loadCols() || DEFAULT_COLS);
-
-  useEffect(() => {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(cols)); } catch {}
-  }, [cols]);
+  const [cols, setCols] = (typeof useCloudStorage !== 'undefined') ? useCloudStorage(STORAGE_KEY, DEFAULT_COLS) : useState(DEFAULT_COLS);
   const [drafts, setDrafts] = useState({ todo: '', doing: '', done: '' });
   const [adding, setAdding] = useState(null); // which col is open for adding
   const [dragCard, setDragCard] = useState(null); // {id, fromCol}

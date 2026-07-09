@@ -6,14 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const COLOR_STORAGE = 'morph_color_v1';
 const INITIAL_HEX = '#6366f1';
-function loadColorPrefs() {
-  try { const r = localStorage.getItem(COLOR_STORAGE); if (r) return JSON.parse(r); } catch {}
-  return { hex: INITIAL_HEX, harmony: 'Complementary' };
-}
-function saveColorPrefs(hex, harmony) {
-  try { localStorage.setItem(COLOR_STORAGE, JSON.stringify({ hex, harmony })); } catch {}
-  if (typeof morphSaveState !== 'undefined') morphSaveState({ hex, harmony });
-}
+
 
 // ─── Color math ───────────────────────────────────────────────
 function hslToHex(h, s, l) {
@@ -93,25 +86,28 @@ const HARMONIES = {
 
 const HARMONY_KEYS = Object.keys(HARMONIES);
 
-export default function ColorPaletteArtifact() {
-  const _p = loadColorPrefs();
-  const [baseHex, setBaseHexRaw]  = useState(_p.hex);
-  const [inputHex, setInputHex]   = useState(_p.hex);
-  const [harmony, setHarmonyRaw]  = useState(_p.harmony);
-  const [copied, setCopied]       = useState(null);
+export default function ColorPicker() {
+  const [prefs, setPrefs] = (typeof useCloudStorage !== 'undefined') ? useCloudStorage(COLOR_STORAGE, { hex: INITIAL_HEX, harmony: 'Complementary' }) : useState({ hex: INITIAL_HEX, harmony: 'Complementary' });
+  
+  const [baseHex, setBaseHexRaw] = useState(prefs.hex);
+  const [inputHex, setInputHex]  = useState(prefs.hex);
+  const [harmony, setHarmonyRaw] = useState(prefs.harmony);
+  const [copied, setCopied]      = useState(null);
 
-  const setBaseHex = (h) => { setBaseHexRaw(h); saveColorPrefs(h, harmony); };
-  const setHarmony = (h) => { setHarmonyRaw(h); saveColorPrefs(baseHex, h); };
-
-  // On mount: hydrate from cloud
+  // Sync incoming cloud state
   useEffect(() => {
-    if (typeof morphLoadState !== 'undefined') {
-      morphLoadState().then(s => {
-        if (s && s.hex) { setBaseHexRaw(s.hex); setInputHex(s.hex); }
-        if (s && s.harmony) setHarmonyRaw(s.harmony);
-      }).catch(() => {});
+    if (prefs.hex !== baseHex) {
+      setBaseHexRaw(prefs.hex);
+      setInputHex(prefs.hex);
     }
-  }, []);
+    if (prefs.harmony !== harmony) {
+      setHarmonyRaw(prefs.harmony);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefs]);
+
+  const setBaseHex = (h) => { setBaseHexRaw(h); setPrefs({ hex: h, harmony }); };
+  const setHarmony = (h) => { setHarmonyRaw(h); setPrefs({ hex: baseHex, harmony: h }); };
 
   const hsl   = hexToHsl(baseHex);
   const swatches = HARMONIES[harmony](hsl).map(([h,s,l]) => hslToHex(h,s,l));

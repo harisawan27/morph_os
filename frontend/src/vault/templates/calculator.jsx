@@ -5,14 +5,6 @@ import { motion } from 'framer-motion';
 // [MORZ_VAULT_TEMPLATE: calculator]
 
 const CALC_STORAGE = 'morph_calc_history_v1';
-function loadHistory() {
-  try { const r = localStorage.getItem(CALC_STORAGE); if (r) return JSON.parse(r); } catch {}
-  return [];
-}
-function saveHistory(h) {
-  try { localStorage.setItem(CALC_STORAGE, JSON.stringify(h)); } catch {}
-  if (typeof morphSaveState !== 'undefined') morphSaveState(h);
-}
 
 function safeEval(expr) {
   try {
@@ -32,23 +24,8 @@ function safeEval(expr) {
 export default function CalculatorArtifact() {
   const [display, setDisplay]       = useState('0');
   const [expr, setExpr]             = useState('');
-  const [history, setHistoryRaw]    = useState(() => loadHistory());
+  const [history, setHistory]       = (typeof useCloudStorage !== 'undefined') ? useCloudStorage('morph_calc_history_v2', []) : useState([]);
   const [justEvaled, setJustEvaled] = useState(false);
-
-  // On mount: hydrate history from cloud
-  useEffect(() => {
-    if (typeof morphLoadState !== 'undefined') {
-      morphLoadState().then(s => { if (Array.isArray(s)) setHistoryRaw(s); }).catch(() => {});
-    }
-  }, []);
-
-  const setHistory = (updater) => {
-    setHistoryRaw(prev => {
-      const next = typeof updater === 'function' ? updater(prev) : updater;
-      saveHistory(next);
-      return next;
-    });
-  };
 
   const appendChar = useCallback((ch) => {
     setJustEvaled(false);

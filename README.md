@@ -461,7 +461,7 @@ Open [http://localhost:3000](http://localhost:3000).
 ## Roadmap
 
 - [ ] **Artifact collaboration** — share a generated tool via link; recipients get their own live copy
-- [ ] **Cloud state sync** — todo items, notes, kanban cards persist to the database across devices
+- [x] **Cloud state sync** — 33+ vault templates use Universal Cloud Storage to persist state to PostgreSQL across devices via optimistic UI sync
 - [ ] **Multi-artifact canvas** — pin multiple artifacts side by side in the workspace
 - [ ] **Voice input** — speak to Morph OS via the OmniBar
 - [ ] **Plugin system** — extend the Vault with community-contributed templates

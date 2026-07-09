@@ -24,9 +24,7 @@ export default function SnakeArtifact() {
   const [gameOver, setGameOver] = useState(false);
   const [started, setStarted] = useState(false);
   const [score, setScore] = useState(0);
-  const [highScore, setHighScore] = useState(() => {
-    try { return parseInt(localStorage.getItem('morph_snake_hs') || '0', 10); } catch { return 0; }
-  });
+  const [highScore, setHighScore] = (typeof useCloudStorage !== 'undefined') ? useCloudStorage('morph_snake_hs_v2', 0) : useState(0);
   const [level, setLevel] = useState(1);
   const [flash, setFlash] = useState(false);
   const touchStart = useRef(null);
@@ -117,10 +115,7 @@ export default function SnakeArtifact() {
   }, [moveSnake, speed, started, gameOver]);
 
   useEffect(() => {
-    if (score > highScore) {
-      setHighScore(score);
-      try { localStorage.setItem('morph_snake_hs', String(score)); } catch {}
-    }
+    if (score > highScore) setHighScore(score);
   }, [score]);
 
   const resetGame = () => {

@@ -33,8 +33,8 @@ export default function DrawingCanvas() {
     ctx.lineJoin  = 'round';
     ctxRef.current = ctx;
 
-    const saved = localStorage.getItem(DRAW_KEY);
-    if (saved) {
+    const saved = null;
+    if (saved && typeof saved === 'string') {
       const img = new Image();
       img.onload = () => { ctx.drawImage(img, 0, 0); setHasDrawn(true); };
       img.src = saved;
@@ -79,7 +79,8 @@ export default function DrawingCanvas() {
   const stopDraw = useCallback(() => {
     drawing.current = false;
     lastPos.current = null;
-    try { localStorage.setItem(DRAW_KEY, canvasRef.current.toDataURL()); } catch {}
+    if (typeof morphSaveState !== 'undefined') morphSaveState(canvasRef.current.toDataURL());
+
   }, []);
 
   const clear = () => {
@@ -88,7 +89,8 @@ export default function DrawingCanvas() {
     ctx.fillStyle = '#0a0a0a';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     setHasDrawn(false);
-    try { localStorage.removeItem(DRAW_KEY); } catch {}
+    if (typeof morphSaveState !== 'undefined') morphSaveState(null);
+
   };
 
   const download = () => {

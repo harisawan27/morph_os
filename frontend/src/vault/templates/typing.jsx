@@ -22,9 +22,7 @@ export default function TypingTest() {
   const [done,     setDone]     = useState(false);
   const [wpm,      setWpm]      = useState(0);
   const [acc,      setAcc]      = useState(100);
-  const [best,     setBest]     = useState(() => {
-    try { const v = localStorage.getItem('morph_typing_best'); return v ? parseInt(v, 10) : null; } catch { return null; }
-  });
+  const [best,     setBest]     = (typeof useCloudStorage !== 'undefined') ? useCloudStorage('morph_typing_best_v2', 0) : useState(0);
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -55,7 +53,6 @@ export default function TypingTest() {
       setAcc(a);
       if (!best || w > best) {
         setBest(w);
-        try { localStorage.setItem('morph_typing_best', String(w)); } catch {}
       }
     }
   }, [done]);

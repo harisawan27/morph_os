@@ -8,6 +8,8 @@ import { X, Sparkles, ChevronLeft, Cloud, RefreshCw, Ghost, MessageSquare } from
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "";
 
+import { useCloudStorage } from "../src/hooks/useCloudStorage";
+
 const BASE_SCOPE = {
   React,
   ...React,
@@ -16,6 +18,7 @@ const BASE_SCOPE = {
   motion: framerMotion.motion,
   AnimatePresence: framerMotion.AnimatePresence,
   MORPH_API_URL: API,
+  useCloudStorage,
 };
 
 interface ArtifactRendererProps {

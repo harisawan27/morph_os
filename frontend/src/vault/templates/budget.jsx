@@ -11,15 +11,10 @@ const DEFAULT_TXN = [
   { id: 2, type: 'expense', label: 'Rent',          amount: 900,  category: 'Housing' },
   { id: 3, type: 'expense', label: 'Groceries',     amount: 120,  category: 'Food' },
 ];
-function loadTxns() {
-  try { const d = localStorage.getItem(STORAGE_KEY); return d ? JSON.parse(d) : null; } catch { return null; }
-}
+
 
 export default function BudgetTracker() {
-  const [transactions, setTransactions] = useState(() => loadTxns() || DEFAULT_TXN);
-  useEffect(() => {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions)); } catch {}
-  }, [transactions]);
+  const [transactions, setTransactions] = (typeof useCloudStorage !== 'undefined') ? useCloudStorage(STORAGE_KEY, DEFAULT_TXN) : useState(DEFAULT_TXN);
 
   const [label,    setLabel]    = useState('');
   const [amount,   setAmount]   = useState('');

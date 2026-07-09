@@ -146,6 +146,46 @@ def update_user_settings(
     db.commit()
     return {"status": "success"}
 
+# ─── App Storage ──────────────────────────────────────────────────────────────
+
+class AppStorageRequest(BaseModel):
+    data: str
+
+@app.get("/api/storage/{app_id}")
+def get_app_storage(
+    app_id: str,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    user_id = user.get("email") or user.get("sub")
+    if not user_id:
+        raise HTTPException(status_code=400, detail="User ID not found in session")
+    
+    storage = db.query(AppStorage).filter(AppStorage.user_id == user_id, AppStorage.app_id == app_id).first()
+    if not storage:
+        return {"data": None}
+    return {"data": storage.data}
+
+@app.post("/api/storage/{app_id}")
+def update_app_storage(
+    app_id: str,
+    req: AppStorageRequest,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    user_id = user.get("email") or user.get("sub")
+    if not user_id:
+        raise HTTPException(status_code=400, detail="User ID not found in session")
+        
+    storage = db.query(AppStorage).filter(AppStorage.user_id == user_id, AppStorage.app_id == app_id).first()
+    if not storage:
+        storage = AppStorage(user_id=user_id, app_id=app_id, data=req.data)
+        db.add(storage)
+    else:
+        storage.data = req.data
+    
+    db.commit()
+    return {"status": "success"}
 
 # ─── Generate ────────────────────────────────────────────────────────────────
 

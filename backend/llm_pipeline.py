@@ -643,7 +643,7 @@ OUTPUT RULES (non-negotiable)
 - CRITICAL: You MUST explicitly import React and all necessary hooks (e.g., `import React, { useState, useEffect, useRef } from 'react';`) at the absolute top of the file. Do not assume they are auto-injected.
 - Import Lucide-React icons immediately below React.
 - The component must fill its container: use `className="h-full w-full ..."` on the root element.
-- Persist user data with localStorage where it makes sense (todos, transactions, notes, settings).
+- NEVER use localStorage. You must persist user data (todos, history, notes, etc.) using the custom hook: `const [data, setData] = useCloudStorage('unique_app_id', initialValue)`. This hook is pre-injected into your environment, so you do not need to import it. Just use it exactly like `useState`.
 
 ════════════════════════════════════════
 FUNCTIONALITY — ZERO COMPROMISE

@@ -5,8 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 // [MORZ_VAULT_TEMPLATE: chess]
 
 const KEY = 'morph_chess_v1';
-const load = () => { try { const d = localStorage.getItem(KEY); return d ? JSON.parse(d) : null; } catch { return null; } };
-const save = (s) => { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch {} };
 
 const PIECES = {
   wK:'♔', wQ:'♕', wR:'♖', wB:'♗', wN:'♘', wP:'♙',
@@ -194,7 +192,7 @@ export default function Chess() {
   const [vsAI, setVsAI]         = useState(true);
   const [locked, setLocked]     = useState(false);
   const [status, setStatus]     = useState(null);
-  const [score, setScore]       = useState(()=>load()||{w:0,b:0,d:0});
+  const [score, setScore]       = (typeof useCloudStorage !== 'undefined') ? useCloudStorage(KEY, {w:0,b:0,d:0}) : useState({w:0,b:0,d:0});
   const [lastMove, setLastMove] = useState(null);
   const [captured, setCaptured] = useState({w:[],b:[]});
 
@@ -204,16 +202,7 @@ export default function Chess() {
   useEffect(() => { boardRef.current = board; }, [board]);
   useEffect(() => { gsRef.current = gs; }, [gs]);
 
-  // Cloud persistence
-  useEffect(() => {
-    if (typeof morphLoadState !== 'undefined') {
-      morphLoadState().then(s => { if (s?.score) setScore(s.score); }).catch(()=>{});
-    }
-  }, []);
-  useEffect(() => {
-    save(score);
-    if (typeof morphSaveState !== 'undefined') morphSaveState({ score });
-  }, [score]);
+
 
   const updateStatus = useCallback((b, color, g) => {
     const moves = allLegalMoves(b,color,g);

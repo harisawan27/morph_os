@@ -61,18 +61,12 @@ function wordCount(t) {
   return t.trim() ? t.trim().split(/\s+/).length : 0;
 }
 
-function loadEntries() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch { return {}; }
-}
 
-function saveEntries(entries) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)); } catch {}
-}
 
 export default function Diary() {
   const today = todayStr();
   const [date,        setDate]        = useState(today);
-  const [entries,     setEntries]     = useState(loadEntries);
+  const [entries,     setEntries]     = (typeof useCloudStorage !== 'undefined') ? useCloudStorage(STORAGE_KEY, {}) : useState({});
   const [text,        setText]        = useState('');
   const [mood,        setMood]        = useState(null);
   const [savedFlag,   setSavedFlag]   = useState(false);
@@ -95,21 +89,14 @@ export default function Diary() {
 
   const save = useCallback(() => {
     if (!text.trim()) return;
-    const updated = {
-      ...entries,
-      [date]: {
-        text,
-        mood,
-        words: wordCount(text),
-        savedAt: new Date().toISOString(),
-      },
-    };
-    setEntries(updated);
-    saveEntries(updated);
+    setEntries(e => {
+      const next = { ...e, [date]: { text, words: wordCount(text), mood, savedAt: new Date().toISOString() } };
+      return next;
+    });
     setSavedFlag(true);
     setSaveFlash(true);
     setTimeout(() => setSaveFlash(false), 1800);
-  }, [text, mood, date, entries]);
+  }, [text, mood, date]);
 
   // Auto-save on blur
   const onBlur = () => { if (isDirty && text.trim()) save(); };
