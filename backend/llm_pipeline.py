@@ -813,8 +813,8 @@ _STUB_PHRASES = [
     "coming soon",
     "will be added",
     "not yet implemented",
-    "placeholder",
-    "learn more",
+    "// placeholder",
+    "/* placeholder",
     "stay tuned",
 ]
 
